@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-10 px-4"
+     x-data="{ showDetail: false, selectedOrder: null }">
+
+  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg p-6 border border-blue-100">
+    <h1 class="text-3xl font-bold text-blue-700 mb-6 text-center">🧺 Daftar Pesanan Anda</h1>
+
+    {% if orders %}
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse text-sm">
+        <thead>
+          <tr class="bg-blue-600 text-white text-left">
+            <th class="py-3 px-4 rounded-tl-lg">No</th>
+            <th class="py-3 px-4">Layanan</th>
+            <th class="py-3 px-4">Berat/Jumlah</th>
+            <th class="py-3 px-4">Total</th>
+            <th class="py-3 px-4">Payment</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 rounded-tr-lg text-center">Aksi</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-gray-200">
+          {% for order in orders %}
+          <tr class="hover:bg-blue-50 transition">
+            <td class="py-3 px-4">{{ forloop.counter }}</td>
+            <td class="py-3 px-4 font-medium">{{ order.service.name }}</td>
+            <td class="py-3 px-4">
+              {% if order.weight %}
+                {{ order.weight }} kg
+              {% elif order.items %}
+                {{ order.items|length }} pcs
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="py-3 px-4">Rp {{ order.price_total|floatformat:0|intcomma }}</td>
+
+            <!-- Status Pembayaran -->
+            <td class="py-3 px-4">
+              {% if order.payment_status in 'paid settlement' %}
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Dibayar</span>
+              {% else %}
+                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Belum Bayar</span>
+              {% endif %}
+            </td>
+
+            <!-- Status Pengantaran -->
+            <td class="py-3 px-4">
+              {% if order.order_status == 'pending' %}
+                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Menunggu</span>
+              {% elif order.order_status == 'picked_up' %}
+                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">Diambil</span>
+              {% elif order.order_status == 'processing' %}
+                <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-semibold">Diproses</span>
+              {% elif order.order_status == 'ready' %}
+                <span class="bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">Siap Diantar</span>
+              {% elif order.order_status == 'delivered' %}
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Selesai</span>
+              {% elif order.order_status == 'cancelled' %}
+                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Dibatalkan</span>
+              {% endif %}
+            </td>
+
+            <!-- Tombol Aksi -->
+            <td class="py-3 px-4 text-center space-x-1 flex justify-center">
+              <!-- Tombol Detail -->
+              <button
+                @click="
+                  showDetail = true;
+                  selectedOrder = {
+                    customer: '{{ order.customer.username }}',
+                    service: '{{ order.service.name }}',
+                    weight: '{{ order.weight|default_if_none:"" }}',
+                    items: {{ order.items|default:'[]'|safe }},
+                    price_total: {{ order.price_total|default:0 }},
+                    pickup_address: '{{ order.pickup_address|escapejs }}',
+                    scheduled_pickup: '{{ order.scheduled_pickup|date:"d M Y, H:i" }}',
+                    assigned_courier: '{{ order.assigned_courier.username|default:"Belum ditugaskan" }}',
+                    order_status: '{{ order.get_order_status_display }}',
+                    payment_status: '{{ order.get_payment_status_display }}'
+                  };
+                "
+                class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition"
+                title="Lihat Detail"
+              >
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+
+              <!-- Tombol Bayar Sekarang -->
+              {% if order.payment_method == 'qris' and order.payment_status == 'unpaid' and order.order_status == 'pending' %}
+              <a href="{% url 'orders:payment' order.id %}"
+                class="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition"
+                title="Bayar Sekarang"
+              >
+                <i data-lucide="credit-card" class="w-4 h-4"></i>
+              </a>
+              {% endif %}
+
+              <!-- Tombol Lihat Nota -->
+              {% if order.payment_status == "paid" or order.payment_status == "settlement" %}
+              <a href="{% url 'orders:order_invoice' order.id %}" 
+                class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-full transition"
+                title="Lihat Nota"
+              >
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+              </a>
+              {% endif %}
+
+              <!-- Tombol Batalkan -->
+              {% if order.order_status == 'pending' and order.payment_status == 'unpaid' %}
+              <form action="{% url 'orders:cancel_order' order.id %}" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                  onclick="return confirm('Yakin ingin membatalkan pesanan ini?')"
+                  class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition"
+                  title="Batalkan Pesanan"
+                >
+                  <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-center text-gray-500 mt-10">Belum ada pesanan yang dibuat.</p>
+    {% endif %}
+  </div>
+
+  <!-- 🔹 Modal Detail Pesanan -->
+  <div x-show="showDetail" 
+       class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" 
+       x-transition>
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-lg relative">
+      <h2 class="text-2xl font-semibold text-blue-700 mb-4">Detail Pesanan</h2>
+
+      <div x-show="selectedOrder" class="space-y-2 text-sm">
+        <p><span class="font-semibold">Customer:</span> <span x-text="selectedOrder.customer"></span></p>
+        <p><span class="font-semibold">Layanan:</span> <span x-text="selectedOrder.service"></span></p>
+        <p><span class="font-semibold">Berat / Jumlah:</span>
+          <template x-if="selectedOrder.weight && selectedOrder.weight !== '0'">
+            <span x-text="selectedOrder.weight + ' kg'"></span>
+          </template>
+          <template x-if="!selectedOrder.weight || selectedOrder.weight === '0'">
+            <span x-text="selectedOrder.items.length + ' pcs'"></span>
+          </template>
+        </p>
+
+        <template x-if="(!selectedOrder.weight || selectedOrder.weight === '0') && selectedOrder.items.length > 0">
+          <div class="pl-4">
+            <template x-for="item in selectedOrder.items" :key="item.name">
+              <p x-text="item.name + ' x' + item.quantity + ' - Rp' + parseFloat(item.price).toLocaleString()"></p>
+            </template>
+          </div>
+        </template>
+
+        <p><span class="font-semibold">Harga Total:</span> Rp <span x-text="parseFloat(selectedOrder.price_total).toLocaleString()"></span></p>
+        <p><span class="font-semibold">Alamat Pickup:</span> <span x-text="selectedOrder.pickup_address"></span></p>
+        <p><span class="font-semibold">Jadwal Pickup:</span> <span x-text="selectedOrder.scheduled_pickup"></span></p>
+        <p><span class="font-semibold">Kurir:</span> <span x-text="selectedOrder.assigned_courier || 'Belum ditugaskan'"></span></p>
+        <p><span class="font-semibold">Status Pengantaran:</span> <span x-text="selectedOrder.order_status"></span></p>
+        <p><span class="font-semibold">Status Pembayaran:</span> <span x-text="selectedOrder.payment_status"></span></p>
+      </div>
+
+      <button @click="showDetail = false" 
+              class="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-lg">&times;</button>
+
+      <div class="text-right mt-6">
+        <button @click="showDetail = false" 
+                class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">Tutup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alpine.js -->
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    lucide.createIcons();
+  });
+</script>
+{% endblock %}

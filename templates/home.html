@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Beranda | FreshWash Laundry{% endblock %}
+{% block content %}
+{% load static %}
+
+<!-- Hero Section -->
+<section class="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-16">
+  <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between px-6">
+    <div class="md:w-1/2 space-y-5">
+      <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">
+        FreshWash Laundry<br>Solusi Cuci Cepat & Bersih Tanpa Ribet
+      </h1>
+      <p class="text-blue-100">
+        Kami hadir untuk memudahkan hidupmu. Cukup pesan online, tim kami akan datang menjemput, mencuci, dan mengantarkan pakaianmu kembali dengan wangi segar!
+      </p>
+      <div class="flex space-x-4 mt-6">
+        <a href="{% url 'orders:order' %}" class="bg-white text-blue-700 font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-100 transition">Pesan Sekarang</a>
+        <a href="{% url 'services:list' %}" class="border-2 border-white text-white font-semibold px-6 py-3 rounded-lg hover:bg-white hover:text-blue-700 transition">
+          Lihat Layanan
+        </a>
+      </div>
+    </div>
+
+    <div class="md:w-1/2 mt-10 md:mt-0 flex justify-center">
+
+      <img src="{% static 'images/laundry-service.png' %}" alt="Laundry Service" class="w-72 md:w-96 drop-shadow-lg">
+
+    </div>
+  </div>
+</section>
+
+<!-- Tentang Kami -->
+<section class="bg-white py-16">
+  <div class="max-w-6xl mx-auto text-center px-6">
+    <h2 class="text-3xl font-bold text-blue-700 mb-6">Tentang FreshWash Laundry</h2>
+    <p class="text-gray-700 leading-relaxed text-lg">
+      FreshWash Laundry adalah platform laundry online berbasis web yang mempermudah kamu dalam mencuci pakaian tanpa harus keluar rumah. 
+      Dengan fitur pemesanan online, sistem pembayaran digital (QRIS & COD), dan notifikasi real-time, kami memastikan pengalaman laundry yang cepat, bersih, dan transparan.
+    </p>
+    <div class="flex justify-center mt-8">
+      <img src="{% static 'images/digital-wallet.png' %}" alt="Laundry Process" class="w-56">
+    </div>
+  </div>
+</section>
+
+<!-- Keunggulan -->
+<section class="bg-gray-100 py-12">
+  <div class="max-w-7xl mx-auto px-6">
+    <h2 class="text-2xl font-bold text-center text-blue-700 mb-8">Kenapa Memilih Kami?</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+      <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+        <img src="{% static 'images/clock.png' %}" class="w-16 mx-auto mb-4" alt="Cepat">
+        <h3 class="text-lg font-semibold mb-2">Cepat & Tepat Waktu</h3>
+        <p class="text-gray-600 text-sm">Pesanan selesai dalam waktu singkat sesuai jadwal yang kamu pilih. Tak perlu menunggu lama!</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+        <img src="{% static 'images/clean-clothes.png' %}" class="w-16 mx-auto mb-4" alt="Kualitas">
+        <h3 class="text-lg font-semibold mb-2">Bersih, Wangi & Rapi</h3>
+        <p class="text-gray-600 text-sm">Kami menggunakan detergen premium dan mesin modern untuk hasil maksimal dan higienis.</p>
+      </div>
+      <div class="bg-white p-6 rounded-xl shadow hover:shadow-lg transition">
+        <img src="{% static 'images/fast-delivery.png' %}" class="w-16 mx-auto mb-4" alt="Antar Jemput">
+        <h3 class="text-lg font-semibold mb-2">Antar Jemput Gratis</h3>
+        <p class="text-gray-600 text-sm">Kami menjemput dan mengantarkan pakaianmu tanpa biaya tambahan ke lokasi yang kamu tentukan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Kekurangan & Kelebihan -->
+<section class="bg-white py-16">
+  <div class="max-w-6xl mx-auto px-6">
+    <h2 class="text-2xl font-bold text-center text-blue-700 mb-8">Kelebihan & Kekurangan FreshWash</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div class="bg-blue-50 p-6 rounded-xl shadow-sm">
+        <h3 class="text-xl font-semibold text-blue-700 mb-4">✨ Kelebihan</h3>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li>✅ Pemesanan cepat via web</li>
+          <li>✅ Notifikasi otomatis lewat WhatsApp</li>
+          <li>✅ Bisa bayar via COD atau QRIS</li>
+          <li>✅ Tampilan responsif & user friendly</li>
+        </ul>
+      </div>
+      <div class="bg-red-50 p-6 rounded-xl shadow-sm">
+        <h3 class="text-xl font-semibold text-red-700 mb-4">⚠️ Kekurangan</h3>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li>❌ Layanan terbatas di area tertentu</li>
+          <li>❌ Waktu pengiriman tergantung cuaca</li>
+          <li>❌ Tidak bisa ubah jadwal setelah pesanan dikonfirmasi</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Kontak -->
+<section class="bg-gray-100 py-12">
+  <div class="max-w-6xl mx-auto text-center px-6">
+    <h2 class="text-2xl font-bold text-blue-700 mb-4">Hubungi Kami</h2>
+    <p class="text-gray-700 mb-6">
+      Ada pertanyaan atau ingin tahu lebih banyak tentang layanan kami?  
+      Hubungi kami kapan saja melalui kontak berikut:
+    </p>
+    <div class="flex flex-col md:flex-row justify-center gap-6 text-gray-700">
+      <div class="flex items-center gap-2 justify-center">
+        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" class="w-6 h-6" alt="Instagram">
+        <span>@freshwash.id</span>
+      </div>
+      <div class="flex items-center gap-2 justify-center">
+        <img src="https://cdn-icons-png.flaticon.com/512/3670/3670051.png" class="w-6 h-6">
+        <span>0822-7418-6163</span>
+      </div>
+      <div class="flex items-center gap-2 justify-center">
+        <img src="https://cdn-icons-png.flaticon.com/512/145/145802.png" class="w-6 h-6">
+        <span>@freshwash.id</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

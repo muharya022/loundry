@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <form method="post" class="bg-white p-8 rounded-xl shadow-md w-full max-w-sm">
+    {% csrf_token %}
+    <h2 class="text-2xl font-semibold text-center text-blue-600 mb-4">Daftar Akun Baru</h2>
+
+    <label class="block text-gray-700">Nama Depan</label>
+    <input type="text" name="first_name" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+    
+    <label class="block text-gray-700">Nama Belakang</label>
+    <input type="text" name="last_name" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+
+    <label class="block text-gray-700">Username</label>
+    <input type="text" name="username" required class="w-full border rounded-lg px-4 py-2 mb-3">
+
+    <label class="block text-gray-700">Email</label>
+    <input type="email" name="email" required class="w-full border rounded-lg px-4 py-2 mb-3">
+
+    <label class="block text-gray-700">Nomor Telepon</label>
+    <input type="text" name="phone" required class="w-full border rounded-lg px-4 py-2 mb-3">
+
+    <label class="block text-gray-700">Password</label>
+    <input type="password" name="password1" required class="w-full border rounded-lg px-4 py-2 mb-3">
+
+    <label class="block text-gray-700">Konfirmasi Password</label>
+    <input type="password" name="password2" required class="w-full border rounded-lg px-4 py-2 mb-3">
+
+    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Daftar</button>
+
+    <p class="text-center text-sm mt-4">Sudah punya akun? 
+      <a href="{% url 'accounts:login' %}" class="text-blue-600 hover:underline">Login</a>
+    </p>
+  </form>
+</div>
+{% endblock %}

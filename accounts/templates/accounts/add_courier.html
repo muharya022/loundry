@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 mt-10 rounded-xl shadow-md">
+  <h1 class="text-2xl font-bold text-blue-600 mb-4 text-center">Tambah Kurir</h1>
+
+  <form method="POST" class="space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="block text-gray-700">Username</label>
+      <input type="text" name="username" class="w-full border rounded-md p-2" required>
+    </div>
+    <div>
+      <label class="block text-gray-700">Email</label>
+      <input type="email" name="email" class="w-full border rounded-md p-2">
+    </div>
+    <div>
+      <label class="block text-gray-700">Password</label>
+      <input type="password" name="password" class="w-full border rounded-md p-2" required>
+    </div>
+    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition">
+      + Tambah Kurir
+    </button>
+  </form>
+</div>
+{% endblock %}

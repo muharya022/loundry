@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg mt-12 text-center">
+  <h2 class="text-2xl font-bold mb-3 text-blue-700">💳 Pembayaran Pesanan #{{ order.id }}</h2>
+
+  <div class="my-4">
+    <p class="text-gray-700">Total Pembayaran:</p>
+    <h3 class="text-3xl font-bold text-green-600 mt-1 mb-3">
+      Rp{{ order.price_total|floatformat:0 }}
+    </h3>
+
+    <p class="text-sm text-gray-500 mb-2">
+      Metode Pembayaran: 
+      <span class="font-semibold text-gray-700 uppercase">{{ order.get_payment_method_display }}</span>
+    </p>
+    <p class="text-sm text-gray-500">
+      Tanggal Pemesanan: {{ order.created_at|date:"d M Y, H:i" }}
+    </p>
+  </div>
+
+  <hr class="my-4">
+
+  <p class="text-gray-600 text-sm mb-5">
+    Tekan tombol di bawah untuk melakukan pembayaran melalui Midtrans (QRIS, GoPay, atau Transfer Bank).
+  </p>
+
+  <button id="pay-button" 
+          class="mt-3 bg-green-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-green-700 transition-all duration-200">
+    Bayar Sekarang
+  </button>
+
+  <a href="{% url 'orders:order_list' %}" 
+     class="block mt-4 text-sm text-blue-600 hover:underline">
+    Kembali ke Daftar Pesanan
+  </a>
+</div>
+
+<!-- 🔹 Load Midtrans Snap SDK -->
+<script 
+  src="https://app.sandbox.midtrans.com/snap/snap.js" 
+  data-client-key="{{ client_key }}">
+</script>
+
+<!-- 🔹 Jalankan pembayaran -->
+<script>
+document.getElementById('pay-button').onclick = function () {
+    snap.pay('{{ snap_token }}', {
+        // Jangan redirect otomatis, gunakan callback JS
+        onSuccess: function(result){
+            console.log("Pembayaran berhasil:", result);
+            alert("✅ Pembayaran berhasil!");
+            // Redirect ke daftar pesanan bersih tanpa query string
+            window.location.href = "{% url 'orders:order_list' %}";
+        },
+        onPending: function(result){
+            console.log("Pembayaran pending:", result);
+            alert("⏳ Pembayaran menunggu, silakan selesaikan di aplikasi e-wallet Anda.");
+            window.location.href = "{% url 'orders:order_list' %}";
+        },
+        onError: function(result){
+            console.error("Terjadi kesalahan:", result);
+            alert("❌ Terjadi kesalahan: " + (result.status_message || "Unknown error"));
+        },
+        onClose: function(){
+            alert("⚠️ Kamu menutup halaman pembayaran sebelum menyelesaikan transaksi.");
+        }
+    });
+};
+</script>
+
+{% endblock %}
