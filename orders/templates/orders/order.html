@@ -2,7 +2,7 @@
 {% load static %}
 {% block content %}
 
-<div class="bg-gradient-to-b from-blue-50 to-blue-100 min-h-screen py-8">
+<div class="bg-gradient-to-b from-blue-50 to-blue-ho100 min-h-screen py-8">
   <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-2xl p-8 transition-all duration-300 hover:shadow-blue-300">
     
     <h1 class="text-3xl font-extrabold text-blue-700 mb-8 flex items-center gap-2">
@@ -35,8 +35,12 @@
 
           <div>
             <label class="text-sm font-medium text-gray-700">Tanggal Masuk</label>
-            <input type="datetime-local" name="scheduled_pickup" 
-                   class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+            <input
+                  type="datetime-local"
+                  id="scheduled_pickup"
+                  name="scheduled_pickup"
+                  class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  required>
           </div>
 
           <div>
@@ -169,10 +173,24 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateLocation(lat, lng) {
         marker.setLatLng([lat, lng]);
         map.setView([lat, lng], 15);
+
         latInput.value = lat.toFixed(6);
         lngInput.value = lng.toFixed(6);
-        addressField.value = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.display_name) {
+                    addressField.value = data.display_name;
+                } else {
+                    addressField.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                }
+            })
+            .catch(() => {
+                addressField.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            });
     }
+
 
     marker.on('dragend', e => {
         const pos = e.target.getLatLng();
@@ -197,9 +215,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const weightInput = document.getElementById("weightInput");
     const serviceCards = document.querySelectorAll(".service-card");
     const itemCards = document.querySelectorAll(".item-card");
+    const dateInput = document.getElementById("scheduled_pickup");
 
     let selectedService = null;
     let cart = [];
+        /* =========================
+       AUTO DATE PICKUP
+    ========================= */
+    if (dateInput && !dateInput.value) {
+        const now = new Date();
+        dateInput.value =
+            now.getFullYear() + "-" +
+            String(now.getMonth() + 1).padStart(2, "0") + "-" +
+            String(now.getDate()).padStart(2, "0") + "T" +
+            String(now.getHours()).padStart(2, "0") + ":" +
+            String(now.getMinutes()).padStart(2, "0");
+    }
 
     // ===== Render cart =====
     function renderCart() {

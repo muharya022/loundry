@@ -131,32 +131,61 @@
 
     <!-- ✅ Menu mobile -->
     <div id="mobile-menu" class="hidden md:hidden bg-blue-500 text-white px-6 py-3 space-y-2">
-      {% if user.is_authenticated %}
-        <a href="/" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
-          <i data-lucide="home"></i> <span>Beranda</span>
-        </a>
-        <a href="{% url 'services:list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
-          <i data-lucide="layers"></i> <span>Layanan</span>
-        </a>
-        <a href="{% url 'orders:order' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
-          <i data-lucide="shopping-bag"></i> <span>Pesan</span>
-        </a>
-        <!-- ✅ Badge mobile di dalam teks “Daftar Pesanan” -->
-        <a href="{% url 'orders:order_list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600 relative">
-          <i data-lucide="list"></i> 
-          <span>Daftar Pesanan</span>
-          <span id="order-badge-mobile" class="hidden ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">0</span>
-        </a>
-        <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
-          <i data-lucide="user"></i> <span>Profil</span>
-        </a>
-        <form method="POST" action="{% url 'accounts:logout' %}">
-          {% csrf_token %}
-          <button type="submit" class="flex items-center space-x-2 px-3 py-2 w-full text-left rounded hover:bg-blue-600">
-            <i data-lucide="log-out"></i> <span>Logout</span>
-          </button>
-        </form>
+
+      {% if user.is_authenticated and user.is_courier %}
+          <!-- Kurir -->
+          <a href="{% url 'courier:courier_dashboard' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide='layout-dashboard'></i> <span>Dashboard Kurir</span>
+          </a>
+          <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide='user'></i> <span>Profil</span>
+          </a>
+          <form method="POST" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="flex items-center space-x-2 px-3 py-2 w-full rounded hover:bg-blue-600">
+              <i data-lucide='log-out'></i> <span>Logout</span>
+            </button>
+          </form>
+
+      {% elif user.is_authenticated %}
+          <!-- User Login -->
+          <a href="/" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="home"></i> <span>Beranda</span>
+          </a>
+          <a href="{% url 'services:list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="layers"></i> <span>Layanan</span>
+          </a>
+          <a href="{% url 'orders:order' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="shopping-bag"></i> <span>Pesan</span>
+          </a>
+          <a href="{% url 'orders:order_list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600 relative">
+            <i data-lucide="list"></i>
+            <span>Daftar Pesanan</span>
+            <span id="order-badge-mobile" class="hidden ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">0</span>
+          </a>
+          <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="user"></i> <span>Profil</span>
+          </a>
+          <form method="POST" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="flex items-center space-x-2 px-3 py-2 w-full text-left rounded hover:bg-blue-600">
+              <i data-lucide="log-out"></i> <span>Logout</span>
+            </button>
+          </form>
+
+      {% else %}
+          <!-- Pengunjung (TIDAK LOGIN) — INI YANG HILANG SEBELUMNYA -->
+          <a href="/" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="home"></i> <span>Beranda</span>
+          </a>
+          <a href="{% url 'services:list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="layers"></i> <span>Layanan</span>
+          </a>
+          <a href="{% url 'accounts:login' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+            <i data-lucide="log-in"></i> <span>Login</span>
+          </a>
       {% endif %}
+
     </div>
   </header>
 

@@ -33,6 +33,7 @@
   <div class="flex flex-wrap justify-end mb-8 gap-3">
     <a href="{% url 'services:add_service' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow transition">+ Layanan</a>
     <a href="{% url 'orders:add_laundry_item' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow transition">+ Item</a>
+    <a href="{% url 'orders:promo_assign' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow transition">+ Promo</a>
     <a href="{% url 'accounts:manage_users' %}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 shadow transition">Akun</a>
   </div>
 
@@ -55,64 +56,71 @@
     </div>
   </div>
 
-  <!-- Script Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const ctx = document.getElementById('incomeChart').getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.5)');
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+<script>
+  const ctx = document.getElementById('incomeChart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+  gradient.addColorStop(0, 'rgba(37, 99, 235, 0.5)');
+  gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
 
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: {{ income_chart_labels|safe }},
-        datasets: [{
-          label: 'Pendapatan (Rp)',
-          data: {{ income_chart_data|safe }},
-          fill: true,
-          backgroundColor: gradient,
-          borderColor: '#2563EB',
-          borderWidth: 3,
-          tension: 0.35,
-          pointRadius: 5,
-          pointHoverRadius: 8,
-          pointBackgroundColor: '#2563EB',
-          pointHoverBackgroundColor: '#1E40AF',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-        }]
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ income_chart_labels|safe }},
+      datasets: [{
+        label: 'Pendapatan (Rp)',
+        data: {{ income_chart_data|safe }}.map(v => v <= 0 ? null : v),
+        fill: true,
+        backgroundColor: gradient,
+        borderColor: '#2563EB',
+        borderWidth: 3,
+        tension: 0.35,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        pointBackgroundColor: '#2563EB',
+        pointHoverBackgroundColor: '#1E40AF',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(17, 24, 39, 0.9)',
+          cornerRadius: 8,
+          padding: 10,
+          callbacks: {
+            label: (ctx) => {
+              if (!ctx.parsed.y) return '';
+              return 'Rp ' + ctx.parsed.y.toLocaleString('id-ID');
+            }
+          }
+        }
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(17, 24, 39, 0.9)',
-            titleFont: { size: 14, weight: 'bold' },
-            bodyFont: { size: 13 },
-            cornerRadius: 8,
-            padding: 10,
-            callbacks: {
-              label: (ctx) => 'Rp ' + ctx.formattedValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-            }
-          }
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#6B7280' }
         },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: '#6B7280' } },
-          y: {
-            grid: { color: '#E5E7EB' },
-            ticks: {
-              color: '#6B7280',
-              callback: (value) => 'Rp ' + value.toLocaleString('id-ID')
-            }
+        y: {
+          min: 1, // ⬅️ tidak tampilkan Rp 0
+          grid: { color: '#E5E7EB' },
+          ticks: {
+            color: '#6B7280',
+            callback: (value) => value <= 0 ? '' : 'Rp ' + value.toLocaleString('id-ID')
           }
-        },
-        animation: { duration: 1200, easing: 'easeOutQuart' }
+        }
+      },
+      animation: {
+        duration: 1200,
+        easing: 'easeOutQuart'
       }
-    });
-  </script>
+    }
+  });
+</script>
 
   <!-- Pesanan Terbaru -->
   <div class="bg-white p-8 rounded-2xl shadow-lg overflow-x-auto mb-12">

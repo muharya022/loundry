@@ -23,6 +23,16 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+# ===============================
+# 🔹 HOME VIEW
+# ===============================
+from .models import Promo
+
+def home(request):
+    promos = Promo.objects.filter(is_active=True).order_by('-created_at')
+    return render(request, 'home.html', {
+        'promos': promos
+    })
 
 # ===============================
 # 🔹 Helper Functions
@@ -42,7 +52,7 @@ def admin_required(user):
 # 🔹 Views Pelanggan
 # ===============================
 from decimal import Decimal
-from .models import Discount, Order
+from .models import Promo, Order
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -68,7 +78,7 @@ def get_address(lat, lng):
 
 
 from decimal import Decimal
-from .models import Discount, Order  # pastikan import Discount
+from .models import Promo, Order
 
 @login_required
 def create_order(request):
@@ -133,16 +143,26 @@ def create_order(request):
                 if item_obj:
                     total_price += Decimal(item_obj.price) * int(q)
 
-        # ===== Hitung diskon berbasis transaksi pelanggan =====
-        total_orders = Order.objects.filter(customer=customer).count()
-        discount_obj = Discount.objects.filter(active=True, min_orders__lte=total_orders).order_by('-min_orders').first()
-        if discount_obj:
-            discount_percent = discount_obj.percent
-            total_price_after_discount = total_price - (total_price * discount_percent / 100)
-        else:
-            discount_percent = None
-            total_price_after_discount = total_price
+         # ================= PROMO (USER PROMO) =================
+        user_promo = UserPromo.objects.filter(
+            user=customer,
+            is_used=False,
+            promo__is_active=True,
+            promo__min_transaction__lte=total_price
+        ).select_related("promo").first()
 
+        discount_percent = None
+        total_price_after_discount = total_price
+
+        if user_promo:
+            discount_percent = user_promo.promo.discount
+            discount_amount = total_price * Decimal(discount_percent) / 100
+            total_price_after_discount -= discount_amount
+
+            # tandai promo sudah dipakai
+            user_promo.is_used = True
+            user_promo.save()
+            
         # ===== Simpan order =====
         order = Order.objects.create(
             customer=customer,
@@ -388,6 +408,102 @@ def delete_order(request, order_id):
         order.delete()
         messages.success(request, f"Pesanan #{order.id} berhasil dihapus.")
     return redirect('orders:order_list')
+
+from django.shortcuts import render, redirect
+from django.contrib.admin.views.decorators import staff_member_required
+from .models import Promo
+from .forms import AssignPromoForm
+
+
+@staff_member_required
+def assign_promo(request):
+    promos = Promo.objects.filter(is_active=True).order_by('-created_at')
+
+    if request.method == 'POST':
+        form = AssignPromoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('orders:promo_assign')
+    else:
+        form = AssignPromoForm()
+
+    context = {
+        'form': form,
+        'promos': promos
+    }
+    return render(request, 'orders/assign_promo.html', context)
+
+
+from decimal import Decimal
+from .models import UserPromo
+def apply_promo(user, total_price):
+    user_promo = UserPromo.objects.filter(
+        user=user,
+        is_used=False,
+        promo__is_active=True,
+        promo__min_transaction__lte=total_price
+    ).select_related('promo').first()
+
+    if user_promo:
+        discount_amount = total_price * user_promo.promo.discount / 100
+        total_after_discount = total_price - discount_amount
+
+        user_promo.is_used = True
+        user_promo.save()
+
+        return total_after_discount, user_promo.promo.discount
+
+    return total_price, 0
+
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import PromoForm
+
+def is_admin(user):
+    return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin)
+def add_promo(request):
+    form = PromoForm(request.POST or None, request.FILES or None)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Promo berhasil ditambahkan.')
+        return redirect('orders:promo_assign')
+
+    return render(request, 'orders/promo_add.html', {'form': form})
+
+@login_required
+@user_passes_test(is_admin)
+def edit_promo(request, promo_id):
+    promo = get_object_or_404(Promo, id=promo_id)
+    form = PromoForm(request.POST or None, request.FILES or None, instance=promo)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Promo berhasil diperbarui.')
+        return redirect('orders:promo_assign')
+
+    return render(request, 'orders/promo_edit.html', {
+        'form': form,
+        'promo': promo
+    })
+
+@login_required
+@user_passes_test(is_admin)
+def delete_promo(request, promo_id):
+    promo = get_object_or_404(Promo, id=promo_id)
+
+    if request.method == 'POST':
+        if promo.image:
+            promo.image.delete(save=False)
+        promo.delete()
+        messages.success(request, 'Promo berhasil dihapus.')
+        return redirect('orders:promo_assign')
+
+    return render(request, 'orders/promo_confirm_delete.html', {'promo': promo})
 
 
 # ===============================

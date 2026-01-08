@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow text-center">
+  <h2 class="text-lg font-semibold mb-4">Hapus Promo</h2>
+  <p>Yakin ingin menghapus promo <b>{{ promo.code }}</b>?</p>
+
+  <form method="post" class="mt-4">
+    {% csrf_token %}
+    <button class="bg-red-600 text-white px-4 py-2 rounded">Hapus</button>
+    <a href="{% url 'orders:promo_assign' %}" class="ml-2 text-gray-600">Batal</a>
+  </form>
+</div>
+{% endblock %}

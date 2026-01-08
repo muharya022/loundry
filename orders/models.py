@@ -42,7 +42,7 @@ class Order(models.Model):
     )
 
     service = models.ForeignKey(Service, on_delete=models.PROTECT)
-    notified_customer = models.BooleanField(default=False)  # ✅ Tambahan untuk notifikasi
+    notified_customer = models.BooleanField(default=False)
 
     # Tambahan untuk layanan per item
     item_type = models.ForeignKey(LaundryItem, on_delete=models.SET_NULL, null=True, blank=True)
@@ -104,11 +104,32 @@ class Order(models.Model):
         return 0
 
 
-class Discount(models.Model):
-    name = models.CharField(max_length=100)
-    min_orders = models.PositiveIntegerField(default=0)  # minimal transaksi
-    percent = models.DecimalField(max_digits=5, decimal_places=2)  # diskon %
-    active = models.BooleanField(default=True)
+class Promo(models.Model):
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    discount = models.PositiveIntegerField()  # %
+    min_transaction = models.PositiveIntegerField(default=0)
+    image = models.ImageField(upload_to='promo/', blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.name} ({self.percent}% untuk minimal {self.min_orders} transaksi)"
+        return self.title
+
+from django.conf import settings
+from django.db import models
+
+class UserPromo(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    promo = models.ForeignKey('Promo', on_delete=models.CASCADE)
+    is_used = models.BooleanField(default=False)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'promo')
+
+    def __str__(self):
+        return f"{self.user} - {self.promo.title}"

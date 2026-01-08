@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+{% block content %}
+
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8 px-4">
+  <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-blue-100">
+
+    <!-- Header -->
+    <h2 class="text-xl sm:text-2xl font-bold text-blue-700 mb-6 text-center sm:text-left">
+      Tambah Promo
+    </h2>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+
+      <!-- Judul -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">
+          Judul Promo
+        </label>
+        {{ form.title|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" }}
+      </div>
+
+      <!-- Deskripsi -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">
+          Deskripsi
+        </label>
+        {{ form.description|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" }}
+      </div>
+
+      <!-- Diskon & Minimal Transaksi -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">
+            Diskon (%)
+          </label>
+          {{ form.discount|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" }}
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">
+            Minimal Transaksi
+          </label>
+          {{ form.min_transaction|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" }}
+        </div>
+      </div>
+
+      <!-- Upload Gambar -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">
+          Gambar Promo
+        </label>
+        {{ form.image|add_class:"w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700" }}
+      </div>
+
+      <!-- Status -->
+      <div class="flex items-center gap-2 mt-2">
+        {{ form.is_active|add_class:"h-4 w-4 text-blue-600" }}
+        <label class="text-sm font-semibold text-gray-700">
+          Aktifkan Promo
+        </label>
+      </div>
+
+      <!-- Tombol -->
+      <div class="flex flex-col sm:flex-row gap-3 pt-4">
+        <button type="submit"
+                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl shadow transition text-sm">
+          Simpan Promo
+        </button>
+
+        <a href="{% url 'orders:promo_assign' %}"
+           class="w-full sm:w-auto text-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-xl shadow transition text-sm">
+          Kembali
+        </a>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

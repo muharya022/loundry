@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+from dotenv import load_dotenv
 from pathlib import Path
+
+load_dotenv() 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +28,7 @@ SECRET_KEY = 'django-insecure-61qn3skdxxii!gsrmltyewzxoat5-&@90^1^*k@7-(wa*+ff0w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.13', ' 192.168.1.12', '*', 'https://gentle-candles-tan.loca.lt/']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.13', ' 192.168.1.12', '*', 'https://gentle-candles-tan.loca.lt/', 'https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev']
 
 
 # Application definition
@@ -62,8 +65,13 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 AUTH_USER_MODEL = 'accounts.User'
 
-MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
-MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
+MIDTRANS = {
+    'SERVER_KEY': os.getenv("MIDTRANS_SERVER_KEY"),
+    'CLIENT_KEY': os.getenv("MIDTRANS_CLIENT_KEY"),
+    'IS_PRODUCTION': os.getenv("MIDTRANS_IS_PRODUCTION", "False") == "True",
+}
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

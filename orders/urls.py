@@ -4,12 +4,13 @@ from . import views
 app_name = 'orders'
 
 urlpatterns = [
+
     # Endpoint API
     path('notifications/', views.get_order_notifications, name='get_order_notifications'),
     path('notifications/read/', views.mark_notifications_as_read, name='mark_notifications_as_read'),
 
     # Endpoint frontend / admin
-    path('', views.order_list, name='order_list'),
+    path('order_list', views.order_list, name='order_list'),
     path('<int:order_id>/cancel/', views.cancel_order, name='cancel_order'),
     path('order/', views.create_order, name='order'),
     path("payment/<int:order_id>/", views.payment, name="payment"),
@@ -25,4 +26,10 @@ urlpatterns = [
     path('edit-item/<int:item_id>/', views.edit_laundry_item, name='edit_laundry_item'),
     path('delete-item/<int:item_id>/', views.delete_laundry_item, name='delete_laundry_item'),
     path('notifications/', views.get_order_notifications, name='get_order_notifications'),
+    path('webhook/wa/', views.get_order_status, name='webhook_wa'),
+    path('promo/assign/', views.assign_promo, name='promo_assign'),
+    path('promo/add/', views.add_promo, name='add_promo'),
+    path('promo/edit/<int:promo_id>/', views.edit_promo, name='promo_edit'),
+    path('promo/delete/<int:promo_id>/', views.delete_promo, name='promo_delete'),
+
 ]

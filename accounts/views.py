@@ -133,15 +133,13 @@ def user_login(request):
 
     return render(request, 'accounts/login.html')
 
-
-# ===============================
-# 🔹 HOME VIEW
-# ===============================
+from orders.models import Promo
 
 def home(request):
-    """Halaman utama untuk user biasa"""
-    return render(request, 'home.html')
-
+    promos = Promo.objects.filter(is_active=True).order_by('-created_at')
+    return render(request, 'home.html', {
+        'promos': promos
+    })
 
 # ===============================
 # 🔹 PROFILE VIEW
