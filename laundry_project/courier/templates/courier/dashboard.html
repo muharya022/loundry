@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="p-6 bg-gray-50 min-h-screen">
+
+  <!-- Header / Selamat Datang -->
+  <div class="mb-6 text-center">
+    <h1 class="text-3xl font-bold text-blue-600">Selamat Datang, {{ user.username }}!</h1>
+    <p class="text-gray-600 mt-2">Pantau pesanan, ambil paket, dan selesaikan pengiriman tepat waktu untuk pelanggan.</p>
+  </div>
+
+  <!-- Statistik dengan Dropdown -->
+  <div class="bg-white p-6 rounded-2xl shadow mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div>
+      <h2 class="text-sm font-semibold text-gray-500 uppercase">Jumlah Pengambilan Paket</h2>
+      <p id="stat-value" class="text-3xl font-bold text-blue-600 mt-2">{{ stats.daily }}</p>
+      <p class="text-gray-500 text-sm mt-1">Lihat jumlah pengambilan paket berdasarkan periode.</p>
+    </div>
+    <div>
+      <label for="stat-filter" class="sr-only">Filter Periode</label>
+      <select id="stat-filter" class="border rounded px-3 py-1 text-sm">
+        <option value="daily" selected>Hari Ini</option>
+        <option value="weekly">Minggu Ini</option>
+        <option value="monthly">Bulan Ini</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tabel Order Aktif -->
+  <div class="overflow-x-auto bg-white shadow-md rounded-lg p-4 mb-8">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Daftar Order Aktif</h2>
+    <p class="text-gray-500 text-sm mb-4">Klik "Maps" untuk lokasi pickup dan "WA" untuk menghubungi pelanggan.</p>
+    <table class="min-w-full">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="px-4 py-2 text-left">ID</th>
+          <th class="px-4 py-2 text-left">Customer</th>
+          <th class="px-4 py-2 text-left">Alamat Pickup</th>
+          <th class="px-4 py-2 text-left">Service</th>
+          <th class="px-4 py-2 text-left">Total</th>
+          <th class="px-4 py-2 text-left">Status</th>
+          <th class="px-4 py-2 text-left">Lokasi & Kontak</th>
+          <th class="px-4 py-2 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr class="border-t hover:bg-blue-50 transition">
+          <td class="px-4 py-2">{{ o.id }}</td>
+          <td class="px-4 py-2">{{ o.customer.username }}</td>
+          <td class="px-4 py-2">{{ o.pickup_address }}</td>
+          <td class="px-4 py-2">{{ o.service.name }}</td>
+          <td class="px-4 py-2">Rp {{ o.price_total|floatformat:0 }}</td>
+          <td class="px-4 py-2 capitalize">{{ o.order_status }}</td>
+          <td class="px-4 py-2 flex items-center gap-2">
+            {% if o.latitude and o.longitude %}
+            <a href="https://www.google.com/maps/search/?api=1&query={{ o.latitude }},{{ o.longitude }}" 
+               target="_blank" 
+               class="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm">
+               <img src="https://img.icons8.com/color/48/000000/google-maps.png" class="w-4 h-4" alt="Maps"> Maps
+            </a>
+            {% endif %}
+            {% if o.customer.phone %}
+              {% with o.customer.phone|slice:"1:" as wa_number %}
+              <a href="https://wa.me/62{{ wa_number }}" target="_blank" 
+                 class="flex items-center gap-1 text-green-600 hover:text-green-800 text-sm">
+                 <img src="https://img.icons8.com/color/48/000000/whatsapp.png" class="w-4 h-4" alt="WA"> WA
+              </a>
+              {% endwith %}
+            {% endif %}
+          </td>
+          <td class="px-4 py-2 flex gap-2 justify-center">
+            {% if o.order_status == 'pending' %}
+                <a href="{% url 'courier:update_status' o.id 'pickup' %}" 
+                class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs">Ambil</a>
+            {% elif o.order_status == 'pickup' %}
+                <a href="{% url 'courier:update_status' o.id 'in_progress' %}" 
+                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">Diantar</a>
+            {% elif o.order_status == 'in_progress' %}
+                <a href="{% url 'courier:update_status' o.id 'delivered' %}" 
+                class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-xs">Selesai</a>
+            {% endif %}
+
+            <!-- Tombol Bayar COD -->
+            {% if o.payment_method == 'cod' and o.payment_status == 'unpaid' %}
+                <a href="{% url 'courier:mark_cod_paid' o.id %}" 
+                class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition"
+                title="Tandai Sudah Dibayar">
+                Bayar
+                </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-4 text-gray-500">Belum ada order aktif.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if orders.has_other_pages %}
+    <div class="mt-4 flex justify-center gap-2">
+      {% if orders.has_previous %}
+      <a href="?orders_page={{ orders.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">&laquo; Prev</a>
+      {% endif %}
+      {% for num in orders.paginator.page_range %}
+        {% if orders.number == num %}
+          <span class="px-3 py-1 bg-blue-500 text-white rounded">{{ num }}</span>
+        {% else %}
+          <a href="?orders_page={{ num }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if orders.has_next %}
+      <a href="?orders_page={{ orders.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next &raquo;</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Riwayat Paket Selesai -->
+  <div class="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Riwayat Paket Selesai</h2>
+    <p class="text-gray-500 text-sm mb-4">Daftar paket yang telah berhasil diantar.</p>
+    <table class="min-w-full">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="px-4 py-2 text-left">ID</th>
+          <th class="px-4 py-2 text-left">Customer</th>
+          <th class="px-4 py-2 text-left">Status Payment</th>
+          <th class="px-4 py-2 text-left">Tipe Pembayaran</th>
+          <th class="px-4 py-2 text-left">Service</th>
+          <th class="px-4 py-2 text-left">Total</th>
+          <th class="px-4 py-2 text-left">Tanggal Selesai</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in completed_orders %}
+        <tr class="border-t hover:bg-green-50 transition">
+          <td class="px-4 py-2">{{ r.id }}</td>
+          <td class="px-4 py-2">{{ r.customer.username }}</td>
+          <td class="px-4 py-2">
+            {% if r.payment_status == 'unpaid' %}
+                <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">{{ r.payment_status|capfirst }}</span>
+            {% elif r.payment_status == 'paid' %}
+                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">{{ r.payment_status|capfirst }}</span>
+            {% elif r.payment_status == 'settlement' %}
+                <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">{{ r.payment_status|capfirst }}</span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-2">
+            {% if r.payment_method == 'cod' %}
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">COD</span>
+            {% elif r.payment_method == 'qris' %}
+                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">Online</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2">{{ r.service.name }}</td>
+          <td class="px-4 py-2">Rp {{ r.price_total|floatformat:0 }}</td>
+          <td class="px-4 py-2">{{ r.updated_at|date:"d M Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-gray-500">Belum ada riwayat paket selesai.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if completed_orders.has_other_pages %}
+    <div class="mt-4 flex justify-center gap-2">
+      {% if completed_orders.has_previous %}
+      <a href="?completed_page={{ completed_orders.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">&laquo; Prev</a>
+      {% endif %}
+      {% for num in completed_orders.paginator.page_range %}
+        {% if completed_orders.number == num %}
+          <span class="px-3 py-1 bg-green-500 text-white rounded">{{ num }}</span>
+        {% else %}
+          <a href="?completed_page={{ num }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if completed_orders.has_next %}
+      <a href="?completed_page={{ completed_orders.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next &raquo;</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  const stats = {
+    daily: {{ stats.daily }},
+    weekly: {{ stats.weekly }},
+    monthly: {{ stats.monthly }}
+  };
+
+  const filter = document.getElementById('stat-filter');
+  const statValue = document.getElementById('stat-value');
+
+  filter.addEventListener('change', () => {
+    const selected = filter.value;
+    statValue.textContent = stats[selected];
+  });
+</script>
+{% endblock %}

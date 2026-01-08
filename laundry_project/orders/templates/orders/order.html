@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="bg-gradient-to-b from-blue-50 to-blue-100 min-h-screen py-8">
+  <div class="max-w-7xl mx-auto bg-white rounded-2xl shadow-2xl p-8 transition-all duration-300 hover:shadow-blue-300">
+    
+    <h1 class="text-3xl font-extrabold text-blue-700 mb-8 flex items-center gap-2">
+      🧺 <span>Transaksi Laundry</span>
+    </h1>
+
+    <form method="POST" action="{% url 'orders:order' %}" id="orderForm">{% csrf_token %}
+
+      <!-- Informasi Pelanggan & Pickup -->
+      <div class="bg-blue-100 rounded-xl p-5 mb-8 shadow-inner border border-blue-200">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Informasi Pelanggan</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {% if request.user.is_staff %}
+          <div>
+            <label class="block text-gray-700 font-medium mb-0.4">Pilih Pelanggan</label>
+            <select name="customer" class="w-full border border-blue-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+              <option value="">-- Pilih Pelanggan --</option>
+              {% for c in customers %}
+                <option value="{{ c.id }}">{{ c.username }} ({{ c.email }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% else %}
+          <div>
+            <label class="block text-sm text-gray-700 font-medium mb-1">Pelanggan</label>
+            <input type="text" value="{{ request.user.username }}" readonly
+                   class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-100 text-gray-700">
+          </div>
+          {% endif %}
+
+          <div>
+            <label class="text-sm font-medium text-gray-700">Tanggal Masuk</label>
+            <input type="datetime-local" name="scheduled_pickup" 
+                   class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium text-gray-700">Metode Pembayaran</label>
+            <select name="payment_method" 
+                    class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+              <option value="">Pilih Pembayaran</option>
+              <option value="cod">Tunai / COD</option>
+              <option value="qris">QRIS</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Lokasi Pickup -->
+        <div class="mt-6 bg-blue-100 p-4 rounded-xl border border-blue-200 shadow-inner relative">
+            <h2 class="text-lg font-semibold text-gray-800 mb-2">📍 Lokasi Pickup</h2>
+            <input type="text" id="pickup_address" placeholder="Klik peta atau geser marker untuk memilih lokasi"
+                  class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2" required>
+            <div class="map-container relative z-10">
+              <div id="map" class="w-full rounded-xl" style="height: 400px;"></div>
+            </div>
+            <input type="hidden" name="latitude" id="latitude">
+            <input type="hidden" name="longitude" id="longitude">
+        </div>
+      </div>
+
+      <!-- Pilih Layanan dan Keranjang -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">🧼 Pilih Layanan</h2>
+          <div id="serviceContainer" class="grid grid-cols-2 md:grid-cols-3 gap-5">
+            {% for s in services %}
+            <div class="service-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-5 text-center cursor-pointer shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300"
+                 data-id="{{ s.id }}" data-price="{{ s.price }}" data-name="{{ s.name }}" data-type="{{ s.type }}">
+              <div class="w-20 h-20 mx-auto mb-3 flex items-center justify-center bg-white border border-blue-200 rounded-xl shadow-sm overflow-hidden">
+                {% if s.image %}
+                  <img src="{{ s.image.url }}" alt="{{ s.name }}" class="w-full h-full object-contain">
+                {% else %}
+                  {% if s.type == "per_kilo" %}
+                    <img src="{% static 'images/scale.png' %}" alt="Laundry per kilo" class="w-12 h-12 object-contain opacity-80">
+                  {% else %}
+                    <img src="https://cdn-icons-png.flaticon.com/512/892/892458.png" alt="Laundry per item" class="w-12 h-12 object-contain opacity-80">
+                  {% endif %}
+                {% endif %}
+              </div>
+              <h3 class="font-bold text-gray-800 text-lg service-name">{{ s.name }}</h3>
+              <p class="text-blue-600 font-semibold text-sm">Rp {{ s.price|floatformat:0 }}</p>
+              <p class="text-xs text-gray-500 mt-1 italic">{{ s.get_type_display }}</p>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div id="weightInputContainer" class="mt-6 hidden bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <label class="block text-gray-700 font-medium mb-2">Masukkan Berat (kg)</label>
+            <input type="number" id="weightInput" min="0.1" step="0.1"
+                   class="w-full border border-blue-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                   placeholder="Contoh: 3.5">
+          </div>
+
+          <div id="itemCards" class="mt-8 hidden">
+              <h2 class="text-lg font-semibold text-gray-800 mb-3">👕 Pilih Item</h2>
+              <div id="itemContainer" class="grid grid-cols-2 md:grid-cols-3 gap-5">
+                  {% for item in laundry_items %}
+                  <div class="item-card bg-white border border-gray-200 rounded-2xl p-5 text-center cursor-pointer shadow-sm 
+                              hover:shadow-lg hover:scale-105 transition-all duration-300"
+                      data-id="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.price }}">
+                      
+                      <div class="w-20 h-20 mx-auto mb-3 flex items-center justify-center bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                          {% if item.image %}
+                              <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-full h-full object-contain">
+                          {% else %}
+                              <div class="text-4xl">👚</div>
+                          {% endif %}
+                      </div>
+
+                      <h4 class="font-semibold text-gray-700 item-name mt-1">{{ item.name }}</h4>
+                      <p class="text-blue-600 font-semibold text-sm">Rp {{ item.price|floatformat:0 }}</p>
+                  </div>
+                  {% endfor %}
+              </div>
+          </div>
+
+          <input type="hidden" name="total_price" id="total_price" value="0">
+          <input type="hidden" name="service" id="selected_service_id">
+          <input type="hidden" name="weight" id="weight_hidden" value="0">
+          <div id="items_hidden_container"></div>
+        </div>
+
+        <div class="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-inner">
+          <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-1">🛒 Keranjang</h2>
+          <div id="cartList" class="bg-white border rounded-xl p-4 min-h-[200px] shadow-sm">
+            <p class="text-gray-500 text-sm text-center" id="emptyCart">Belum ada item ditambahkan</p>
+          </div>
+
+          <div class="mt-4 flex justify-between text-gray-700 font-semibold text-lg">
+            <span>Total:</span>
+            <span id="cartTotal" class="text-blue-700">Rp 0</span>
+          </div>
+          <div class="mt-1 text-green-600 font-semibold" id="discountText"></div>
+          <input type="hidden" id="totalOrders" value="{{ user_orders_count }}">
+          <input type="hidden" id="discountRules" value='{{ discount_rules_json|safe }}'>
+
+          <button type="submit"
+                  class="mt-5 w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-semibold py-2 rounded-lg transition-all duration-200">
+            💾 Simpan Transaksi
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const latInput = document.getElementById("latitude");
+    const lngInput = document.getElementById("longitude");
+    const addressField = document.getElementById("pickup_address");
+
+    const initialLat = -3.9915; // Kendari
+    const initialLng = 122.5290;
+
+    const map = L.map('map').setView([initialLat, initialLng], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+
+    function updateLocation(lat, lng) {
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 15);
+        latInput.value = lat.toFixed(6);
+        lngInput.value = lng.toFixed(6);
+        addressField.value = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+    }
+
+    marker.on('dragend', e => {
+        const pos = e.target.getLatLng();
+        updateLocation(pos.lat, pos.lng);
+    });
+
+    map.on('click', e => {
+        updateLocation(e.latlng.lat, e.latlng.lng);
+    });
+
+    updateLocation(initialLat, initialLng);
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("orderForm");
+    const selectedServiceInput = document.getElementById("selected_service_id");
+    const weightHidden = document.getElementById("weight_hidden");
+    const itemsHiddenContainer = document.getElementById("items_hidden_container");
+    const cartTotal = document.getElementById("cartTotal");
+    const weightInput = document.getElementById("weightInput");
+    const serviceCards = document.querySelectorAll(".service-card");
+    const itemCards = document.querySelectorAll(".item-card");
+
+    let selectedService = null;
+    let cart = [];
+
+    // ===== Render cart =====
+    function renderCart() {
+        const cartList = document.getElementById("cartList");
+        itemsHiddenContainer.innerHTML = "";
+        cartList.innerHTML = "";
+
+        if (!selectedService) {
+            cartList.innerHTML = '<p class="text-gray-500 text-sm text-center">Belum ada item ditambahkan</p>';
+            document.getElementById("total_price").value = 0;
+            cartTotal.innerText = "Rp 0";
+            return;
+        }
+
+        let total = 0;
+
+        if (selectedService.type === "per_kilo") {
+            const berat = parseFloat(weightInput.value) || 0;
+            weightHidden.value = berat;
+            total = berat * selectedService.price;
+            cartList.innerHTML = `Berat: ${berat} kg × Rp ${selectedService.price.toLocaleString()}`;
+        } else { // per_item
+            // ===== Tampilkan harga service =====
+            const serviceRow = document.createElement("div");
+            serviceRow.className = "flex justify-between items-center mb-2 font-semibold";
+            serviceRow.innerHTML = `
+                <span>Layanan (${selectedService.name})</span>
+                <span>Rp ${selectedService.price.toLocaleString()}</span>
+            `;
+            cartList.appendChild(serviceRow);
+            total += selectedService.price;
+
+            if (cart.length === 0) {
+                const emptyRow = document.createElement("p");
+                emptyRow.className = "text-gray-500 text-sm text-center";
+                emptyRow.innerText = "Belum ada item ditambahkan";
+                cartList.appendChild(emptyRow);
+            } else {
+                cart.forEach((item, index) => {
+                    itemsHiddenContainer.innerHTML += `
+                        <input type="hidden" name="item_name[]" value="${item.name}">
+                        <input type="hidden" name="item_qty[]" value="${item.qty}">
+                    `;
+
+                    const row = document.createElement("div");
+                    row.className = "flex justify-between items-center mb-2";
+                    row.innerHTML = `
+                        <span>${item.name} × <span id="qty-${index}">${item.qty}</span></span>
+                        <span>Rp ${(item.price * item.qty).toLocaleString()}</span>
+                        <div class="flex items-center gap-2 ml-2">
+                            <button type="button" data-index="${index}" class="decrease-btn bg-gray-200 px-2 rounded">-</button>
+                            <button type="button" data-index="${index}" class="increase-btn bg-gray-200 px-2 rounded">+</button>
+                            <button type="button" data-index="${index}" class="remove-btn text-red-500 font-bold px-2">×</button>
+                        </div>
+                    `;
+                    cartList.appendChild(row);
+
+                    total += item.price * item.qty;
+                });
+
+                // Event tombol +, -, ×
+                cartList.querySelectorAll(".decrease-btn").forEach(btn => btn.addEventListener("click", e => {
+                    const i = parseInt(e.target.dataset.index);
+                    if (cart[i].qty > 1) cart[i].qty--;
+                    else cart.splice(i, 1);
+                    renderCart();
+                }));
+                cartList.querySelectorAll(".increase-btn").forEach(btn => btn.addEventListener("click", e => {
+                    const i = parseInt(e.target.dataset.index);
+                    cart[i].qty++;
+                    renderCart();
+                }));
+                cartList.querySelectorAll(".remove-btn").forEach(btn => btn.addEventListener("click", e => {
+                    const i = parseInt(e.target.dataset.index);
+                    cart.splice(i, 1);
+                    renderCart();
+                }));
+            }
+        }
+
+        document.getElementById("total_price").value = total.toFixed(0);
+        cartTotal.innerText = "Rp " + total.toLocaleString();
+    }
+
+    // ===== Pilih layanan =====
+    serviceCards.forEach(card => card.addEventListener("click", () => {
+        selectedService = {
+            id: card.dataset.id,
+            name: card.dataset.name,
+            type: card.dataset.type,
+            price: parseFloat(card.dataset.price)
+        };
+        selectedServiceInput.value = selectedService.id;
+        cart = [];
+        weightInput.value = "";
+        renderCart();
+
+        if (selectedService.type === "per_item") {
+            document.getElementById("itemCards").classList.remove("hidden");
+            document.getElementById("weightInputContainer").classList.add("hidden");
+        } else {
+            document.getElementById("weightInputContainer").classList.remove("hidden");
+            document.getElementById("itemCards").classList.add("hidden");
+        }
+    }));
+
+    // ===== Pilih item =====
+    itemCards.forEach(card => card.addEventListener("click", () => {
+        const id = card.dataset.id;
+        const name = card.dataset.name;
+        const price = parseFloat(card.dataset.price);
+        const existing = cart.find(i => i.id === id);
+        if (existing) existing.qty++;
+        else cart.push({ id, name, price, qty: 1 });
+        renderCart();
+    }));
+
+    weightInput.addEventListener("input", renderCart);
+
+    // ===== Validasi form sebelum submit =====
+    form.addEventListener("submit", e => {
+        if (!selectedService) { 
+            e.preventDefault(); 
+            alert("Pilih layanan terlebih dahulu!"); 
+            return; 
+        }
+        if (selectedService.type === "per_kilo" && (!weightInput.value || parseFloat(weightInput.value) <= 0)) { 
+            e.preventDefault(); 
+            alert("Masukkan berat laundry minimal 0.1 kg"); 
+            return; 
+        }
+        if (selectedService.type === "per_item" && cart.length === 0) { 
+            e.preventDefault(); 
+            alert("Tambahkan setidaknya 1 item!"); 
+            return; 
+        }
+
+        renderCart();
+    });
+});
+</script>
+
+{% endblock %}

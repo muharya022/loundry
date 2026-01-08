@@ -1,0 +1,92 @@
+{% extends 'base_invoice.html' %}
+{% block content %}
+<div class="max-w-sm mx-auto bg-white shadow-lg rounded-lg p-6 mt-8 font-mono text-sm">
+  
+  <!-- Header Nota -->
+  <div class="text-center mb-4">
+    <h2 class="text-lg font-bold">FRESHWASH LAUNDRY</h2>
+    <p class="text-gray-500">Nota Pembayaran</p>
+    <p class="text-gray-400 text-xs">{{ order.created_at|date:"d M Y, H:i" }}</p>
+  </div>
+  <hr class="border-dashed border-t border-gray-400 mb-2">
+
+  <!-- Info Pelanggan -->
+  <div class="mb-2">
+    <p>Nama  : {{ order.customer.username }}</p>
+    <p>Alamat: {{ order.pickup_address }}</p>
+    <p>Bayar  : {{ order.payment_method|capfirst }}</p>
+    <p>Status : <span class="text-green-600 font-semibold">{{ order.payment_status|upper }}</span></p>
+  </div>
+  <hr class="border-dashed border-t border-gray-400 mb-2">
+
+  <!-- Layanan -->
+  <div class="mb-2">
+    <p>Layanan: {{ order.service.name }}</p>
+  </div>
+  <hr class="border-dashed border-t border-gray-400 mb-2">
+
+  <!-- Item per item -->
+  {% if order.items %}
+  <div class="mb-2">
+    <p class="font-semibold">Item Laundry:</p>
+    <table class="w-full text-sm">
+      <tbody>
+        {% for item in order.items %}
+        <tr>
+          <td>{{ item.name }}</td>
+          <td class="text-center">{{ item.quantity }}</td>
+          <td class="text-right">Rp {{ item.price_total|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <hr class="border-dashed border-t border-gray-400 mb-2">
+  {% endif %}
+
+  <!-- Item Per Kilo -->
+  {% if order.weight %}
+  <div class="mb-2">
+    <p class="font-semibold">Per Kilo:</p>
+    <table class="w-full text-sm">
+      <tbody>
+        <tr>
+          <td>Berat (kg)</td>
+          <td class="text-center">{{ order.weight }}</td>
+          <td class="text-right">Rp {{ order.price_total|floatformat:0 }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <hr class="border-dashed border-t border-gray-400 mb-2">
+  {% endif %}
+
+  <!-- Total -->
+  <div class="text-right font-bold text-lg mt-2">
+    Total: Rp {{ order.price_total|floatformat:0 }}
+  </div>
+  <hr class="border-dashed border-t border-gray-400 my-2">
+
+  <!-- Footer -->
+  <div class="text-center text-xs mt-2 text-gray-500">
+    Terima kasih atas kepercayaan Anda!<br>
+    FreshWash Laundry - Cepat, Bersih, Rapi
+  </div>
+
+  <!-- Tombol Cetak & Kembali -->
+  <div class="text-center mt-4 space-x-2">
+    <button onclick="window.print()" 
+            class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 text-xs">
+      Cetak Nota
+    </button>
+    <a href="{% url 'orders:download_invoice' order.id %}" 
+       class="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700 text-xs">
+      Download PDF
+    </a>
+    <a href="{% url 'orders:order_list' %}" 
+       class="bg-gray-500 text-white px-4 py-1 rounded hover:bg-gray-600 text-xs">
+      Kembali
+    </a>
+  </div>
+</div>
+{% endblock %}

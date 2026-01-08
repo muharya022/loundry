@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FreshWash Laundry{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+  <!-- ✅ Notifikasi Django Messages -->
+  {% if messages %}
+  <div id="messages-container" class="fixed top-5 right-5 z-50 space-y-2">
+    {% for message in messages %}
+      <div class="relative flex items-center justify-between gap-3 transition-all duration-500 px-4 py-3 rounded-lg shadow-lg text-white opacity-0 translate-x-5 animate-slide-in
+                  {% if message.tags == 'success' %} bg-green-500
+                  {% elif message.tags == 'error' %} bg-red-500
+                  {% else %} bg-blue-500 {% endif %}">
+        <span>{{ message }}</span>
+        <button class="ml-2 text-white hover:text-gray-200 focus:outline-none" onclick="this.parentElement.remove()">✖</button>
+      </div>
+    {% endfor %}
+  </div>
+
+  <style>
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .animate-slide-in {
+      animation: slideIn 0.5s ease forwards;
+    }
+  </style>
+
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('#messages-container > div').forEach(el => {
+        el.style.transition = "opacity 0.7s ease";
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 700);
+      });
+    }, 5000);
+  </script>
+  {% endif %}
+
+  <!-- 🧭 Navbar -->
+  <header class="bg-blue-600 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
+      <a href="/" class="text-2xl font-bold flex items-center space-x-2 hover:text-blue-200 transition">
+        <i data-lucide="droplets"></i>
+        <span>FreshWash</span>
+      </a>
+
+      <!-- ✅ Menu utama (Desktop) -->
+      <nav id="nav-menu" class="hidden md:flex items-center space-x-6 text-sm font-medium">
+
+        {% if user.is_authenticated and user.is_courier %}
+          <!-- 🔹 Navbar KURIR -->
+          <a href="{% url 'courier:courier_dashboard' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/courier/courier_dashboard/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="layout-dashboard"></i> <span>Dashboard Kurir</span>
+          </a>
+          <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/accounts/profile/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="user"></i> <span>Profil</span>
+          </a>
+          <form method="POST" action="{% url 'accounts:logout' %}" class="inline ml-3">
+            {% csrf_token %}
+            <button type="submit" class="flex items-center space-x-1 hover:text-blue-200 transition duration-200">
+              <i data-lucide="log-out"></i> <span>Logout</span>
+            </button>
+          </form>
+
+        {% elif user.is_authenticated %}
+          <!-- 🔹 Navbar USER -->
+          <a href="/" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="home"></i> <span>Beranda</span>
+          </a>
+
+          <a href="{% url 'services:list' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if '/services' in request.path %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="layers"></i> <span>Layanan</span>
+          </a>
+
+          <a href="{% url 'orders:order' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/order/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="shopping-bag"></i> <span>Pesan</span>
+          </a>
+
+          <!-- ✅ Badge notifikasi di dalam tautan “Daftar Pesanan” -->
+          <a href="{% url 'orders:order_list' %}" class="relative flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/order/list/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="list"></i>
+            <span>Daftar Pesanan</span>
+            <span id="order-badge" class="hidden ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">0</span>
+          </a>
+
+          <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/accounts/profile/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="user"></i> <span>Profil</span>
+          </a>
+
+          {% if user.is_staff or user.is_superuser %}
+            <a href="{% url 'accounts:admin_dashboard' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/accounts/admin/dashboard/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+              <i data-lucide="layout-dashboard"></i> <span>Admin Dashboard</span>
+            </a>
+          {% endif %}
+
+          <form method="POST" action="{% url 'accounts:logout' %}" class="inline ml-3">
+            {% csrf_token %}
+            <button type="submit" class="flex items-center space-x-1 hover:text-blue-200 transition duration-200">
+              <i data-lucide="log-out"></i> <span>Logout</span>
+            </button>
+          </form>
+
+        {% else %}
+          <!-- 🔹 Navbar PENGUNJUNG -->
+          <a href="/" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="home"></i> <span>Beranda</span>
+          </a>
+          <a href="{% url 'services:list' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if '/services' in request.path %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="layers"></i> <span>Layanan</span>
+          </a>
+          <a href="{% url 'accounts:login' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/accounts/login/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+            <i data-lucide="log-in"></i> <span>Login</span>
+          </a>
+        {% endif %}
+      </nav>
+
+      <!-- Tombol hamburger (mobile) -->
+      <button class="md:hidden text-3xl focus:outline-none" id="menu-btn">☰</button>
+    </div>
+
+    <!-- ✅ Menu mobile -->
+    <div id="mobile-menu" class="hidden md:hidden bg-blue-500 text-white px-6 py-3 space-y-2">
+      {% if user.is_authenticated %}
+        <a href="/" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+          <i data-lucide="home"></i> <span>Beranda</span>
+        </a>
+        <a href="{% url 'services:list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+          <i data-lucide="layers"></i> <span>Layanan</span>
+        </a>
+        <a href="{% url 'orders:order' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+          <i data-lucide="shopping-bag"></i> <span>Pesan</span>
+        </a>
+        <!-- ✅ Badge mobile di dalam teks “Daftar Pesanan” -->
+        <a href="{% url 'orders:order_list' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600 relative">
+          <i data-lucide="list"></i> 
+          <span>Daftar Pesanan</span>
+          <span id="order-badge-mobile" class="hidden ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">0</span>
+        </a>
+        <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
+          <i data-lucide="user"></i> <span>Profil</span>
+        </a>
+        <form method="POST" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="flex items-center space-x-2 px-3 py-2 w-full text-left rounded hover:bg-blue-600">
+            <i data-lucide="log-out"></i> <span>Logout</span>
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- 📄 Konten -->
+  <main class="flex-grow">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ⚓ Footer -->
+  <footer class="bg-blue-700 text-white py-4 mt-10">
+    <div class="max-w-7xl mx-auto text-center text-sm">
+      &copy; 2025 <strong>FreshWash Laundry</strong> — Semua hak dilindungi.
+    </div>
+  </footer>
+
+  <!-- ⚙️ Script -->
+  <script>
+    const menuBtn = document.getElementById('menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    menuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+    lucide.createIcons();
+  </script>
+
+<script>
+async function markNotificationsRead() {
+  try {
+    const response = await fetch("{% url 'orders:mark_notifications_as_read' %}", {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+
+    const result = await response.json();
+    console.log("✅ Notifikasi dibaca:", result);
+
+    // Sembunyikan badge setelah dibaca
+    const badges = [
+      document.getElementById('order-badge'),
+      document.getElementById('order-badge-mobile')
+    ].filter(Boolean);
+    badges.forEach(badge => badge.classList.add('hidden'));
+  } catch (error) {
+    console.error("❌ Gagal menandai notifikasi dibaca:", error);
+  }
+}
+
+document.querySelectorAll('a[href$="/order/list/"]').forEach(link => {
+  link.addEventListener('click', markNotificationsRead);
+});
+</script>
+
+
+</body>
+</html>
