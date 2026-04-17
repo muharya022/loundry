@@ -15,9 +15,9 @@ class PromoForm(forms.ModelForm):
         fields = [
             'title',
             'description',
-            'discount',
+            'discount_amount',
             'min_transaction',
-            'image',          # ⬅️ tambah ini
+            'image',
             'is_active'
         ]
         widgets = {
@@ -28,14 +28,14 @@ class PromoForm(forms.ModelForm):
                 'class': 'form-control',
                 'rows': 3
             }),
-            'discount': forms.NumberInput(attrs={
+            'discount_amount': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': 1
             }),
             'min_transaction': forms.NumberInput(attrs={
                 'class': 'form-control'
             }),
-            'image': forms.ClearableFileInput(attrs={   # ⬅️ widget upload
+            'image': forms.ClearableFileInput(attrs={
                 'class': 'form-control'
             }),
             'is_active': forms.CheckboxInput(attrs={

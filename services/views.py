@@ -1,18 +1,66 @@
-from .models import Service
-from django.shortcuts import render, get_object_or_404
-from .models import Service
-
-def service_list(request):
-    services = Service.objects.all().order_by('name')
-    return render(request, 'services/list.html', {'services': services})
-
-
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.db.models import ProtectedError
 from .forms import ServiceForm
 from .models import Service
+from django.db.models import Q
+
+def service_list(request):
+    services = Service.objects.all()
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        services = services.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    # Filter by type (Jenis Layanan)
+    filter_type = request.GET.get('type', '')
+    if filter_type:
+        services = services.filter(type=filter_type)
+    
+    # Filter by duration (Durasi)
+    filter_duration = request.GET.get('duration', '')
+    if filter_duration:
+        services = services.filter(duration=filter_duration)
+    
+    # Sort functionality
+    sort_by = request.GET.get('sort', 'name_asc')
+    if sort_by == 'name_asc':
+        services = services.order_by('name')
+    elif sort_by == 'name_desc':
+        services = services.order_by('-name')
+    elif sort_by == 'price_asc':
+        services = services.order_by('price')
+    elif sort_by == 'price_desc':
+        services = services.order_by('-price')
+    elif sort_by == 'newest':
+        services = services.order_by('-created_at')
+    elif sort_by == 'oldest':
+        services = services.order_by('created_at')
+    elif sort_by == 'duration_asc':
+        services = services.order_by('duration')
+    else:
+        services = services.order_by('name')
+    
+    # Pagination
+    paginator = Paginator(services, 9)
+    page_number = request.GET.get('page')
+    services_page = paginator.get_page(page_number)
+    
+    context = {
+        'services': services_page,
+        'search_query': search_query,
+        'filter_type': filter_type,
+        'filter_duration': filter_duration,
+        'sort_by': sort_by,
+    }
+    
+    return render(request, 'services/list.html', context)
 
 def is_admin(user):
     return user.is_staff or user.is_superuser

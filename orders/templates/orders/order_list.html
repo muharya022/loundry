@@ -5,283 +5,834 @@
 {% block content %}
 <style>
   [x-cloak] { display: none !important; }
+  
+  /* Custom scrollbar for mobile */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #3b82f6;
+    border-radius: 20px;
+  }
 </style>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-10 px-4"
-     x-data="{ showDetail: false, selectedOrder: null }">
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-4 sm:py-8 px-3 sm:px-4"
+     x-data="{ 
+       showDetail: false, 
+       selectedOrder: null,
+       activeTab: 'all',
+       orders: [
+         {% for order in orders %}
+         {
+           id: {{ order.id }},
+           service_name: '{{ order.service.name|escapejs }}',
+           service_type: '{{ order.service.type }}',
+           weight: {% if order.weight %}{{ order.weight }}{% else %}null{% endif %},
+           price_total: {{ order.price_total|default:0 }},
+           order_status: '{{ order.order_status }}',
+           payment_status: '{{ order.payment_status }}',
+           payment_method: '{{ order.payment_method }}',
+           created_at: '{{ order.created_at|date:"d M Y" }}',
+           pickup_address: '{{ order.pickup_address|escapejs }}',
+           scheduled_pickup: '{{ order.scheduled_pickup|date:"d M Y, H:i" }}',
+           assigned_courier: '{{ order.assigned_courier.username|default:"Belum ditugaskan"|escapejs }}',
+           payment_url: '{% url "orders:payment" order.id %}',
+           invoice_url: '{% url "orders:order_invoice" order.id %}',
+           cancel_url: '{% url "orders:cancel_order" order.id %}',
+           // Ambil data dari OrderItem
+           order_items: [
+             {% for item in order.order_items.all %}
+             {
+               id: {{ item.id }},
+               service_name: '{% if item.service %}{{ item.service.name|escapejs }}{% elif item.laundry_item %}{{ item.laundry_item.name|escapejs }}{% endif %}',
+               quantity: {% if item.quantity %}{{ item.quantity }}{% else %}0{% endif %},
+               weight: {% if item.weight %}{{ item.weight }}{% else %}null{% endif %},
+               price: {{ item.price }},
+               subtotal: {{ item.subtotal }},
+               type: '{% if item.service %}service{% else %}item{% endif %}'
+             }{% if not forloop.last %},{% endif %}
+             {% endfor %}
+           ],
+           // Helper functions
+           getTotalWeight() {
+             let total = 0;
+             if (this.order_items) {
+               this.order_items.forEach(item => {
+                 if (item.weight && item.weight > 0) {
+                   total += parseFloat(item.weight);
+                 }
+               });
+             }
+             if (this.weight && this.weight > 0) {
+               total += parseFloat(this.weight);
+             }
+             return total;
+           },
+           getTotalItems() {
+             let total = 0;
+             if (this.order_items) {
+               this.order_items.forEach(item => {
+                 if (item.quantity && item.quantity > 0) {
+                   total += parseInt(item.quantity);
+                 }
+               });
+             }
+             return total;
+           },
+           getAllItems() {
+             let items = [];
+             if (this.order_items) {
+               this.order_items.forEach(item => {
+                 if (item.type === 'item' && item.quantity > 0) {
+                   items.push({
+                     name: item.service_name,
+                     quantity: item.quantity,
+                     price: item.price
+                   });
+                 }
+               });
+             }
+             return items;
+           },
+           getWeightItems() {
+             let items = [];
+             if (this.order_items) {
+               this.order_items.forEach(item => {
+                 if (item.type === 'service' && item.weight > 0) {
+                   items.push({
+                     name: item.service_name,
+                     weight: item.weight,
+                     price: item.price
+                   });
+                 }
+               });
+             }
+             return items;
+           },
+           getStatusText(status) {
+             const statusMap = {
+               'pending': 'Menunggu',
+               'picked_up': 'Diambil',
+               'processing': 'Diproses',
+               'ready': 'Siap',
+               'delivered': 'Selesai',
+               'cancelled': 'Dibatalkan',
+               'in_progress': 'Diproses',
+               'pickup': 'Diproses'
+             };
+             return statusMap[status] || status;
+           }
+         }{% if not forloop.last %},{% endif %}
+         {% endfor %}
+       ],
+       getStatusText(status) {
+         const statusMap = {
+           'pending': 'Menunggu',
+           'picked_up': 'Diambil',
+           'processing': 'Diproses',
+           'ready': 'Siap',
+           'delivered': 'Selesai',
+           'cancelled': 'Dibatalkan',
+           'in_progress': 'Diproses',
+           'pickup': 'Diproses'
+         };
+         return statusMap[status] || status;
+       }
+     }">
 
-  <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg p-6 border border-blue-100">
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-      <div>
-        <h1 class="text-3xl font-bold text-blue-700">
-          Halo, {{ request.user.get_full_name|default:request.user.username }} 👋
-        </h1>
-        <p class="text-gray-600">Berikut ringkasan aktivitas laundry kamu</p>
-      </div>
-      <div class="bg-blue-600 text-white rounded-xl px-6 py-3 mt-4 md:mt-0 shadow text-center">
-        <p class="font-semibold text-sm opacity-80">Total Nilai Transaksi</p>
-        <p class="font-bold text-xl">Rp {{ total_paid_value|floatformat:0|intcomma }}</p>
+  <div class="max-w-7xl mx-auto">
+    <!-- Header Section -->
+    <div class="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 mb-6 border border-slate-200">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-xl sm:text-2xl font-bold text-slate-900">
+                Halo, {{ request.user.get_full_name|default:request.user.username }}
+              </h1>
+              <p class="text-slate-600 text-sm sm:text-base">Ringkasan aktivitas laundry Anda</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Total Value Card -->
+        <div class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-4 sm:p-5 shadow-lg">
+          <p class="text-xs sm:text-sm font-medium opacity-90 mb-1">Total Nilai Transaksi</p>
+          <p class="text-lg sm:text-2xl font-bold">Rp {{ total_paid_value|floatformat:0|intcomma }}</p>
+        </div>
       </div>
     </div>
 
-    <!-- Statistik Transaksi -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-      <!-- Selesai -->
-      <div class="flex flex-col items-center bg-green-100 border border-green-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 duration-300">
-        <i data-lucide="check-circle" class="w-8 h-8 text-green-600 mb-2 animate-bounce"></i>
-        <p class="text-3xl font-bold text-green-700 counter" data-target="{{ success_orders }}">0</p>
-        <p class="text-sm text-green-700 font-semibold">Selesai</p>
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div class="stat-card-mobile">
+        <div class="stat-icon-mobile bg-green-100">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="text-center sm:text-left">
+          <div class="stat-value-mobile counter text-green-700" data-target="{{ success_orders }}">0</div>
+          <div class="stat-title-mobile">Selesai</div>
+        </div>
       </div>
 
-      <!-- Menunggu -->
-      <div class="flex flex-col items-center bg-yellow-100 border border-yellow-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 duration-300">
-        <i data-lucide="clock" class="w-8 h-8 text-yellow-600 mb-2 animate-pulse"></i>
-        <p class="text-3xl font-bold text-yellow-700 counter" data-target="{{ pending_orders }}">0</p>
-        <p class="text-sm text-yellow-700 font-semibold">Menunggu</p>
+      <div class="stat-card-mobile">
+        <div class="stat-icon-mobile bg-yellow-100">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="text-center sm:text-left">
+          <div class="stat-value-mobile counter text-yellow-700" data-target="{{ pending_orders }}">0</div>
+          <div class="stat-title-mobile">Menunggu</div>
+        </div>
       </div>
 
-      <!-- Dibatalkan -->
-      <div class="flex flex-col items-center bg-red-100 border border-red-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 duration-300">
-        <i data-lucide="x-circle" class="w-8 h-8 text-red-600 mb-2 animate-pulse"></i>
-        <p class="text-3xl font-bold text-red-700 counter" data-target="{{ cancelled_orders }}">0</p>
-        <p class="text-sm text-red-700 font-semibold">Dibatalkan</p>
+      <div class="stat-card-mobile">
+        <div class="stat-icon-mobile bg-red-100">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div class="text-center sm:text-left">
+          <div class="stat-value-mobile counter text-red-700" data-target="{{ cancelled_orders }}">0</div>
+          <div class="stat-title-mobile">Dibatalkan</div>
+        </div>
       </div>
 
-      <!-- Total -->
-      <div class="flex flex-col items-center bg-blue-100 border border-blue-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition transform hover:-translate-y-1 duration-300">
-        <i data-lucide="package-check" class="w-8 h-8 text-blue-600 mb-2 animate-bounce"></i>
-        <p class="text-3xl font-bold text-blue-700 counter" data-target="{{ total_orders }}">0</p>
-        <p class="text-sm text-blue-700 font-semibold">Total Pesanan</p>
+      <div class="stat-card-mobile">
+        <div class="stat-icon-mobile bg-blue-100">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </div>
+        <div class="text-center sm:text-left">
+          <div class="stat-value-mobile counter text-blue-700" data-target="{{ total_orders }}">0</div>
+          <div class="stat-title-mobile">Total Pesanan</div>
+        </div>
       </div>
     </div>
 
-    <!-- Layanan yang Sering Digunakan -->
+    <!-- Frequent Services -->
     {% if frequent_services %}
-    <div class="mb-8">
-      <h2 class="text-xl font-semibold text-blue-700 mb-4">Layanan yang Sering Digunakan</h2>
-      <div class="flex gap-4 flex-wrap">
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg sm:text-xl font-bold text-slate-900">Layanan Favorit</h2>
+        <span class="text-xs text-slate-500">{{ frequent_services|length }} layanan</span>
+      </div>
+      
+      <div class="flex overflow-x-auto gap-3 pb-4 scrollbar-thin -mx-3 px-3">
         {% for s in frequent_services %}
-        <div class="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition flex flex-col items-center">
-
-          <!-- Gambar layanan -->
+        <div class="flex-shrink-0 w-32 sm:w-40 bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           {% if s.service.image %}
-            <img src="{{ s.service.image.url }}" alt="{{ s.service.name }}" class="w-12 h-12 mb-2 object-contain">
+            <img src="{{ s.service.image.url }}" alt="{{ s.service.name }}" 
+                 class="w-12 h-12 mx-auto mb-3 object-contain">
           {% else %}
-            <img src="{% static 'images/scale.png' %}" alt="{{ s.service.name }}" class="w-12 h-12 mb-2 object-contain">
+            <div class="w-12 h-12 mx-auto mb-3 flex items-center justify-center bg-blue-100 rounded-lg">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+            </div>
           {% endif %}
-
-          <!-- Nama & jumlah -->
-          <p class="font-semibold">{{ s.service.name }}</p>
-          <p class="text-sm text-gray-600">{{ s.count }}x digunakan</p>
+          <h3 class="font-semibold text-slate-900 text-sm text-center line-clamp-1">{{ s.service.name }}</h3>
+          <p class="text-xs text-slate-600 text-center mt-1">{{ s.count }}x digunakan</p>
         </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
-    <!-- 🔹 Tabel Pesanan -->
-    {% if orders %}
-    <div class="overflow-x-auto">
-      <table class="w-full border-collapse text-sm">
-        <thead>
-          <tr class="bg-blue-600 text-white text-left">
-            <th class="py-3 px-4 rounded-tl-lg">No</th>
-            <th class="py-3 px-4">Layanan</th>
-            <th class="py-3 px-4">Berat/Jumlah</th>
-            <th class="py-3 px-4">Total</th>
-            <th class="py-3 px-4">Payment</th>
-            <th class="py-3 px-4">Status</th>
-            <th class="py-3 px-4 rounded-tr-lg text-center">Aksi</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          {% for order in orders %}
-          <tr class="hover:bg-blue-50 transition">
-            <td class="py-3 px-4">{{ forloop.counter }}</td>
-            <td class="py-3 px-4 font-medium">{{ order.service.name }}</td>
-            <td class="py-3 px-4">
-              {% if order.weight %}
-                {{ order.weight }} kg
-              {% elif order.items %}
-                {{ order.items|length }} pcs
-              {% else %}
-                -
-              {% endif %}
-            </td>
-            <td class="py-3 px-4">Rp {{ order.price_total|floatformat:0|intcomma }}</td>
+    <!-- Order Tabs -->
+    <div class="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 mb-6 border border-slate-200">
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg sm:text-xl font-bold text-slate-900">Riwayat Pesanan</h2>
+          <span class="text-sm text-slate-600">{{ orders.paginator.count }} pesanan</span>
+        </div>
+        
+        <!-- Filter Tabs -->
+        <div class="flex overflow-x-auto gap-2 pb-2 scrollbar-thin">
+          <button @click="activeTab = 'all'" :class="activeTab === 'all' ? 'filter-tab-active' : 'filter-tab'">Semua</button>
+          <button @click="activeTab = 'pending'" :class="activeTab === 'pending' ? 'filter-tab-active' : 'filter-tab'">Menunggu</button>
+          <button @click="activeTab = 'processing'" :class="activeTab === 'processing' ? 'filter-tab-active' : 'filter-tab'">Diproses</button>
+          <button @click="activeTab = 'delivered'" :class="activeTab === 'delivered' ? 'filter-tab-active' : 'filter-tab'">Selesai</button>
+        </div>
+      </div>
 
-            <!-- Status Pembayaran -->
-            <td class="py-3 px-4">
-              {% if order.payment_status in 'paid settlement' %}
-                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Dibayar</span>
-              {% else %}
-                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Belum Bayar</span>
-              {% endif %}
-            </td>
-
-            <!-- Status Pengantaran -->
-            <td class="py-3 px-4">
-              {% if order.order_status == 'pending' %}
-                <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Menunggu</span>
-              {% elif order.order_status == 'picked_up' %}
-                <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">Diambil</span>
-              {% elif order.order_status == 'processing' %}
-                <span class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-semibold">Diproses</span>
-              {% elif order.order_status == 'ready' %}
-                <span class="bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-semibold">Siap Diantar</span>
-              {% elif order.order_status == 'delivered' %}
-                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Selesai</span>
-              {% elif order.order_status == 'cancelled' %}
-                <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Dibatalkan</span>
-              {% endif %}
-            </td>
-
-            <!-- Tombol Aksi -->
-            <td class="py-3 px-4 text-center space-x-1 flex justify-center">
-              <!-- Tombol Detail -->
-              <button
-                @click="
-                  showDetail = true;
-                  selectedOrder = {
-                    customer: '{{ order.customer.username }}',
-                    service: '{{ order.service.name }}',
-                    weight: '{{ order.weight|default_if_none:"" }}',
-                    items: {{ order.items|default:'[]'|safe }},
-                    price_total: {{ order.price_total|default:0 }},
-                    pickup_address: '{{ order.pickup_address|escapejs }}',
-                    scheduled_pickup: '{{ order.scheduled_pickup|date:"d M Y, H:i" }}',
-                    assigned_courier: '{{ order.assigned_courier.username|default:"Belum ditugaskan" }}',
-                    order_status: '{{ order.get_order_status_display }}',
-                    payment_status: '{{ order.get_payment_status_display }}'
-                  };
-                "
-                class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition"
-                title="Lihat Detail"
-              >
-                <i data-lucide="eye" class="w-4 h-4"></i>
-              </button>
-
-              {% if order.payment_method == 'qris' and order.payment_status == 'unpaid' and order.order_status == 'pending' %}
-              <a href="{% url 'orders:payment' order.id %}"
-                class="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition"
-                title="Bayar Sekarang">
-                <i data-lucide="credit-card" class="w-4 h-4"></i>
-              </a>
-              {% endif %}
-
-              {% if order.payment_status == "paid" or order.payment_status == "settlement" %}
-              <a href="{% url 'orders:order_invoice' order.id %}" 
-                class="bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-full transition"
-                title="Lihat Nota">
-                <i data-lucide="file-text" class="w-4 h-4"></i>
-              </a>
-              {% endif %}
-
-              {% if order.order_status == 'pending' and order.payment_status == 'unpaid' %}
-              <form action="{% url 'orders:cancel_order' order.id %}" method="post" class="inline">
-                {% csrf_token %}
-                <button type="submit"
-                  onclick="return confirm('Yakin ingin membatalkan pesanan ini?')"
-                  class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition"
-                  title="Batalkan Pesanan">
-                  <i data-lucide="x-circle" class="w-4 h-4"></i>
-                </button>
-              </form>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-      <p class="text-center text-gray-500 mt-10">Belum ada pesanan yang dibuat.</p>
-    {% endif %}
-  </div>
-
-  <!-- 🔹 Modal Detail Pesanan -->
-  <div 
-    x-show="showDetail"
-    x-cloak
-    x-transition:enter="transition ease-out duration-300"
-    x-transition:enter-start="opacity-0 scale-95"
-    x-transition:enter-end="opacity-100 scale-100"
-    x-transition:leave="transition ease-in duration-200"
-    x-transition:leave-start="opacity-100 scale-100"
-    x-transition:leave-end="opacity-0 scale-95"
-    class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
-  >
-    <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-lg relative">
-      <h2 class="text-2xl font-semibold text-blue-700 mb-4">Detail Pesanan</h2>
-
-      <div x-show="selectedOrder" class="space-y-2 text-sm">
-        <p><span class="font-semibold">Customer:</span> <span x-text="selectedOrder.customer"></span></p>
-        <p><span class="font-semibold">Layanan:</span> <span x-text="selectedOrder.service"></span></p>
-        <p><span class="font-semibold">Berat / Jumlah:</span>
-          <template x-if="selectedOrder.weight && selectedOrder.weight !== '0'">
-            <span x-text="selectedOrder.weight + ' kg'"></span>
-          </template>
-          <template x-if="!selectedOrder.weight || selectedOrder.weight === '0'">
-            <span x-text="selectedOrder.items.length + ' pcs'"></span>
-          </template>
-        </p>
-        <template x-if="(!selectedOrder.weight || selectedOrder.weight === '0') && selectedOrder.items.length > 0">
-          <div class="pl-4">
-            <template x-for="item in selectedOrder.items" :key="item.name">
-              <p x-text="item.name + ' x' + item.quantity + ' - Rp' + parseFloat(item.price).toLocaleString()"></p>
+      <!-- Filtered Orders -->
+      <div x-data="{
+        get filteredOrders() {
+          if (this.activeTab === 'all') return this.orders;
+          if (this.activeTab === 'pending') return this.orders.filter(o => o.order_status === 'pending');
+          if (this.activeTab === 'processing') {
+            const statuses = ['picked_up', 'processing', 'ready', 'in_progress', 'pickup'];
+            return this.orders.filter(o => statuses.includes(o.order_status));
+          }
+          if (this.activeTab === 'delivered') return this.orders.filter(o => o.order_status === 'delivered');
+          return this.orders;
+        }
+      }" x-init>
+        
+        <!-- Mobile Card View -->
+        <div class="block sm:hidden">
+          <div x-show="filteredOrders.length > 0" class="space-y-4">
+            <template x-for="order in filteredOrders" :key="order.id">
+              <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 hover:border-blue-300 transition-colors">
+                
+                <div class="flex justify-between items-start mb-3">
+                  <div>
+                    <div class="font-semibold text-slate-900" x-text="order.service_name"></div>
+                    <div class="text-xs text-slate-500 mt-1">#<span x-text="order.id"></span> • <span x-text="order.created_at"></span></div>
+                  </div>
+                  <span class="status-badge-mobile" :class="order.order_status" x-text="order.getStatusText(order.order_status)"></span>
+                </div>
+                
+                <!-- Order Details -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                  <div class="text-center bg-white p-3 rounded-lg">
+                    <div class="text-xs text-slate-500 mb-1">Berat/Jumlah</div>
+                    <div class="font-semibold text-slate-900">
+                      <template x-if="order.getTotalWeight() > 0">
+                        <span x-text="order.getTotalWeight().toFixed(1) + ' kg'"></span>
+                      </template>
+                      <template x-if="order.getTotalWeight() === 0 && order.getTotalItems() > 0">
+                        <span x-text="order.getTotalItems() + ' pcs'"></span>
+                      </template>
+                      <template x-if="order.getTotalWeight() === 0 && order.getTotalItems() === 0">
+                        <span>-</span>
+                      </template>
+                    </div>
+                  </div>
+                  
+                  <div class="text-center bg-white p-3 rounded-lg">
+                    <div class="text-xs text-slate-500 mb-1">Total</div>
+                    <div class="font-semibold text-slate-900">Rp <span x-text="parseFloat(order.price_total).toLocaleString()"></span></div>
+                  </div>
+                </div>
+                
+                <div class="mb-4">
+                  <span class="payment-badge-mobile" :class="['paid', 'settlement'].includes(order.payment_status) ? 'paid' : 'unpaid'" 
+                        x-text="['paid', 'settlement'].includes(order.payment_status) ? 'Dibayar' : 'Belum Bayar'"></span>
+                </div>
+                
+                <div class="flex gap-2">
+                  <button @click="showDetail = true; selectedOrder = order"
+                          class="action-btn-mobile bg-blue-600 hover:bg-blue-700 text-white flex-1 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Detail
+                  </button>
+                  
+                  <a x-show="order.payment_method === 'qris' && order.payment_status === 'unpaid' && order.order_status === 'pending'"
+                     :href="order.payment_url" 
+                     class="action-btn-mobile bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    Bayar
+                  </a>
+                  
+                  <a x-show="order.payment_status === 'paid' || order.payment_status === 'settlement'"
+                     :href="order.invoice_url" 
+                     class="action-btn-mobile bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Invoice
+                  </a>
+                  
+                  <form x-show="order.order_status === 'pending' && order.payment_status === 'unpaid'"
+                        :action="order.cancel_url" method="post" class="inline">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <button type="submit" onclick="return confirm('Yakin ingin membatalkan pesanan ini?')"
+                            class="action-btn-mobile bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                      Batal
+                    </button>
+                  </form>
+                </div>
+              </div>
             </template>
           </div>
-        </template>
 
-        <p><span class="font-semibold">Harga Total:</span> Rp <span x-text="parseFloat(selectedOrder.price_total).toLocaleString()"></span></p>
-        <p><span class="font-semibold">Alamat Pickup:</span> <span x-text="selectedOrder.pickup_address"></span></p>
-        <p><span class="font-semibold">Jadwal Pickup:</span> <span x-text="selectedOrder.scheduled_pickup"></span></p>
-        <p><span class="font-semibold">Kurir:</span> <span x-text="selectedOrder.assigned_courier"></span></p>
-        <p><span class="font-semibold">Status Pengantaran:</span> <span x-text="selectedOrder.order_status"></span></p>
-        <p><span class="font-semibold">Status Pembayaran:</span> <span x-text="selectedOrder.payment_status"></span></p>
+          <div x-show="filteredOrders.length === 0" class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <p class="text-slate-900 font-medium mb-2" x-text="'Tidak ada pesanan ' + (activeTab !== 'all' ? 'dengan status ini' : '')"></p>
+            <p class="text-slate-600 text-sm">Coba filter lainnya</p>
+          </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden sm:block overflow-x-auto">
+          <div x-show="filteredOrders.length > 0">
+            <table class="w-full">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="table-th">Layanan</th>
+                  <th class="table-th">Berat/Jumlah</th>
+                  <th class="table-th">Total</th>
+                  <th class="table-th">Pembayaran</th>
+                  <th class="table-th">Status</th>
+                  <th class="table-th text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <template x-for="order in filteredOrders" :key="order.id">
+                  <tr class="hover:bg-blue-50 transition-colors">
+                    <td class="table-td">
+                      <div class="font-medium text-slate-900" x-text="order.service_name"></div>
+                      <div class="text-xs text-slate-500">#<span x-text="order.id"></span> • <span x-text="order.created_at"></span></div>
+                    </td>
+                    <td class="table-td">
+                      <div class="font-medium text-slate-900">
+                        <template x-if="order.getTotalWeight() > 0">
+                          <span x-text="order.getTotalWeight().toFixed(1) + ' kg'"></span>
+                        </template>
+                        <template x-if="order.getTotalWeight() === 0 && order.getTotalItems() > 0">
+                          <span x-text="order.getTotalItems() + ' pcs'"></span>
+                        </template>
+                        <template x-if="order.getTotalWeight() === 0 && order.getTotalItems() === 0">
+                          <span>-</span>
+                        </template>
+                      </div>
+                    </td>
+                    <td class="table-td">
+                      <div class="font-bold text-slate-900">Rp <span x-text="parseFloat(order.price_total).toLocaleString()"></span></div>
+                    </td>
+                    <td class="table-td">
+                      <span class="payment-badge" :class="['paid', 'settlement'].includes(order.payment_status) ? 'paid' : 'unpaid'"
+                            x-text="['paid', 'settlement'].includes(order.payment_status) ? 'Dibayar' : 'Belum Bayar'"></span>
+                    </td>
+                    <td class="table-td">
+                      <span class="status-badge" :class="order.order_status" x-text="order.getStatusText(order.order_status)"></span>
+                    </td>
+                    <td class="table-td">
+                      <div class="flex justify-center gap-2">
+                        <button @click="showDetail = true; selectedOrder = order"
+                                class="action-btn bg-blue-600 hover:bg-blue-700 text-white" title="Detail">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                        </button>
+                        
+                        <a x-show="order.payment_method === 'qris' && order.payment_status === 'unpaid' && order.order_status === 'pending'"
+                           :href="order.payment_url" class="action-btn bg-green-600 hover:bg-green-700 text-white" title="Bayar">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                          </svg>
+                        </a>
+                        
+                        <a x-show="order.payment_status === 'paid' || order.payment_status === 'settlement'"
+                           :href="order.invoice_url" class="action-btn bg-emerald-600 hover:bg-emerald-700 text-white" title="Invoice">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                          </svg>
+                        </a>
+                        
+                        <form x-show="order.order_status === 'pending' && order.payment_status === 'unpaid'"
+                              :action="order.cancel_url" method="post" class="inline">
+                          <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                          <button type="submit" onclick="return confirm('Yakin ingin membatalkan pesanan ini?')"
+                                  class="action-btn bg-red-600 hover:bg-red-700 text-white" title="Batalkan">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <div x-show="filteredOrders.length === 0" class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <p class="text-slate-900 font-medium mb-2" x-text="'Tidak ada pesanan ' + (activeTab !== 'all' ? 'dengan status ini' : '')"></p>
+            <p class="text-slate-600 text-sm">Coba filter lainnya</p>
+          </div>
+        </div>
       </div>
 
-      <button @click="showDetail = false"
-              class="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-lg">&times;</button>
+      <!-- Pagination -->
+      {% if orders.paginator.num_pages > 1 %}
+      <div class="mt-8">
+        <div class="block sm:hidden">
+          <div class="flex items-center justify-between">
+            {% if orders.has_previous %}
+            <a href="?page={{ orders.previous_page_number }}" class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </a>
+            {% endif %}
+            <div class="text-center">
+              <div class="text-sm text-slate-900 font-medium">Halaman {{ orders.number }}</div>
+              <div class="text-xs text-slate-500">dari {{ orders.paginator.num_pages }}</div>
+            </div>
+            {% if orders.has_next %}
+            <a href="?page={{ orders.next_page_number }}" class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="hidden sm:flex items-center justify-center gap-2">
+          {% if orders.has_previous %}
+            <a href="?page=1" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">Pertama</a>
+            <a href="?page={{ orders.previous_page_number }}" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">« Sebelumnya</a>
+          {% endif %}
+          <div class="flex gap-1">
+            {% for page_num in orders.paginator.page_range %}
+              {% if orders.number == page_num %}
+                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm">{{ page_num }}</span>
+              {% elif page_num > orders.number|add:'-3' and page_num < orders.number|add:'3' %}
+                <a href="?page={{ page_num }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm">{{ page_num }}</a>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if orders.has_next %}
+            <a href="?page={{ orders.next_page_number }}" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">Selanjutnya »</a>
+            <a href="?page={{ orders.paginator.num_pages }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">Terakhir</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 
-      <div class="text-right mt-6">
-        <button @click="showDetail = false"
-                class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">Tutup</button>
+  <!-- Modal Detail -->
+  <div x-show="showDetail" x-cloak
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95"
+       class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
+       @click.self="showDetail = false">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="sticky top-0 bg-white p-6 border-b border-slate-200">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold text-slate-900">Detail Pesanan</h2>
+          <button @click="showDetail = false" class="text-slate-400 hover:text-slate-600 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <div class="p-6 space-y-4" x-show="selectedOrder">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-50 p-4 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Layanan</div>
+            <div class="font-semibold text-slate-900" x-text="selectedOrder.service_name"></div>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Total</div>
+            <div class="font-semibold text-slate-900">Rp <span x-text="parseFloat(selectedOrder.price_total).toLocaleString()"></span></div>
+          </div>
+        </div>
+        
+        <div class="space-y-3">
+          <div>
+            <div class="text-xs text-slate-500 mb-1">Berat / Jumlah</div>
+            <div class="font-medium text-slate-900">
+              <template x-if="selectedOrder.getTotalWeight() > 0">
+                <span x-text="selectedOrder.getTotalWeight().toFixed(1) + ' kg'"></span>
+              </template>
+              <template x-if="selectedOrder.getTotalWeight() === 0 && selectedOrder.getTotalItems() > 0">
+                <span x-text="selectedOrder.getTotalItems() + ' pcs'"></span>
+              </template>
+              <template x-if="selectedOrder.getTotalWeight() === 0 && selectedOrder.getTotalItems() === 0">
+                <span>-</span>
+              </template>
+            </div>
+          </div>
+          
+          <div>
+            <div class="text-xs text-slate-500 mb-1">Alamat Pickup</div>
+            <div class="font-medium text-slate-900" x-text="selectedOrder.pickup_address"></div>
+          </div>
+          
+          <div>
+            <div class="text-xs text-slate-500 mb-1">Jadwal Pickup</div>
+            <div class="font-medium text-slate-900" x-text="selectedOrder.scheduled_pickup"></div>
+          </div>
+          
+          <div>
+            <div class="text-xs text-slate-500 mb-1">Kurir</div>
+            <div class="font-medium text-slate-900" x-text="selectedOrder.assigned_courier"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="text-xs text-slate-500 mb-1">Status Pengantaran</div>
+              <div class="font-medium text-slate-900" x-text="selectedOrder.getStatusText(selectedOrder.order_status)"></div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-500 mb-1">Status Pembayaran</div>
+              <div class="font-medium text-slate-900" x-text="['paid', 'settlement'].includes(selectedOrder.payment_status) ? 'Dibayar' : 'Belum Bayar'"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Items List -->
+        <div x-show="selectedOrder.getTotalItems() > 0">
+          <div class="text-sm font-semibold text-slate-900 mb-2">Daftar Item</div>
+          <div class="space-y-2">
+            <template x-for="item in selectedOrder.getAllItems()" :key="item.name">
+              <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg">
+                <div>
+                  <div class="font-medium text-slate-900" x-text="item.name"></div>
+                  <div class="text-sm text-slate-500" x-text="'Jumlah: ' + item.quantity"></div>
+                </div>
+                <div class="text-right">
+                  <div class="font-semibold text-slate-900" x-text="'Rp ' + parseFloat(item.price).toLocaleString()"></div>
+                  <div class="text-sm text-slate-500" x-text="'Total: Rp ' + parseFloat(item.price * item.quantity).toLocaleString()"></div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+        
+        <!-- Weight Info -->
+        <div x-show="selectedOrder.getTotalWeight() > 0">
+          <div class="text-sm font-semibold text-slate-900 mb-2">Detail Berat</div>
+          <div class="bg-slate-50 p-3 rounded-lg">
+            <div class="flex justify-between">
+              <span class="text-slate-600">Total Berat:</span>
+              <span class="font-semibold" x-text="selectedOrder.getTotalWeight().toFixed(1) + ' kg'"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
-</div> <!-- tutup x-data -->
-<!-- Alpine.js -->
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    lucide.createIcons();
-  });
-</script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    lucide.createIcons();
+</div>
 
-    // Efek angka naik (count-up)
-    const counters = document.querySelectorAll('.counter');
-    counters.forEach(counter => {
-      const target = +counter.getAttribute('data-target');
-      let count = 0;
-      const increment = target / 50; // durasi animasi
-      const updateCounter = () => {
-        if (count < target) {
-          count += increment;
-          counter.textContent = Math.ceil(count);
-          requestAnimationFrame(updateCounter);
-        } else {
-          counter.textContent = target;
+<!-- Styles -->
+<style>
+.stat-card-mobile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+@media (min-width: 640px) {
+  .stat-card-mobile {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1.25rem;
+  }
+}
+.stat-icon-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+}
+.stat-title-mobile {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+.stat-value-mobile {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+@media (min-width: 640px) {
+  .stat-value-mobile {
+    font-size: 1.5rem;
+  }
+}
+.filter-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.filter-tab-active {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3b82f6;
+  background: #eff6ff;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+  border: 2px solid #3b82f6;
+  cursor: pointer;
+}
+.status-badge-mobile {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  display: inline-block;
+}
+.status-badge-mobile.pending { background: #fef3c7; color: #92400e; }
+.status-badge-mobile.picked_up,
+.status-badge-mobile.processing,
+.status-badge-mobile.ready,
+.status-badge-mobile.in_progress,
+.status-badge-mobile.pickup { background: #e0e7ff; color: #3730a3; }
+.status-badge-mobile.delivered { background: #d1fae5; color: #065f46; }
+.status-badge-mobile.cancelled { background: #fee2e2; color: #991b1b; }
+.payment-badge-mobile {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+.payment-badge-mobile.paid { background: #d1fae5; color: #065f46; }
+.payment-badge-mobile.unpaid { background: #fef3c7; color: #92400e; }
+.action-btn-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  min-height: 44px;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+}
+.table-th {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f8fafc;
+}
+.table-td {
+  padding: 1rem;
+  font-size: 0.875rem;
+  color: #334155;
+}
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+.status-badge {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+.status-badge.pending { background: #fef3c7; color: #92400e; }
+.status-badge.picked_up,
+.status-badge.processing,
+.status-badge.ready,
+.status-badge.in_progress,
+.status-badge.pickup { background: #e0e7ff; color: #3730a3; }
+.status-badge.delivered { background: #d1fae5; color: #065f46; }
+.status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+.payment-badge {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+.payment-badge.paid { background: #d1fae5; color: #065f46; }
+.payment-badge.unpaid { background: #fef3c7; color: #92400e; }
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const counters = document.querySelectorAll('.counter');
+  counters.forEach(counter => {
+    const target = parseInt(counter.getAttribute('data-target'));
+    let count = 0;
+    const increment = target / 30;
+    const updateCounter = () => {
+      if (count < target) {
+        count += increment;
+        counter.textContent = Math.ceil(count);
+        setTimeout(updateCounter, 20);
+      } else {
+        counter.textContent = target;
+      }
+    };
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          updateCounter();
+          observer.unobserve(entry.target);
         }
-      };
-      updateCounter();
-    });
+      });
+    }, { threshold: 0.5 });
+    observer.observe(counter);
   });
+});
 </script>
 
 {% endblock %}

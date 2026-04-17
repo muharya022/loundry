@@ -30,6 +30,7 @@ urlpatterns = [
     path('promo/assign/', views.assign_promo, name='promo_assign'),
     path('promo/add/', views.add_promo, name='add_promo'),
     path('promo/edit/<int:promo_id>/', views.edit_promo, name='promo_edit'),
-    path('promo/delete/<int:promo_id>/', views.delete_promo, name='promo_delete'),
+    path('promo-delete/<int:promo_id>/', views.delete_promo, name='promo_delete'),
+    path('user-promo-delete/<int:pk>/', views.user_promo_delete, name='user_promo_delete'),
 
 ]

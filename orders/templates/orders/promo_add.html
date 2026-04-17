@@ -1,82 +1,211 @@
 {% extends "base.html" %}
 {% load widget_tweaks %}
+{% load humanize %}
+
 {% block content %}
+<style>
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  .modern-input {
+    transition: all 0.2s ease;
+  }
+  
+  .modern-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  /* File input styling */
+  .file-input {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+  }
+  
+  .file-input input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+</style>
 
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8 px-4">
-  <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-8 border border-blue-100">
-
-    <!-- Header -->
-    <h2 class="text-xl sm:text-2xl font-bold text-blue-700 mb-6 text-center sm:text-left">
-      Tambah Promo
-    </h2>
-
-    <form method="post" enctype="multipart/form-data" class="space-y-4">
-      {% csrf_token %}
-
-      <!-- Judul -->
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">
-          Judul Promo
-        </label>
-        {{ form.title|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" }}
-      </div>
-
-      <!-- Deskripsi -->
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">
-          Deskripsi
-        </label>
-        {{ form.description|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" }}
-      </div>
-
-      <!-- Diskon & Minimal Transaksi -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">
-            Diskon (%)
-          </label>
-          {{ form.discount|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" }}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+  <div class="max-w-2xl mx-auto fade-in">
+    
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
+      
+      <!-- Header with gradient -->
+      <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <i class="fas fa-plus-circle text-white text-lg"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-white">Tambah Promo</h2>
+            <p class="text-blue-100 text-sm mt-0.5">Buat promo baru untuk pelanggan</p>
+          </div>
         </div>
-
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1">
-            Minimal Transaksi
-          </label>
-          {{ form.min_transaction|add_class:"w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" }}
-        </div>
       </div>
+      
+      <!-- Form Body -->
+      <div class="p-6 sm:p-8">
+        <form method="post" enctype="multipart/form-data" class="space-y-5">
+          {% csrf_token %}
 
-      <!-- Upload Gambar -->
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1">
-          Gambar Promo
-        </label>
-        {{ form.image|add_class:"w-full text-sm file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700" }}
+          <!-- Judul -->
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-gray-700">
+              <i class="fas fa-heading text-blue-500 w-5 mr-1"></i>
+              Judul Promo
+              <span class="text-red-500 text-sm">*</span>
+            </label>
+            {{ form.title|add_class:"w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition modern-input" }}
+            <p class="text-xs text-gray-500">
+              <i class="fas fa-info-circle text-gray-400 text-xs mr-1"></i>
+              Contoh: Promo Lebaran, Diskon Akhir Tahun, dll
+            </p>
+          </div>
+
+          <!-- Deskripsi -->
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-gray-700">
+              <i class="fas fa-align-left text-blue-500 w-5 mr-1"></i>
+              Deskripsi
+            </label>
+            {{ form.description|add_class:"w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none modern-input" }}
+          </div>
+
+          <!-- Diskon & Minimal Transaksi -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="block text-sm font-semibold text-gray-700">
+                <i class="fas fa-percent text-blue-500 w-5 mr-1"></i>
+                Diskon (%)
+                <span class="text-red-500 text-sm">*</span>
+              </label>
+              {{ form.discount|add_class:"w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition modern-input" }}
+              <p class="text-xs text-gray-500">
+                <i class="fas fa-info-circle text-gray-400 text-xs mr-1"></i>
+                Masukkan angka diskon dalam persen (1-100)
+              </p>
+            </div>
+
+            <div class="space-y-1">
+              <label class="block text-sm font-semibold text-gray-700">
+                <i class="fas fa-money-bill-wave text-blue-500 w-5 mr-1"></i>
+                Minimal Transaksi (Rp)
+                <span class="text-red-500 text-sm">*</span>
+              </label>
+              {{ form.min_transaction|add_class:"w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition modern-input" }}
+              <p class="text-xs text-gray-500">
+                <i class="fas fa-info-circle text-gray-400 text-xs mr-1"></i>
+                Minimal belanja untuk mendapatkan promo
+              </p>
+            </div>
+          </div>
+
+          <!-- Upload Gambar -->
+          <div class="space-y-1">
+            <label class="block text-sm font-semibold text-gray-700">
+              <i class="fas fa-image text-blue-500 w-5 mr-1"></i>
+              Gambar Promo
+            </label>
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition bg-gray-50">
+              <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+              <p class="text-gray-600 text-sm">Klik atau drag & drop untuk upload gambar</p>
+              <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, max 2MB</p>
+              {{ form.image|add_class:"hidden" }}
+              <button type="button" onclick="document.getElementById('id_image').click()" 
+                      class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">
+                <i class="fas fa-upload mr-1"></i> Pilih Gambar
+              </button>
+            </div>
+            <div id="imagePreview" class="hidden mt-3">
+              <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                <img id="previewImg" src="#" alt="Preview" class="w-16 h-16 object-cover rounded-lg border">
+                <div>
+                  <p class="text-sm font-medium text-gray-700">Preview Gambar</p>
+                  <p class="text-xs text-gray-500" id="fileName"></p>
+                </div>
+                <button type="button" onclick="clearImage()" class="ml-auto text-red-500 hover:text-red-700">
+                  <i class="fas fa-times-circle"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="flex items-center gap-3 pt-2">
+            {{ form.is_active|add_class:"h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" }}
+            <label class="text-sm font-semibold text-gray-700">
+              <i class="fas fa-toggle-on text-blue-500 mr-1"></i>
+              Aktifkan Promo
+            </label>
+          </div>
+
+          <!-- Tombol -->
+          <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+            <a href="{% url 'orders:promo_assign' %}"
+               class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-medium text-sm">
+              <i class="fas fa-arrow-left"></i>
+              Kembali
+            </a>
+
+            <button type="submit"
+                    class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow-md font-medium text-sm">
+              <i class="fas fa-save"></i>
+              Simpan Promo
+            </button>
+          </div>
+        </form>
       </div>
-
-      <!-- Status -->
-      <div class="flex items-center gap-2 mt-2">
-        {{ form.is_active|add_class:"h-4 w-4 text-blue-600" }}
-        <label class="text-sm font-semibold text-gray-700">
-          Aktifkan Promo
-        </label>
-      </div>
-
-      <!-- Tombol -->
-      <div class="flex flex-col sm:flex-row gap-3 pt-4">
-        <button type="submit"
-                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl shadow transition text-sm">
-          Simpan Promo
-        </button>
-
-        <a href="{% url 'orders:promo_assign' %}"
-           class="w-full sm:w-auto text-center bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-xl shadow transition text-sm">
-          Kembali
-        </a>
-      </div>
-    </form>
-
+      
+    </div>
+    
   </div>
 </div>
+
+<!-- JavaScript untuk preview gambar -->
+<script>
+  // Preview gambar sebelum upload
+  document.getElementById('id_image')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const preview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const fileName = document.getElementById('fileName');
+        
+        previewImg.src = event.target.result;
+        fileName.textContent = file.name;
+        preview.classList.remove('hidden');
+      }
+      reader.readAsDataURL(file);
+    }
+  });
+  
+  function clearImage() {
+    const fileInput = document.getElementById('id_image');
+    const preview = document.getElementById('imagePreview');
+    fileInput.value = '';
+    preview.classList.add('hidden');
+  }
+  
+  // Auto-focus pada input pertama
+  document.querySelector('input:not([type="hidden"]), select')?.focus();
+</script>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 {% endblock %}

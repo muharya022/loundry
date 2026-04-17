@@ -26,7 +26,7 @@ class Order(models.Model):
     PAYMENT_STATUS_CHOICES = [
         ('unpaid', 'Belum Dibayar'),
         ('paid', 'Dibayar'),
-        ('settlement', 'Selesai'),
+        # ('settlement', 'Selesai'),
     ]
 
     # Metode pembayaran
@@ -41,18 +41,18 @@ class Order(models.Model):
         related_name='orders'
     )
 
-    service = models.ForeignKey(Service, on_delete=models.PROTECT)
+    service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, blank=True)
     notified_customer = models.BooleanField(default=False)
 
     # Tambahan untuk layanan per item
-    item_type = models.ForeignKey(LaundryItem, on_delete=models.SET_NULL, null=True, blank=True)
-    quantity = models.IntegerField(default=0)
+    # item_type = models.ForeignKey(LaundryItem, on_delete=models.SET_NULL, null=True, blank=True)
+    # quantity = models.IntegerField(default=0)
 
     # Untuk layanan per kilo
     weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
 
     # Detail item (JSON)
-    items = models.JSONField(blank=True, null=True)
+    # items = models.JSONField(blank=True, null=True)
 
     price_total = models.DecimalField(max_digits=12, decimal_places=2)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -79,6 +79,7 @@ class Order(models.Model):
         blank=True,
         related_name='assigned_orders'
     )
+    cart_data = models.JSONField(null=True, blank=True, default=dict)
 
     def save(self, *args, **kwargs):
         """Otomatis set notified_customer=False jika status berubah"""
@@ -103,11 +104,22 @@ class Order(models.Model):
             return self.service.price * self.weight
         return 0
 
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_items")
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, null=True, blank=True)
+    laundry_item = models.ForeignKey(LaundryItem, on_delete=models.CASCADE, null=True, blank=True)
+    
+    quantity = models.IntegerField(null=True, blank=True)
+    weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+
 
 class Promo(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
-    discount = models.PositiveIntegerField()  # %
+    discount_amount = models.PositiveIntegerField()  # 🔥 NOMINAL
     min_transaction = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to='promo/', blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -115,6 +127,7 @@ class Promo(models.Model):
 
     def __str__(self):
         return self.title
+
 
 from django.conf import settings
 from django.db import models

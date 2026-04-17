@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.contrib.auth import login, get_user_model
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -198,6 +198,7 @@ def admin_dashboard(request):
         return redirect('accounts:home')
 
     # 🔹 Data utama
+    active_tab = request.GET.get('tab', 'dashboard')
     total_users = User.objects.count()
     total_orders = Order.objects.count()
     total_services = Service.objects.count()
@@ -233,13 +234,14 @@ def admin_dashboard(request):
     orders_page_number = request.GET.get("orders_page", 1)
     transactions_page_number = request.GET.get("transactions_page", 1)
 
-    orders_paginator = Paginator(recent_orders_list, 10)  # 10 item per halaman
-    transactions_paginator = Paginator(recent_transactions_list, 10)
+    orders_paginator = Paginator(recent_orders_list, 5)  # 5 item per halaman
+    transactions_paginator = Paginator(recent_transactions_list, 5)
 
     recent_orders = orders_paginator.get_page(orders_page_number)
     recent_transactions = transactions_paginator.get_page(transactions_page_number)
 
     context = {
+        'active_tab': active_tab,
         "total_users": total_users,
         "total_orders": total_orders,
         "total_services": total_services,
@@ -255,6 +257,8 @@ def admin_dashboard(request):
         "orders_paginator": orders_paginator,
         "transactions_paginator": transactions_paginator,
     }
+    if active_tab == 'orders':
+        context['active_tab'] = 'orders'
 
     return render(request, "accounts/admin_dashboard.html", context)
 
@@ -291,11 +295,10 @@ def add_courier(request):
 
     return render(request, 'accounts/add_courier.html')
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render
 from django.contrib.auth import get_user_model
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.forms import UserCreationForm
+from django.core.paginator import Paginator
 
 User = get_user_model()
 
@@ -306,20 +309,25 @@ def admin_required(user):
 @user_passes_test(admin_required)
 def manage_users(request):
     users = User.objects.all()
-    users_data = []
-    for u in users:
-        users_data.append({
-            "id": u.id,
-            "username": u.username,
-            "email": u.email,
-            "first_name": u.first_name,
-            "last_name": u.last_name,
-            "is_staff": u.is_staff,
-            "is_courier": getattr(u, "is_courier", False),
-            "date_joined": u.date_joined.strftime("%Y-%m-%d %H:%M:%S") if u.date_joined else "-",
-            "last_login": u.last_login.strftime("%Y-%m-%d %H:%M:%S") if u.last_login else "-",
-        })
-    return render(request, 'accounts/manage_users.html', {'users_data': users_data})
+
+    # Pisahkan Karyawan (Admin & Kurir) dan Member
+    staff_users_list = [u for u in users if u.is_staff or getattr(u, "is_courier", False)]
+    member_users_list = [u for u in users if not u.is_staff and not getattr(u, "is_courier", False)]
+
+    # Pagination: 10 user per halaman
+    staff_paginator = Paginator(staff_users_list, 10)
+    member_paginator = Paginator(member_users_list, 10)
+
+    staff_page_number = request.GET.get('staff_page', 1)
+    member_page_number = request.GET.get('member_page', 1)
+
+    staff_users = staff_paginator.get_page(staff_page_number)
+    member_users = member_paginator.get_page(member_page_number)
+
+    return render(request, 'accounts/manage_users.html', {
+        'staff_users': staff_users,
+        'member_users': member_users,
+    })
 
 
 # views.py
@@ -359,3 +367,137 @@ def delete_user(request, user_id):
         user.delete()
         messages.success(request, f"Pengguna {user.username} berhasil dihapus.")
     return redirect('accounts:manage_users')
+
+import random
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
+from .models import PasswordResetOTP
+
+User = get_user_model()
+
+def password_reset_otp(request):
+    if request.method == "POST":
+        step = request.POST.get("step")
+
+        # =====================
+        # STEP 1: KIRIM OTP
+        # =====================
+        if step == "send_otp":
+            email = request.POST.get("email")
+            user = User.objects.filter(email=email).first()
+
+            if user:
+                
+                PasswordResetOTP.objects.filter(user=user).delete()
+
+                otp = str(random.randint(100000, 999999))
+                PasswordResetOTP.objects.create(user=user, otp=otp)
+
+                subject = "🔐 Reset Password Akun FreshWash"
+                message = f"""
+                Halo,
+
+                Kami menerima permintaan reset password untuk akun Anda.
+
+                Kode OTP:
+                {otp}
+
+                Kode ini berlaku selama 5 menit.
+                Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.
+
+                Terima kasih,
+                FreshWash Laundry
+                """
+
+                html_message = f"""
+                <div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:20px;">
+                <div style="max-width:500px; margin:auto; background:white;
+                            border-radius:10px; padding:30px; box-shadow:0 10px 25px rgba(0,0,0,.08)">
+
+                    <h2 style="color:#2563eb; text-align:center; margin-bottom:10px;">
+                    Reset Password
+                    </h2>
+
+                    <p style="color:#374151; font-size:14px;">
+                    Kami menerima permintaan untuk mereset password akun Anda.
+                    </p>
+
+                    <div style="
+                    margin:25px 0;
+                    text-align:center;
+                    font-size:32px;
+                    font-weight:bold;
+                    letter-spacing:6px;
+                    color:#16a34a;
+                    ">
+                    {otp}
+                    </div>
+
+                    <p style="color:#374151; font-size:14px;">
+                    Kode OTP ini berlaku selama
+                    <strong>5 menit</strong>.
+                    </p>
+
+                    <p style="color:#6b7280; font-size:13px; margin-top:20px;">
+                    Jika Anda tidak melakukan permintaan ini,
+                    silakan abaikan email ini.
+                    </p>
+
+                    <hr style="margin:25px 0; border:none; border-top:1px solid #e5e7eb">
+
+                    <p style="text-align:center; color:#9ca3af; font-size:12px;">
+                    © 2026 FreshWash Laundry
+                    </p>
+
+                </div>
+                </div>
+                """
+
+                send_mail(
+                    subject,
+                    message,                 # fallback text
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    html_message=html_message
+                )
+
+
+            messages.success(
+                request,
+                "Jika email terdaftar, OTP telah dikirim."
+            )
+            return render(
+                request,
+                "accounts/password_reset_otp.html",
+                {"step": "verify", "email": email}
+            )
+
+        # =====================
+        # STEP 2: VERIFIKASI OTP
+        # =====================
+        if step == "verify_otp":
+            otp = request.POST.get("otp")
+            password = request.POST.get("password")
+
+            record = PasswordResetOTP.objects.filter(otp=otp).first()
+
+            if not record or record.is_expired():
+                messages.error(request, "OTP tidak valid atau sudah kadaluarsa.")
+                return redirect("accounts:password_reset_otp")
+
+            user = record.user
+            user.set_password(password)
+            user.save()
+
+            record.delete()
+
+            messages.success(
+                request,
+                "Password berhasil direset. Silakan login."
+            )
+            return redirect("accounts:login")
+
+    return render(request, "accounts/password_reset_otp.html", {"step": "email"})

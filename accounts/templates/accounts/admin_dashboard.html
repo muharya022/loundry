@@ -1,254 +1,1161 @@
 {% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
 {% block content %}
-<div class="min-h-screen bg-gray-50 p-8">
-  <h1 class="text-4xl font-bold text-blue-700 mb-10 text-center tracking-tight">
-    📊 Admin Dashboard
-  </h1>
+<style>
+  /* Alpine.js cloaking */
+  [x-cloak] { display: none !important; }
+  
+  /* Custom scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 3px;
+    width: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #3b82f6;
+    border-radius: 10px;
+  }
+  
+  /* Mobile Navigation */
+  .mobile-nav {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f9fafb;
+    border-radius: 0.75rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .mobile-nav-active {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #3b82f6;
+    background: #eff6ff;
+    border-radius: 0.75rem;
+    white-space: nowrap;
+    border: 2px solid #3b82f6;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  
+  /* Desktop Tabs */
+  .desktop-tab {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+  
+  .desktop-tab-active {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #3b82f6;
+    background: #eff6ff;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  
+  /* KPI Cards */
+  .kpi-card-mobile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: white;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  
+  .kpi-card-mobile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  
+  @media (min-width: 640px) {
+    .kpi-card-mobile {
+      flex-direction: column;
+      text-align: center;
+      gap: 0.5rem;
+      padding: 1.25rem;
+    }
+  }
+  
+  .kpi-icon-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+  }
+  
+  .kpi-title-mobile {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+  
+  .kpi-value-mobile {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  
+  @media (min-width: 640px) {
+    .kpi-value-mobile {
+      font-size: 1.5rem;
+    }
+  }
+  
+  /* Quick Action Buttons */
+  .quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    color: white;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    text-align: center;
+  }
+  
+  .quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Admin Action Buttons */
+  .admin-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  /* Table Styles */
+  .table-th {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #f9fafb;
+  }
+  
+  .table-td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+  
+  /* Status Badges */
+  .order-status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+  
+  .order-status-badge.pending { background: #fef3c7; color: #92400e; }
+  .order-status-badge.picked_up { background: #dbeafe; color: #1e40af; }
+  .order-status-badge.processing { background: #e0e7ff; color: #3730a3; }
+  .order-status-badge.ready { background: #ccfbf1; color: #0f766e; }
+  .order-status-badge.delivered { background: #d1fae5; color: #065f46; }
+  .order-status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+  
+  .payment-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+  
+  .payment-badge.paid { background: #d1fae5; color: #065f46; }
+  .payment-badge.unpaid { background: #fef3c7; color: #92400e; }
+  
+  .payment-badge-mobile {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+  }
+  
+  .payment-badge-mobile.paid { background: #d1fae5; color: #065f46; }
+  .payment-badge-mobile.unpaid { background: #fef3c7; color: #92400e; }
+  
+  /* Select dropdown styles */
+  .status-select {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .status-select:hover {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+  }
+  
+  .status-select:focus {
+    outline: none;
+    ring: 2px solid #3b82f6;
+  }
+  
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .modal-container {
+    background: white;
+    border-radius: 1rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    animation: modalFadeIn 0.3s ease-out;
+  }
+  
+  @keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  .modal-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  
+  .detail-label {
+    font-weight: 500;
+    color: #6b7280;
+  }
+  
+  .detail-value {
+    font-weight: 600;
+    color: #1f2937;
+    text-align: right;
+  }
+  
+  .items-list {
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  
+  .item-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+  }
+  
+  /* Line clamping */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Animation for modal */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+</style>
 
-  <!-- Statistik Utama -->
-  <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-12">
-    <div class="bg-white p-6 rounded-2xl shadow-lg text-center border-t-4 border-blue-500 hover:shadow-xl transition-all duration-300">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase">Total Layanan</h2>
-      <p class="text-3xl font-bold text-blue-600 mt-2">{{ total_services }}</p>
-    </div>
-    <div class="bg-white p-6 rounded-2xl shadow-lg text-center border-t-4 border-green-500 hover:shadow-xl transition-all duration-300">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase">Total Pesanan</h2>
-      <p class="text-3xl font-bold text-green-600 mt-2">{{ total_orders }}</p>
-    </div>
-    <div class="bg-white p-6 rounded-2xl shadow-lg text-center border-t-4 border-indigo-500 hover:shadow-xl transition-all duration-300">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase">Total Pengguna</h2>
-      <p class="text-3xl font-bold text-indigo-600 mt-2">{{ total_users }}</p>
-    </div>
-    <div class="bg-white p-6 rounded-2xl shadow-lg text-center border-t-4 border-purple-500 hover:shadow-xl transition-all duration-300">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase">Total Kurir</h2>
-      <p class="text-3xl font-bold text-purple-600 mt-2">{{ total_couriers }}</p>
-    </div>
-    <div class="bg-white p-6 rounded-2xl shadow-lg text-center border-t-4 border-yellow-500 hover:shadow-xl transition-all duration-300">
-      <h2 class="text-sm font-semibold text-gray-500 uppercase">Pendapatan Bulan Ini</h2>
-      <p class="text-3xl font-bold text-yellow-600 mt-2">Rp {{ total_income|floatformat:0 }}</p>
-    </div>
-  </div>
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-4 sm:py-8 px-3 sm:px-4"
+     x-data="{ 
+       activeTab: '{{ active_tab|default:"dashboard" }}',
+       showDetailModal: false,
+       selectedOrderId: null,
+       showDeleteModal: false,
+       deleteOrderId: null,
+       deleteOrderNumber: null
+     }"
+     x-init="
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam) activeTab = tabParam;
+     ">
 
-  <!-- Tombol Aksi -->
-  <div class="flex flex-wrap justify-end mb-8 gap-3">
-    <a href="{% url 'services:add_service' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow transition">+ Layanan</a>
-    <a href="{% url 'orders:add_laundry_item' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow transition">+ Item</a>
-    <a href="{% url 'orders:promo_assign' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 shadow transition">+ Promo</a>
-    <a href="{% url 'accounts:manage_users' %}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 shadow transition">Akun</a>
-  </div>
-
-  <!-- Grafik & Pendapatan -->
-  <div class="bg-white p-8 rounded-2xl shadow-lg mb-12">
-    <div class="flex flex-col md:flex-row justify-between items-center mb-4">
-      <div>
-        <h2 class="text-2xl font-semibold text-gray-700 mb-2">💰 Laporan Pendapatan</h2>
-        <p class="text-gray-500">Total Transaksi:
-          <span class="font-semibold text-gray-700">{{ total_transactions }}</span>
-        </p>
-        <p class="text-gray-500">Pendapatan Hari Ini:
-          <span class="font-semibold text-green-600">Rp {{ today_income|floatformat:0 }}</span>
-        </p>
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-6 sm:mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+            <span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Admin Dashboard
+            </span>
+          </h1>
+          <p class="text-sm sm:text-base text-gray-600">Ringkasan performa & aktivitas sistem</p>
+        </div>
       </div>
     </div>
 
-    <div class="w-full h-72">
-      <canvas id="incomeChart"></canvas>
+    <!-- Mobile Navigation -->
+    <div class="block sm:hidden mb-6">
+      <div class="flex overflow-x-auto gap-2 pb-2 scrollbar-thin -mx-3 px-3">
+        <button @click="activeTab = 'dashboard'" 
+                :class="activeTab === 'dashboard' ? 'mobile-nav-active' : 'mobile-nav'">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          Dashboard
+        </button>
+        <button @click="activeTab = 'orders'" 
+                :class="activeTab === 'orders' ? 'mobile-nav-active' : 'mobile-nav'">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+          Pesanan
+          <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+            {{ recent_orders.paginator.count }}
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop Tabs -->
+    <div class="hidden sm:flex gap-1 bg-white p-2 rounded-xl shadow-sm border border-gray-200 mb-8">
+      <button @click="activeTab = 'dashboard'" 
+              :class="activeTab === 'dashboard' ? 'desktop-tab-active' : 'desktop-tab'">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        Dashboard
+      </button>
+      <button @click="activeTab = 'orders'" 
+              :class="activeTab === 'orders' ? 'desktop-tab-active' : 'desktop-tab'">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+        </svg>
+        Pesanan
+        <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+          {{ recent_orders.paginator.count }}
+        </span>
+      </button>
+    </div>
+
+    <!-- ================= DASHBOARD TAB ================= -->
+    <div x-show="activeTab === 'dashboard'" x-transition>
+      <!-- KPI Cards Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+        <a href="{% url 'services:list' %}" class="kpi-card-mobile group">
+          <div class="kpi-icon-mobile bg-gradient-to-br from-blue-50 to-blue-100">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+          </div>
+          <div class="text-center sm:text-left">
+            <div class="kpi-value-mobile text-blue-700">{{ total_services }}</div>
+            <div class="kpi-title-mobile">Layanan</div>
+          </div>
+        </a>
+
+        <button @click="activeTab = 'orders'" class="kpi-card-mobile group cursor-pointer">
+          <div class="kpi-icon-mobile bg-gradient-to-br from-green-50 to-green-100">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            </svg>
+          </div>
+          <div class="text-center sm:text-left">
+            <div class="kpi-value-mobile text-green-700">{{ total_orders }}</div>
+            <div class="kpi-title-mobile">Pesanan</div>
+          </div>
+        </button>
+
+        <a href="{% url 'accounts:manage_users' %}" class="kpi-card-mobile group">
+          <div class="kpi-icon-mobile bg-gradient-to-br from-indigo-50 to-indigo-100">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-10a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"/>
+            </svg>
+          </div>
+          <div class="text-center sm:text-left">
+            <div class="kpi-value-mobile text-indigo-700">{{ total_users }}</div>
+            <div class="kpi-title-mobile">Pengguna</div>
+          </div>
+        </a>
+
+        <a href="{% url 'accounts:manage_users' %}" class="kpi-card-mobile group">
+          <div class="kpi-icon-mobile bg-gradient-to-br from-purple-50 to-purple-100">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <div class="text-center sm:text-left">
+            <div class="kpi-value-mobile text-purple-700">{{ total_couriers }}</div>
+            <div class="kpi-title-mobile">Kurir</div>
+          </div>
+        </a>
+
+        <div class="kpi-card-mobile group">
+          <div class="kpi-icon-mobile bg-gradient-to-br from-yellow-50 to-yellow-100">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div class="text-center sm:text-left">
+            <div class="kpi-value-mobile text-yellow-700">
+              Rp {{ total_income|floatformat:"0"|intcomma }}
+            </div>
+            <div class="kpi-title-mobile">Pendapatan</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="mb-6">
+        <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Aksi Cepat</h3>
+              <p class="text-sm text-gray-600">Kelola layanan & sistem</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <a href="{% url 'services:add_service' %}" class="quick-action-btn bg-gradient-to-r from-blue-600 to-blue-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              <span class="text-sm font-medium">Tambah Layanan</span>
+            </a>
+            
+            <a href="{% url 'orders:add_laundry_item' %}" class="quick-action-btn bg-gradient-to-r from-green-600 to-green-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+              </svg>
+              <span class="text-sm font-medium">Item Laundry</span>
+            </a>
+            
+            <a href="{% url 'orders:promo_assign' %}" class="quick-action-btn bg-gradient-to-r from-purple-600 to-purple-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span class="text-sm font-medium">Kelola Promo</span>
+            </a>
+            
+            <a href="{% url 'accounts:manage_users' %}" class="quick-action-btn bg-gradient-to-r from-indigo-600 to-indigo-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-10a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"/>
+              </svg>
+              <span class="text-sm font-medium">Manajemen Akun</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Income Report -->
+      <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+          <div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Laporan Pendapatan</h3>
+            <div class="flex flex-col sm:flex-row gap-4">
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                <span class="text-sm text-gray-600">
+                  Total Transaksi: 
+                  <span class="font-semibold text-gray-900">{{ total_transactions }}</span>
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                <span class="text-sm text-gray-600">
+                  Hari Ini: 
+                  <span class="font-semibold text-green-700">Rp {{ today_income|floatformat:0|intcomma }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="h-64 sm:h-72">
+          <canvas id="incomeChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ORDERS TAB ================= -->
+    <div x-show="activeTab === 'orders'" x-transition>
+      <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-4 sm:p-6 border-b border-gray-200">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Manajemen Pesanan</h3>
+              <p class="text-sm text-gray-600">Kelola semua pesanan pelanggan</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-500">
+                Menampilkan: 
+                <span class="font-semibold text-gray-900">{{ recent_orders.paginator.count }}</span> pesanan
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="block sm:hidden p-4 space-y-4">
+          {% for order in recent_orders %}
+          <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <div class="font-bold text-gray-900">#{{ order.id }}</div>
+                <div class="text-sm text-gray-600">{{ order.customer.username }}</div>
+              </div>
+              <span class="order-status-badge {{ order.order_status }}">
+                {{ order.get_order_status_display }}
+              </span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div class="bg-white p-3 rounded-lg">
+                <div class="text-xs text-gray-500 mb-1">Layanan</div>
+                <div class="font-semibold text-gray-900 text-sm line-clamp-1">{{ order.service.name }}</div>
+              </div>
+              <div class="bg-white p-3 rounded-lg">
+                <div class="text-xs text-gray-500 mb-1">Total</div>
+                <div class="font-bold text-gray-900">Rp {{ order.price_total|floatformat:0|intcomma }}</div>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between mb-4">
+              <span class="payment-badge-mobile {% if order.payment_status == 'paid' %}paid{% else %}unpaid{% endif %}">
+                {% if order.payment_status == 'paid' %}Dibayar{% else %}Belum Bayar{% endif %}
+              </span>
+              <div class="text-right">
+                <div class="text-xs text-gray-500">Kurir</div>
+                <div class="text-sm font-medium text-gray-900">
+                  {{ order.assigned_courier.username|default:"-" }}
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-xs text-gray-500 mb-4">
+              {{ order.created_at|date:"d M Y, H:i" }}
+            </div>
+            
+            <div class="flex gap-2 mb-4">
+              <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}"
+                      class="flex-1 admin-action-btn bg-gray-600 hover:bg-gray-700" style="width: auto; padding: 0.5rem 1rem;">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                Detail
+              </button>
+            </div>
+            
+            <div class="space-y-3">
+              <form action="{% url 'orders:update_order_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post" class="space-y-2">
+                {% csrf_token %}
+                <label class="text-xs font-medium text-gray-700">Status Pesanan</label>
+                <div class="flex gap-2">
+                  <select name="order_status" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
+                    {% for value, label in order.ORDER_STATUS_CHOICES %}
+                      <option value="{{ value }}" {% if order.order_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </form>
+              
+              <form action="{% url 'orders:update_payment_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post" class="space-y-2">
+                {% csrf_token %}
+                <label class="text-xs font-medium text-gray-700">Status Pembayaran</label>
+                <div class="flex gap-2">
+                  <select name="payment_status" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
+                    {% for value, label in order.PAYMENT_STATUS_CHOICES %}
+                      <option value="{{ value }}" {% if order.payment_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </form>
+              
+              <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post" class="space-y-2">
+                {% csrf_token %}
+                <label class="text-xs font-medium text-gray-700">Tugas Kurir</label>
+                <div class="flex gap-2">
+                  <select name="courier" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
+                    <option value="">-- Pilih Kurir --</option>
+                    {% for courier in couriers %}
+                      <option value="{{ courier.id }}" {% if order.assigned_courier == courier %}selected{% endif %}>{{ courier.username }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </form>
+              
+              <!-- Tombol Hapus dengan Modal Modern -->
+              <button type="button" 
+                      @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
+                      class="w-full admin-action-btn bg-red-600 hover:bg-red-700" 
+                      style="width: auto; padding: 0.5rem 1rem;">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                </svg>
+                Hapus Pesanan
+              </button>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              </svg>
+            </div>
+            <p class="text-gray-900 font-medium mb-2">Belum ada pesanan</p>
+            <p class="text-gray-600 text-sm">Pelanggan belum melakukan pemesanan</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden sm:block overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="table-th">ID</th>
+                <th class="table-th">Pelanggan</th>
+                <th class="table-th">Layanan</th>
+                <th class="table-th">Total</th>
+                <th class="table-th">Status</th>
+                <th class="table-th">Pembayaran</th>
+                <th class="table-th">Kurir</th>
+                <th class="table-th">Tanggal</th>
+                <th class="table-th text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              {% for order in recent_orders %}
+              <tr class="hover:bg-blue-50 transition-colors">
+                <td class="table-td">
+                  <div class="font-mono font-bold text-gray-900">#{{ order.id }}</div>
+                </td>
+                <td class="table-td">
+                  <div class="font-medium text-gray-900">{{ order.customer.username }}</div>
+                  <div class="text-xs text-gray-500">{{ order.customer.email|default:"-" }}</div>
+                </td>
+                <td class="table-td">
+                  <div class="text-sm font-medium text-gray-900">{{ order.service.name }}</div>
+                  <div class="text-xs text-gray-500">{{ order.service.get_type_display }}</div>
+                </td>
+                <td class="table-td">
+                  <div class="font-bold text-gray-900">Rp {{ order.price_total|floatformat:0|intcomma }}</div>
+                </td>
+                <td class="table-td">
+                  <form action="{% url 'orders:update_order_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
+                    {% csrf_token %}
+                    <select name="order_status" class="status-select" onchange="this.form.submit()">
+                      {% for value, label in order.ORDER_STATUS_CHOICES %}
+                        <option value="{{ value }}" {% if order.order_status == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </form>
+                </td>
+                <td class="table-td">
+                  <form action="{% url 'orders:update_payment_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
+                    {% csrf_token %}
+                    <select name="payment_status" class="status-select" onchange="this.form.submit()">
+                      {% for value, label in order.PAYMENT_STATUS_CHOICES %}
+                        <option value="{{ value }}" {% if order.payment_status == value %}selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </form>
+                </td>
+                <td class="table-td">
+                  <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
+                    {% csrf_token %}
+                    <select name="courier" class="status-select" onchange="this.form.submit()">
+                      <option value="">-- Pilih Kurir --</option>
+                      {% for courier in couriers %}
+                        <option value="{{ courier.id }}" {% if order.assigned_courier == courier %}selected{% endif %}>{{ courier.username }}</option>
+                      {% endfor %}
+                    </select>
+                  </form>
+                </td>
+                <td class="table-td">
+                  <div class="text-sm text-gray-900">{{ order.created_at|date:"d M Y" }}</div>
+                  <div class="text-xs text-gray-500">{{ order.created_at|time:"H:i" }}</div>
+                </td>
+                <td class="table-td">
+                  <div class="flex justify-center gap-2">
+                    <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}"
+                            class="admin-action-btn bg-gray-600 hover:bg-gray-700"
+                            title="Detail Pesanan">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                    
+                    <!-- Tombol Hapus dengan Modal Modern -->
+                    <button type="button" 
+                            @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
+                            class="admin-action-btn bg-red-600 hover:bg-red-700" 
+                            title="Hapus Pesanan">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="9" class="table-td text-center py-12">
+                  <div class="flex flex-col items-center justify-center">
+                    <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    <p class="text-gray-900 font-medium mb-2">Belum ada pesanan</p>
+                    <p class="text-gray-600 text-sm">Pelanggan belum melakukan pemesanan</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination dengan parameter tab -->
+        {% if recent_orders.paginator.num_pages > 1 %}
+        <div class="p-4 sm:p-6 border-t border-gray-200">
+          <!-- Mobile Pagination -->
+          <div class="block sm:hidden">
+            <div class="flex items-center justify-between">
+              {% if recent_orders.has_previous %}
+              <a href="?orders_page={{ recent_orders.previous_page_number }}&tab=orders" 
+                 class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </a>
+              {% endif %}
+              
+              <div class="text-center">
+                <div class="text-sm text-gray-900 font-medium">Halaman {{ recent_orders.number }}</div>
+                <div class="text-xs text-gray-500">dari {{ recent_orders.paginator.num_pages }}</div>
+              </div>
+              
+              {% if recent_orders.has_next %}
+              <a href="?orders_page={{ recent_orders.next_page_number }}&tab=orders" 
+                 class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </a>
+              {% endif %}
+            </div>
+          </div>
+          
+          <!-- Desktop Pagination -->
+          <div class="hidden sm:flex items-center justify-center gap-2">
+            {% if recent_orders.has_previous %}
+              <a href="?orders_page=1&tab=orders" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">Pertama</a>
+              <a href="?orders_page={{ recent_orders.previous_page_number }}&tab=orders" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">« Sebelumnya</a>
+            {% endif %}
+
+            <div class="flex gap-1">
+              {% for page_num in recent_orders.paginator.page_range %}
+                {% if recent_orders.number == page_num %}
+                  <span class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm">{{ page_num }}</span>
+                {% elif page_num >= recent_orders.number|add:-2 and page_num <= recent_orders.number|add:2 %}
+                  <a href="?orders_page={{ page_num }}&tab=orders" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm">{{ page_num }}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+
+            {% if recent_orders.has_next %}
+              <a href="?orders_page={{ recent_orders.next_page_number }}&tab=orders" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">Selanjutnya »</a>
+              <a href="?orders_page={{ recent_orders.paginator.num_pages }}&tab=orders" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">Terakhir</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  const ctx = document.getElementById('incomeChart').getContext('2d');
-  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, 'rgba(37, 99, 235, 0.5)');
-  gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: {{ income_chart_labels|safe }},
-      datasets: [{
-        label: 'Pendapatan (Rp)',
-        data: {{ income_chart_data|safe }}.map(v => v <= 0 ? null : v),
-        fill: true,
-        backgroundColor: gradient,
-        borderColor: '#2563EB',
-        borderWidth: 3,
-        tension: 0.35,
-        pointRadius: 5,
-        pointHoverRadius: 8,
-        pointBackgroundColor: '#2563EB',
-        pointHoverBackgroundColor: '#1E40AF',
-        pointBorderColor: '#fff',
-        pointBorderWidth: 2,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(17, 24, 39, 0.9)',
-          cornerRadius: 8,
-          padding: 10,
-          callbacks: {
-            label: (ctx) => {
-              if (!ctx.parsed.y) return '';
-              return 'Rp ' + ctx.parsed.y.toLocaleString('id-ID');
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: '#6B7280' }
-        },
-        y: {
-          min: 1, // ⬅️ tidak tampilkan Rp 0
-          grid: { color: '#E5E7EB' },
-          ticks: {
-            color: '#6B7280',
-            callback: (value) => value <= 0 ? '' : 'Rp ' + value.toLocaleString('id-ID')
-          }
-        }
-      },
-      animation: {
-        duration: 1200,
-        easing: 'easeOutQuart'
-      }
-    }
-  });
-</script>
-
-  <!-- Pesanan Terbaru -->
-  <div class="bg-white p-8 rounded-2xl shadow-lg overflow-x-auto mb-12">
-    <h2 class="text-2xl font-semibold mb-4 text-gray-700">🧺 Pesanan Terbaru</h2>
-    <p class="text-sm text-gray-500 mb-3">Menampilkan halaman {{ recent_orders.number }} dari {{ recent_orders.paginator.num_pages }}</p>
-    <table class="min-w-full border border-gray-200 rounded-lg text-sm">
-      <thead class="bg-gray-100 text-gray-600">
-        <tr>
-          <th class="px-4 py-2 text-left">ID</th>
-          <th class="px-4 py-2 text-left">Pelanggan</th>
-          <th class="px-4 py-2 text-left">Layanan</th>
-          <th class="px-4 py-2 text-left">Total</th>
-          <th class="px-4 py-2 text-left">Status Pengantaran</th>
-          <th class="px-4 py-2 text-left">Status Pembayaran</th>
-          <th class="px-4 py-2 text-left">Kurir</th>
-          <th class="px-4 py-2 text-left">Tanggal</th>
-          <th class="px-4 py-2 text-center">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
+  <!-- Modal Detail Pesanan -->
+  <div x-show="showDetailModal && selectedOrderId" x-cloak class="modal-overlay" @click.self="showDetailModal = false">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 class="text-lg font-bold text-gray-900">Detail Pesanan</h3>
+        <button @click="showDetailModal = false" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
         {% for order in recent_orders %}
-        <tr class="border-t hover:bg-blue-50 transition">
-          <td class="px-4 py-2 font-semibold text-gray-700">#{{ order.id }}</td>
-          <td class="px-4 py-2">{{ order.customer.username }}</td>
-          <td class="px-4 py-2">{{ order.service.name }}</td>
-          <td class="px-4 py-2 text-gray-800 font-medium">Rp{{ order.price_total|floatformat:0 }}</td>
-
-          <!-- Status Pengantaran -->
-          <td class="px-4 py-2">
-            <span class="px-3 py-1 rounded-full text-xs font-semibold
-              {% if order.order_status == 'pending' %} bg-yellow-100 text-yellow-700
-              {% elif order.order_status == 'picked_up' %} bg-blue-100 text-blue-700
-              {% elif order.order_status == 'processing' %} bg-indigo-100 text-indigo-700
-              {% elif order.order_status == 'ready' %} bg-teal-100 text-teal-700
-              {% elif order.order_status == 'delivered' %} bg-green-100 text-green-700
-              {% elif order.order_status == 'cancelled' %} bg-red-100 text-red-700
-              {% else %} bg-gray-100 text-gray-600 {% endif %}">
-              {{ order.get_order_status_display }}
-            </span>
-          </td>
-
-          <!-- Status Pembayaran -->
-          <td class="px-4 py-2">
-            {% if order.payment_status == 'paid' %}
-              <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Dibayar</span>
-            {% else %}
-              <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Belum Bayar</span>
-            {% endif %}
-          </td>
-
-          <td class="px-4 py-2">
-            {% if order.assigned_courier %}
-              <span class="text-sm font-medium text-blue-700">{{ order.assigned_courier.username }}</span>
-            {% else %}
-              <span class="text-sm text-gray-400 italic">Belum ditugaskan</span>
-            {% endif %}
-          </td>
-          <td class="px-4 py-2 text-gray-500 text-sm">{{ order.created_at|date:"d M Y, H:i" }}</td>
-
-          <!-- Aksi -->
-          <td class="px-4 py-2 text-center">
-            <div class="flex items-center justify-center gap-1">
-              <!-- Update Status Pengantaran -->
-              <form action="{% url 'orders:update_order_status' order.id %}" method="post" class="flex gap-1">
-                {% csrf_token %}
-                <select name="order_status" class="border border-gray-300 rounded-md text-xs px-1 py-1">
-                  {% for value, label in order.ORDER_STATUS_CHOICES %}
-                    <option value="{{ value }}" {% if order.order_status == value %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-md text-xs shadow">✏️</button>
-              </form>
-
-              <!-- Update Status Pembayaran -->
-              <form action="{% url 'orders:update_payment_status' order.id %}" method="post" class="flex gap-1">
-                {% csrf_token %}
-                <select name="payment_status" class="border border-gray-300 rounded-md text-xs px-1 py-1">
-                  {% for value, label in order.PAYMENT_STATUS_CHOICES %}
-                    <option value="{{ value }}" {% if order.payment_status == value %}selected{% endif %}>{{ label }}</option>
-                  {% endfor %}
-                </select>
-                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-xs shadow">💳</button>
-              </form>
-
-              <!-- Assign Kurir -->
-              <form action="{% url 'orders:assign_courier' order.id %}" method="post" class="flex gap-1">
-                {% csrf_token %}
-                <select name="courier" class="border border-gray-300 rounded-md text-xs px-1 py-1">
-                  <option value="">--</option>
-                  {% for courier in couriers %}
-                    <option value="{{ courier.id }}" {% if order.assigned_courier == courier %}selected{% endif %}>{{ courier.username }}</option>
-                  {% endfor %}
-                </select>
-                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-xs shadow">🚚</button>
-              </form>
-
-              <!-- Hapus Order -->
-              <form action="{% url 'orders:delete_order' order.id %}" method="post">
-                {% csrf_token %}
-                <button type="submit" onclick="return confirm('Yakin ingin menghapus pesanan ini?')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-md text-xs shadow">🗑️</button>
-              </form>
+        <div x-show="selectedOrderId == {{ order.id }}">
+          <!-- Informasi Order -->
+          <div class="detail-row">
+            <span class="detail-label">No. Order</span>
+            <span class="detail-value">#{{ order.id }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Tanggal Order</span>
+            <span class="detail-value">{{ order.created_at|date:"d M Y, H:i" }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Pelanggan</span>
+            <span class="detail-value">{{ order.customer.get_full_name|default:order.customer.username }}</span>
+          </div>
+          
+          <div class="border-t border-gray-200 my-3"></div>
+          
+          <!-- SEMUA LAYANAN DARI ORDER ITEMS -->
+          <div class="font-semibold text-gray-900 mb-2">Detail Layanan</div>
+          
+          {% if order.order_items.all %}
+            {% for item in order.order_items.all %}
+            <div class="bg-gray-50 rounded-lg p-3 mb-3">
+              {% if item.service %}
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-blue-600 font-bold">📦</span>
+                <span class="font-semibold text-gray-900">{{ item.service.name }}</span>
+                <span class="text-xs text-gray-500">({{ item.service.get_type_display }})</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Berat</span>
+                <span class="detail-value">{{ item.weight|default:"0" }} kg</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Harga/kg</span>
+                <span class="detail-value">Rp {{ item.price|floatformat:0|intcomma }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Subtotal</span>
+                <span class="detail-value font-semibold text-blue-600">Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Durasi</span>
+                <span class="detail-value">
+                  {% if item.service.duration == 'reguler' %}Reguler (1-2 hari)
+                  {% elif item.service.duration == 'kilat' %}Kilat (12 jam)
+                  {% elif item.service.duration == 'express' %}Express 6 Jam
+                  {% elif item.service.duration == 'express1' %}Express 3 Jam
+                  {% else %}Reguler{% endif %}
+                </span>
+              </div>
+              {% endif %}
+              
+              {% if item.laundry_item %}
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-green-600 font-bold">👕</span>
+                <span class="font-semibold text-gray-900">{{ item.laundry_item.name }}</span>
+                <span class="text-xs text-gray-500">(Laundry Satuan)</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Jumlah</span>
+                <span class="detail-value">{{ item.quantity }} pcs</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Harga/pcs</span>
+                <span class="detail-value">Rp {{ item.price|floatformat:0|intcomma }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Subtotal</span>
+                <span class="detail-value font-semibold text-blue-600">Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+              </div>
+              {% endif %}
             </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="9" class="text-center py-4 text-gray-500">Belum ada pesanan.</td></tr>
+            {% endfor %}
+            
+            <div class="border-t border-gray-200 my-3"></div>
+            <div class="detail-row font-bold">
+              <span class="detail-label">Total Semua Layanan</span>
+              <span class="detail-value text-blue-600">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+            </div>
+            
+          {% else %}
+            <div class="bg-gray-50 rounded-lg p-3 mb-3">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-blue-600 font-bold">📦</span>
+                <span class="font-semibold text-gray-900">{{ order.service.name }}</span>
+                <span class="text-xs text-gray-500">({{ order.service.get_type_display }})</span>
+              </div>
+              {% if order.service.type == 'per_kilo' and order.weight %}
+              <div class="detail-row">
+                <span class="detail-label">Berat</span>
+                <span class="detail-value">{{ order.weight }} kg</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Harga/kg</span>
+                <span class="detail-value">Rp {{ order.service.price|floatformat:0|intcomma }}</span>
+              </div>
+              {% endif %}
+              <div class="detail-row">
+                <span class="detail-label">Subtotal</span>
+                <span class="detail-value font-semibold text-blue-600">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Durasi</span>
+                <span class="detail-value">
+                  {% if order.service.duration == 'reguler' %}Reguler (1-2 hari)
+                  {% elif order.service.duration == 'kilat' %}Kilat (12 jam)
+                  {% elif order.service.duration == 'express' %}Express 6 Jam
+                  {% elif order.service.duration == 'express1' %}Express 3 Jam
+                  {% else %}Reguler{% endif %}
+                </span>
+              </div>
+            </div>
+          {% endif %}
+          
+          <div class="border-t border-gray-200 my-3"></div>
+          
+          {% if order.discount_percent %}
+          <div class="detail-row">
+            <span class="detail-label">Diskon</span>
+            <span class="detail-value text-green-600">{{ order.discount_percent }}%</span>
+          </div>
+          {% endif %}
+          
+          <div class="border-t border-gray-200 my-3"></div>
+          
+          <div class="detail-row">
+            <span class="detail-label">Status Pesanan</span>
+            <span class="detail-value">
+              <span class="order-status-badge {{ order.order_status }}">
+                {{ order.get_order_status_display }}
+              </span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status Pembayaran</span>
+            <span class="detail-value">
+              <span class="payment-badge {% if order.payment_status == 'paid' %}paid{% else %}unpaid{% endif %}">
+                {% if order.payment_status == 'paid' %}Dibayar{% else %}Belum Dibayar{% endif %}
+              </span>
+            </span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Metode Pembayaran</span>
+            <span class="detail-value">{{ order.get_payment_method_display }}</span>
+          </div>
+          
+          <div class="border-t border-gray-200 my-3"></div>
+          
+          <div class="detail-row">
+            <span class="detail-label">Alamat Pickup</span>
+            <span class="detail-value text-right">{{ order.pickup_address|default:"-"|truncatechars:30 }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Jadwal Pickup</span>
+            <span class="detail-value">{{ order.scheduled_pickup|date:"d M Y, H:i" }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Kurir</span>
+            <span class="detail-value">{{ order.assigned_courier.username|default:"Belum ditugaskan" }}</span>
+          </div>
+        </div>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </div>
+  </div>
 
-    <!-- Pagination Orders -->
-    <div class="mt-4 flex justify-center space-x-2">
-      {% if recent_orders.has_previous %}
-      <a href="?orders_page={{ recent_orders.previous_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">&laquo; Sebelumnya</a>
-      {% endif %}
-
-      {% for num in recent_orders.paginator.page_range %}
-        {% if num == recent_orders.number %}
-          <span class="px-3 py-1 bg-blue-600 text-white rounded">{{ num }}</span>
-        {% elif num >= recent_orders.number|add:-2 and num <= recent_orders.number|add:2 %}
-          <a href="?orders_page={{ num }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">{{ num }}</a>
-        {% endif %}
-      {% endfor %}
-
-      {% if recent_orders.has_next %}
-      <a href="?orders_page={{ recent_orders.next_page_number }}" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Berikutnya &raquo;</a>
-      {% endif %}
+  <!-- Modal Konfirmasi Hapus Pesanan -->
+  <div x-show="showDeleteModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]" style="animation: fadeIn 0.2s ease-out;" @click.self="showDeleteModal = false">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden" style="animation: scaleIn 0.2s ease-out;">
+      <div class="p-6 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Hapus Pesanan?</h3>
+        <p class="text-gray-600 mb-6">
+          Apakah Anda yakin ingin menghapus pesanan <span class="font-semibold" x-text="deleteOrderNumber"></span>?<br>
+          Tindakan ini tidak dapat dibatalkan.
+        </p>
+        <div class="flex gap-3">
+          <button @click="showDeleteModal = false" 
+                  class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
+            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Batal
+          </button>
+          <form :action="'{% url 'orders:delete_order' 0 %}'.replace('0', deleteOrderId) + '?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders'" method="post" class="flex-1">
+            {% csrf_token %}
+            <button type="submit" 
+                    class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
+              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
+              </svg>
+              Ya, Hapus
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- Charts Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('incomeChart');
+  if (ctx) {
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.3)');
+    gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+    
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: {{ income_chart_labels|safe }},
+        datasets: [{
+          label: 'Pendapatan (Rp)',
+          data: {{ income_chart_data|safe }},
+          fill: true,
+          backgroundColor: gradient,
+          borderColor: '#2563EB',
+          borderWidth: 3,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#2563EB',
+          pointHoverBackgroundColor: '#1E40AF',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+            cornerRadius: 8,
+            padding: 10,
+            callbacks: {
+              label: function(ctx) {
+                let value = ctx.parsed.y;
+                if(!value) return '';
+                return 'Rp ' + value.toLocaleString('id-ID');
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: '#6B7280', font: { weight: '500' } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#E5E7EB', borderDash: [5,5] },
+            ticks: {
+              color: '#6B7280',
+              font: { weight: '500' },
+              callback: function(value) { 
+                if (value >= 1000000) return 'Rp ' + (value/1000000).toFixed(1) + 'M';
+                if (value >= 1000) return 'Rp ' + (value/1000).toFixed(0) + 'K';
+                return 'Rp ' + value; 
+              }
+            }
+          }
+        },
+        animation: { duration: 1500, easing: 'easeOutQuart' }
+      }
+    });
+  }
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
 {% endblock %}

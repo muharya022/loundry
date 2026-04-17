@@ -1,181 +1,749 @@
 {% extends "base.html" %}
-{% block title %}Beranda | FreshWash Laundry{% endblock %}
+{% block title %}Beranda | Menara Laundry{% endblock %}
 {% block content %}
 {% load static %}
 
 <style>
-  /* Animasi putar mesin cuci saat discroll */
-  .rotate-on-scroll {
-    transition: transform 0.2s ease-out;
+  /* Smooth animations */
+  * {
+    scroll-behavior: smooth;
+  }
+
+  /* Hero section gradient animation */
+  .hero-gradient {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(30, 64, 175, 0.15) 0%, transparent 50%);
+    animation: float 20s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33% { transform: translateY(20px) rotate(2deg); }
+    66% { transform: translateY(-10px) rotate(-2deg); }
+  }
+
+  /* Fade in animation */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+  }
+
+  /* Smooth card hover */
+  .card-hover {
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Promo badge */
+  .discount-badge {
+    position: absolute;
+    top: -12px;
+    right: 20px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 9999px;
+    font-weight: bold;
+    font-size: 0.875rem;
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+    z-index: 10;
+  }
+
+  /* Button styles */
+  .btn-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: white;
+    padding: 0.875rem 2rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.3);
+  }
+
+  .btn-outline-light {
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .btn-outline-light:hover {
+    background: white;
+    color: #1e40af;
+    transform: translateY(-2px);
+  }
+
+  /* Section titles animation */
+  .section-title {
+    position: relative;
+    display: inline-block;
+  }
+
+  .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #2563eb, #1e40af);
+    border-radius: 2px;
+  }
+
+  /* Glassmorphism effect */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Stats counter animation */
+  .counter {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Floating animation for decorative elements */
+  @keyframes floating {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+  }
+
+  .floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+
+  /* Scroll progress indicator */
+  .scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, #2563eb, #1e40af);
+    z-index: 9999;
+    transition: width 0.3s ease;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .hero-gradient {
+      text-align: center;
+    }
+    
+    .section-title::after {
+      width: 60px;
+    }
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Hero image responsive */
+  .hero-image {
+    max-width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 640px) {
+    .hero-image {
+      max-width: 80%;
+      margin: 0 auto;
+    }
   }
 </style>
 
-<script>
-  document.addEventListener("scroll", function () {
-    const img = document.getElementById("washingMachine");
-    const rotateValue = window.scrollY / 5;
-    img.style.transform = `rotate(${rotateValue}deg)`;
-  });
-</script>
+<!-- Scroll progress indicator -->
+<div class="scroll-progress" id="scrollProgress"></div>
 
 <!-- Hero Section -->
-<section class="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-16">
-  <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between px-6">
-    <div class="md:w-1/2 space-y-5">
-      <h1 class="text-4xl md:text-5xl font-extrabold leading-tight drop-shadow-md">
-        FreshWash Laundry<br>Solusi Cuci Cepat & Bersih Tanpa Ribet
-      </h1>
-      <p class="text-blue-100">
-        Kami hadir untuk memudahkan hidupmu. Cukup pesan online, tim kami akan datang menjemput, mencuci, dan mengantarkan pakaianmu kembali dengan wangi segar!
-      </p>
-      <div class="flex space-x-4 mt-6">
-        <a href="{% url 'orders:order' %}" class="bg-white text-blue-700 font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-100 hover:scale-105 transition-all duration-300">Pesan Sekarang</a>
-        <a href="{% url 'services:list' %}" class="border-2 border-white text-white font-semibold px-6 py-3 rounded-lg hover:bg-white hover:text-blue-700 hover:scale-105 transition-all duration-300">
-          Lihat Layanan
-        </a>
-      </div>
-    </div>
+<section class="hero-gradient text-white pt-24 pb-32 md:pt-32 md:pb-48 relative overflow-hidden">
+  <!-- Background elements -->
+  <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+  <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+  
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <div class="animate-fade-in-up">
+        <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-semibold mb-6">
+          <i class="fas fa-star text-yellow-400 text-xs"></i>
+          <i class="fas fa-star text-yellow-400 text-xs"></i>
+          <i class="fas fa-star text-yellow-400 text-xs"></i>
+          <i class="fas fa-star text-yellow-400 text-xs"></i>
+          <i class="fas fa-star text-yellow-400 text-xs"></i>
+          <span class="ml-2">Solusi Laundry Online Terpercaya</span>
+        </div>
+        
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6">
+          Menara
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-blue-100 block">
+            Laundry
+          </span>
+        </h1>
+        
+        <p class="text-xl text-white/90 leading-relaxed mb-8 max-w-lg">
+          Cuci cepat, bersih, dan wangi tanpa ribet! Kami menjemput, mencuci, dan mengantarkan pakaianmu dengan hasil maksimal.
+        </p>
 
-    <div class="md:w-1/2 mt-10 md:mt-0 flex justify-center">
-      <img id="washingMachine" src="{% static 'images/laundry-service.png' %}" alt="Laundry Service" class="w-72 md:w-96 drop-shadow-lg rotate-on-scroll">
+        <div class="flex flex-col sm:flex-row gap-4 mb-12">
+          <a href="{% url 'orders:order' %}" 
+             class="btn-gradient inline-flex items-center justify-center gap-2 text-center">
+            <i class="fas fa-shopping-cart"></i>
+            Pesan Sekarang
+          </a>
+          <a href="{% url 'services:list' %}" 
+             class="btn-outline-light inline-flex items-center justify-center gap-2 text-center">
+            <i class="fas fa-list-ul"></i>
+            Lihat Layanan
+          </a>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div class="text-center">
+            <p class="text-3xl font-bold counter" data-target="1000">0</p>
+            <p class="text-white/80 text-sm">Pelanggan Puas</p>
+          </div>
+          <div class="text-center">
+            <p class="text-3xl font-bold">24/7</p>
+            <p class="text-white/80 text-sm">Layanan Tersedia</p>
+          </div>
+          <div class="text-center">
+            <p class="text-3xl font-bold counter" data-target="99">0<small class="text-lg">%</small></p>
+            <p class="text-white/80 text-sm">Kepuasan</p>
+          </div>
+          <div class="text-center">
+            <p class="text-3xl font-bold counter" data-target="5000">0<small class="text-lg">+</small></p>
+            <p class="text-white/80 text-sm">Pesanan</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative">
+        <div class="floating">
+          <img src="{% static 'images/icon.jpg' %}" alt="Laundry Service" 
+               class="hero-image rounded-2xl w-full max-w-lg mx-auto drop-shadow-2xl"
+               onerror="this.src='https://placehold.co/600x500/2563eb/white?text=Menara+Laundry'">
+        </div>
+        <!-- Decorative circles -->
+        <div class="absolute -top-6 -left-6 w-24 h-24 bg-blue-500/20 rounded-full"></div>
+        <div class="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-400/20 rounded-full"></div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- PROMO -->
-<section class="bg-white py-16">
-  <div class="max-w-7xl mx-auto px-6 text-center">
-
-    <h2 class="text-3xl font-bold text-blue-700 mb-6">Promo Spesial Untukmu!</h2>
-    <p class="text-gray-600 mb-10">Dapatkan promo menarik dari FreshWash Laundry. Hemat lebih banyak, pakaian tetap bersih!</p>
+<!-- Promo Section -->
+<section class="py-20 bg-gradient-to-b from-slate-50 to-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16 animate-fade-in-up">
+      <h2 class="text-4xl md:text-5xl font-bold mb-6">
+        <span class="section-title"><i class="fas fa-gift text-blue-600 mr-3"></i>Promo Spesial</span>
+      </h2>
+      <p class="text-slate-600 text-lg max-w-2xl mx-auto">
+        Dapatkan diskon dan penawaran terbaik untuk pelanggan setia kami
+      </p>
+    </div>
 
     {% if promos %}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {% for promo in promos %}
-      <div class="bg-white rounded-xl shadow hover:shadow-xl p-6 transition-all duration-300">
+      <div class="glass-card rounded-2xl overflow-hidden card-hover relative">
+        <div class="discount-badge">
+          <i class="fas fa-tag mr-1"></i>-{{ promo.discount_amount }}%
+        </div>
 
         {% if promo.image %}
-        <img src="{{ promo.image.url }}" class="w-full h-40 object-cover rounded-lg mb-4">
+        <div class="h-48 overflow-hidden">
+          <img src="{{ promo.image.url }}" alt="{{ promo.title }}" 
+               class="w-full h-full object-cover hover:scale-110 transition-transform duration-500">
+        </div>
         {% else %}
-        <div class="w-full h-40 bg-blue-100 rounded-lg mb-4 flex items-center justify-center text-blue-700 font-semibold">
-          Tidak ada gambar
+        <div class="h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+          <i class="fas fa-tag fa-4x text-blue-400"></i>
         </div>
         {% endif %}
 
-        <h3 class="text-xl font-bold text-blue-700 mb-2">{{ promo.title }}</h3>
-        <p class="text-sm text-gray-600 break-words whitespace-normal">
-          {{ promo.description }}
-        </p>
-        <div class="text-lg font-bold text-green-600 mb-2">
-          Diskon {{ promo.discount }}%
-        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-bold text-slate-900 mb-3">{{ promo.title }}</h3>
+          <p class="text-slate-600 text-sm mb-6 line-clamp-2">
+            {{ promo.description }}
+          </p>
 
+          <div class="flex items-center justify-between">
+            <span class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-700">
+              Hemat Rp.{{ promo.discount_amount }}
+            </span>
+            <a href="{% url 'orders:order' %}" 
+               class="btn-gradient text-sm py-2 px-6 inline-flex items-center gap-2">
+              <i class="fas fa-arrow-right"></i>
+              Gunakan
+            </a>
+          </div>
+        </div>
       </div>
       {% endfor %}
-
     </div>
     {% else %}
-    <p class="text-gray-500 italic">Belum ada promo tersedia saat ini.</p>
+    <div class="text-center py-16 glass-card rounded-2xl">
+      <i class="fas fa-tag fa-4x text-slate-400 mx-auto mb-4"></i>
+      <p class="text-slate-500 text-lg">Belum ada promo tersedia saat ini</p>
+      <p class="text-slate-400 text-sm mt-2">Cek kembali nanti untuk penawaran menarik</p>
+    </div>
     {% endif %}
-
   </div>
 </section>
 
+<!-- About Section -->
+<section class="py-20 bg-gradient-to-b from-white via-slate-50 to-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="text-center mb-16 animate-fade-in-up">
+      <h2 class="text-4xl md:text-5xl font-bold mb-6">
+        <span class="section-title"><i class="fas fa-info-circle text-blue-600 mr-3"></i>Tentang Menara</span>
+      </h2>
+      <p class="text-slate-600 text-lg max-w-2xl mx-auto">
+        Platform laundry online revolusioner dengan teknologi terdepan dan komitmen terhadap kualitas
+      </p>
+    </div>
 
-<!-- Tentang Kami -->
-<section class="bg-white py-16">
-  <div class="max-w-6xl mx-auto text-center px-6">
-    <h2 class="text-3xl font-bold text-blue-700 mb-6">Tentang FreshWash Laundry</h2>
-    <p class="text-gray-700 leading-relaxed text-lg">
-      FreshWash Laundry adalah platform laundry online berbasis web yang mempermudah kamu dalam mencuci pakaian tanpa harus keluar rumah. 
-      Dengan fitur pemesanan online, sistem pembayaran digital (QRIS & COD), dan notifikasi real-time, kami memastikan pengalaman laundry yang cepat, bersih, dan transparan.
-    </p>
-    <div class="flex justify-center mt-8">
-      <img src="{% static 'images/digital-wallet.png' %}" alt="Laundry Process" class="w-56 hover:scale-110 hover:rotate-6 transition-all duration-500">
+    <!-- Main Content -->
+    <div class="grid lg:grid-cols-2 gap-12 items-center mb-16">
+      <!-- Left: Text Content -->
+      <div class="animate-fade-in-up">
+        <div class="space-y-8">
+          <div class="bg-gradient-to-r from-blue-50 to-blue-100 border-l-4 border-blue-600 p-6 rounded-lg">
+            <p class="text-slate-700 text-lg leading-relaxed">
+              <strong class="text-blue-600">Menara Laundry</strong> adalah inovasi dalam industri laundry yang menggabungkan teknologi digital dengan layanan profesional. Kami memahami bahwa kesibukan Anda adalah prioritas kami.
+            </p>
+          </div>
+
+          <div class="space-y-4">
+            <h3 class="text-2xl font-bold text-slate-900">Komitmen Kami</h3>
+            <ul class="space-y-4">
+              <li class="flex items-start gap-4 group hover:bg-blue-50 p-3 rounded-lg transition-colors">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-bold group-hover:scale-110 transition-transform">
+                  <i class="fas fa-check text-xs"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-900">Kualitas Premium</p>
+                  <p class="text-sm text-slate-600">Menggunakan mesin cuci profesional dan detergen berkualitas tinggi</p>
+                </div>
+              </li>
+              
+              <li class="flex items-start gap-4 group hover:bg-blue-50 p-3 rounded-lg transition-colors">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-bold group-hover:scale-110 transition-transform">
+                  <i class="fas fa-check text-xs"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-900">Layanan Cepat</p>
+                  <p class="text-sm text-slate-600">Penyelesaian pesanan dalam waktu yang dijanjikan tanpa kompromi</p>
+                </div>
+              </li>
+              
+              <li class="flex items-start gap-4 group hover:bg-blue-50 p-3 rounded-lg transition-colors">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-bold group-hover:scale-110 transition-transform">
+                  <i class="fas fa-check text-xs"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-900">Harga Kompetitif</p>
+                  <p class="text-sm text-slate-600">Tarif transparan dan terjangkau untuk semua kalangan</p>
+                </div>
+              </li>
+              
+              <li class="flex items-start gap-4 group hover:bg-blue-50 p-3 rounded-lg transition-colors">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center text-sm font-bold group-hover:scale-110 transition-transform">
+                  <i class="fas fa-check text-xs"></i>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-900">Transparansi Penuh</p>
+                  <p class="text-sm text-slate-600">Tracking real-time dan komunikasi terbuka dengan pelanggan</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Image & Stats -->
+      <div class="animate-fade-in-up" style="animation-delay: 0.2s;">
+        <div class="relative">
+          <!-- Image -->
+          <div class="mb-8">
+            <div class="relative">
+              <img src="{% static 'images/foto.png' %}" alt="Tentang Kami" 
+                   class="w-full max-w-md mx-auto rounded-2xl shadow-xl hover:scale-[1.02] transition-transform duration-500"
+                   onerror="this.src='https://placehold.co/500x400/2563eb/white?text=Menara+Laundry'">
+              <div class="absolute -inset-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl opacity-20 blur-xl -z-10"></div>
+            </div>
+          </div>
+
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="glass-card p-5 rounded-xl text-center group hover:shadow-xl transition-all">
+              <p class="text-2xl md:text-3xl font-bold text-blue-600 mb-1 counter" data-target="1000">0</p>
+              <p class="text-sm text-slate-700 font-medium">Pelanggan Setia</p>
+            </div>
+            
+            <div class="glass-card p-5 rounded-xl text-center group hover:shadow-xl transition-all">
+              <p class="text-2xl md:text-3xl font-bold text-blue-600 mb-1 counter" data-target="10000">0</p>
+              <p class="text-sm text-slate-700 font-medium">Pesanan Selesai</p>
+            </div>
+            
+            <div class="glass-card p-5 rounded-xl text-center group hover:shadow-xl transition-all">
+              <p class="text-2xl md:text-3xl font-bold text-blue-600 mb-1">4.8</p>
+              <p class="text-sm text-slate-700 font-medium">Rating Pelanggan</p>
+              <div class="flex justify-center gap-1 mt-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <i class="fas fa-star-half-alt text-yellow-400 text-xs"></i>
+              </div>
+            </div>
+            
+            <div class="glass-card p-5 rounded-xl text-center group hover:shadow-xl transition-all">
+              <p class="text-2xl md:text-3xl font-bold text-blue-600 mb-1">24/7</p>
+              <p class="text-sm text-slate-700 font-medium">Layanan Aktif</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Values Section -->
+    <div class="glass-card rounded-3xl p-8 md:p-12 animate-fade-in-up" style="animation-delay: 0.4s;">
+      <h3 class="text-3xl font-bold text-center text-slate-900 mb-12">Nilai-Nilai Kami</h3>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center group">
+          <div class="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-full shadow-lg flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-xl transition-all duration-300">
+            <i class="fas fa-bullseye fa-2x text-blue-600"></i>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900 mb-3">Profesional</h4>
+          <p class="text-slate-600 leading-relaxed">Tim berpengalaman yang siap memberikan layanan terbaik setiap saat</p>
+        </div>
+        
+        <div class="text-center group">
+          <div class="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-full shadow-lg flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-xl transition-all duration-300">
+            <i class="fas fa-heart fa-2x text-blue-600"></i>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900 mb-3">Bertanggung Jawab</h4>
+          <p class="text-slate-600 leading-relaxed">Menjaga amanah pelanggan dan setiap kepercayaan yang diberikan</p>
+        </div>
+        
+        <div class="text-center group">
+          <div class="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-blue-200 rounded-full shadow-lg flex items-center justify-center mb-6 group-hover:scale-110 group-hover:shadow-xl transition-all duration-300">
+            <i class="fas fa-bolt fa-2x text-blue-600"></i>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900 mb-3">Inovatif</h4>
+          <p class="text-slate-600 leading-relaxed">Terus berinovasi untuk memberikan pengalaman laundry terdepan</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Keunggulan -->
-<section class="bg-gray-100 py-12">
-  <div class="max-w-7xl mx-auto px-6">
-    <h2 class="text-2xl font-bold text-center text-blue-700 mb-8">Kenapa Memilih Kami?</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+<!-- Features Section -->
+<section class="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16 animate-fade-in-up">
+      <h2 class="text-4xl md:text-5xl font-bold mb-6">
+        <span class="section-title"><i class="fas fa-star text-blue-600 mr-3"></i>Mengapa Memilih Kami?</span>
+      </h2>
+      <p class="text-slate-600 text-lg max-w-2xl mx-auto">
+        Komitmen kami adalah kepuasan pelanggan dengan layanan terbaik
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="glass-card p-8 rounded-2xl text-center animate-fade-in-up" style="animation-delay: 0.1s;">
+        <div class="mb-6">
+          <div class="w-16 h-16 mx-auto bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center">
+            <i class="fas fa-bolt fa-2x text-white"></i>
+          </div>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mb-4">Cepat & Tepat Waktu</h3>
+        <p class="text-slate-600">Pesanan selesai dalam waktu singkat sesuai jadwal yang kamu pilih</p>
+      </div>
       
-      <div class="bg-white p-6 rounded-xl shadow hover:shadow-2xl hover:-translate-y-2 hover:scale-105 hover:rotate-1 transition-all duration-300">
-        <img src="{% static 'images/clock.png' %}" class="w-16 mx-auto mb-4" alt="Cepat">
-        <h3 class="text-lg font-semibold mb-2">Cepat & Tepat Waktu</h3>
-        <p class="text-gray-600 text-sm">Pesanan selesai dalam waktu singkat sesuai jadwal yang kamu pilih. Tak perlu menunggu lama!</p>
+      <div class="glass-card p-8 rounded-2xl text-center animate-fade-in-up" style="animation-delay: 0.2s;">
+        <div class="mb-6">
+          <div class="w-16 h-16 mx-auto bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center">
+            <i class="fas fa-feather-alt fa-2x text-white"></i>
+          </div>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mb-4">Bersih & Wangi</h3>
+        <p class="text-slate-600">Menggunakan detergen premium dan mesin modern untuk hasil maksimal</p>
       </div>
-
-      <div class="bg-white p-6 rounded-xl shadow hover:shadow-2xl hover:-translate-y-2 hover:scale-105 hover:-rotate-1 transition-all duration-300">
-        <img src="{% static 'images/clean-clothes.png' %}" class="w-16 mx-auto mb-4" alt="Kualitas">
-        <h3 class="text-lg font-semibold mb-2">Bersih, Wangi & Rapi</h3>
-        <p class="text-gray-600 text-sm">Kami menggunakan detergen premium dan mesin modern untuk hasil maksimal dan higienis.</p>
+      
+      <div class="glass-card p-8 rounded-2xl text-center animate-fade-in-up" style="animation-delay: 0.3s;">
+        <div class="mb-6">
+          <div class="w-16 h-16 mx-auto bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center">
+            <i class="fas fa-truck fa-2x text-white"></i>
+          </div>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 mb-4">Antar Jemput Gratis</h3>
+        <p class="text-slate-600">Kami menjemput dan mengantarkan pakaianmu tanpa biaya tambahan</p>
       </div>
-
-      <div class="bg-white p-6 rounded-xl shadow hover:shadow-2xl hover:-translate-y-2 hover:scale-105 hover:rotate-2 transition-all duration-300">
-        <img src="{% static 'images/fast-delivery.png' %}" class="w-16 mx-auto mb-4" alt="Antar Jemput">
-        <h3 class="text-lg font-semibold mb-2">Antar Jemput Gratis</h3>
-        <p class="text-gray-600 text-sm">Kami menjemput dan mengantarkan pakaianmu tanpa biaya tambahan ke lokasi yang kamu tentukan.</p>
-      </div>
-
     </div>
   </div>
 </section>
 
-<!-- Kontak -->
-<section class="bg-gray-100 py-16">
-  <div class="max-w-6xl mx-auto text-center px-6">
-    <h2 class="text-2xl font-bold text-blue-700 mb-4">Hubungi Kami</h2>
-    <p class="text-gray-700 mb-6">
-      Ada pertanyaan atau ingin tahu lebih banyak tentang layanan kami?  
-      Hubungi kami kapan saja melalui kontak berikut:
+<!-- Contact Section -->
+<section class="py-20 bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16 animate-fade-in-up">
+      <h2 class="text-4xl md:text-5xl font-bold mb-6">
+        <span class="section-title"><i class="fas fa-phone-alt text-blue-600 mr-3"></i>Hubungi Kami</span>
+      </h2>
+      <p class="text-slate-600 text-lg">Pertanyaan? Kami siap membantu Anda 24/7</p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-12 items-start">
+      <!-- Contact Info -->
+      <div class="space-y-6 animate-fade-in-up">
+        <div class="glass-card p-6 rounded-2xl">
+          <h3 class="text-xl font-bold text-slate-900 mb-6">Kontak Langsung</h3>
+          
+          <div class="space-y-3">
+            <a href="https://www.instagram.com/Menara.id/" 
+               target="_blank" 
+               class="flex items-center gap-4 p-4 hover:bg-blue-50 rounded-xl transition-all duration-300 group">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform">
+                <i class="fab fa-instagram fa-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-900 truncate">Instagram</p>
+                <p class="text-slate-600 text-sm truncate">@Menara.id</p>
+              </div>
+              <i class="fas fa-external-link-alt text-slate-400 group-hover:text-blue-600"></i>
+            </a>
+            
+            <a href="https://wa.me/6282274186163" 
+               target="_blank" 
+               class="flex items-center gap-4 p-4 hover:bg-blue-50 rounded-xl transition-all duration-300 group">
+              <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform">
+                <i class="fab fa-whatsapp fa-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-900 truncate">WhatsApp</p>
+                <p class="text-slate-600 text-sm truncate">0822-7418-6163</p>
+              </div>
+              <i class="fas fa-external-link-alt text-slate-400 group-hover:text-green-600"></i>
+            </a>
+            
+            <a href="https://www.facebook.com/Menara.id" 
+               target="_blank" 
+               class="flex items-center gap-4 p-4 hover:bg-blue-50 rounded-xl transition-all duration-300 group">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center text-white text-xl group-hover:scale-110 transition-transform">
+                <i class="fab fa-facebook-f fa-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-900 truncate">Facebook</p>
+                <p class="text-slate-600 text-sm truncate">@Menara.id</p>
+              </div>
+              <i class="fas fa-external-link-alt text-slate-400 group-hover:text-blue-600"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Maps -->
+      <div class="animate-fade-in-up" style="animation-delay: 0.2s;">
+        <div class="glass-card p-6 rounded-2xl overflow-hidden">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-map-marker-alt fa-lg text-blue-600"></i>
+            <h3 class="text-xl font-bold text-slate-900">Lokasi Kami</h3>
+          </div>
+          <div class="aspect-video rounded-xl overflow-hidden">
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3980.0195311574253!2d122.52559727397158!3d-4.016392995957354!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2d988de6c5934fff%3A0xf528e90a05c77d3!2sMenara%20Laundry%20Express%20Kendari!5e0!3m2!1sid!2sid!4v1776434386843!5m2!1sid!2sid"
+              width="100%"
+              height="100%"
+              style="border:0;"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              class="w-full h-full rounded-lg">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-20 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white relative overflow-hidden">
+  <!-- Background pattern -->
+  <div class="absolute inset-0 opacity-5">
+    <div class="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+    <div class="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+  </div>
+
+  <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10 animate-fade-in-up">
+    <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-semibold mb-6">
+      <i class="fas fa-sparkle"></i>
+      Mulai Perjalanan Bersih Anda
+    </div>
+    
+    <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+      Siap Mencoba
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-blue-100">
+        Menara Laundry?
+      </span>
+    </h2>
+    
+    <p class="text-xl text-white/90 mb-8 max-w-2xl mx-auto leading-relaxed">
+      Pesan sekarang dan dapatkan pengalaman laundry yang berbeda dengan kualitas premium dan pelayanan terbaik.
     </p>
-
-    <div class="flex flex-col md:flex-row justify-center gap-6 text-gray-700">
-
-      <!-- Instagram -->
-      <a href="https://www.instagram.com/freshwash.id/" target="_blank"
-         class="flex items-center gap-2 justify-center hover:scale-110 transition-all duration-300">
-        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" class="w-6 h-6" alt="Instagram">
-        <span>@freshwash.id</span>
+    
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="{% url 'orders:order' %}" 
+         class="inline-flex items-center justify-center gap-3 bg-white text-blue-900 font-bold px-8 py-4 rounded-full hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
+        <i class="fas fa-shopping-cart group-hover:animate-bounce"></i>
+        Pesan Sekarang
       </a>
-
-      <!-- WhatsApp -->
-      <a href="https://wa.me/6282274186163" target="_blank"
-         class="flex items-center gap-2 justify-center hover:scale-110 transition-all duration-300">
-        <img src="https://cdn-icons-png.flaticon.com/512/3670/3670051.png" class="w-6 h-6" alt="WhatsApp">
-        <span>0822-7418-6163</span>
+      <a href="{% url 'services:list' %}" 
+         class="inline-flex items-center justify-center gap-3 bg-transparent text-white border-2 border-white font-bold px-8 py-4 rounded-full hover:bg-white hover:text-blue-900 transition-all duration-300">
+        <i class="fas fa-info-circle"></i>
+        Pelajari Lebih Lanjut
       </a>
-
-      <!-- Facebook -->
-      <a href="https://www.facebook.com/freshwash.id" target="_blank"
-         class="flex items-center gap-2 justify-center hover:scale-110 transition-all duration-300">
-        <img src="https://cdn-icons-png.flaticon.com/512/145/145802.png" class="w-6 h-6" alt="Facebook">
-        <span>@freshwash.id</span>
-      </a>
-
     </div>
-
-    <!-- MAPS -->
-    <div class="mt-10">
-      <h3 class="text-xl font-semibold text-blue-700 mb-4">Lokasi Kami</h3>
-      <div class="flex justify-center">
-        <iframe 
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d254717.78186016358!2d122.52646439538022!3d-4.027488041989601!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2d988d466eb596fb%3A0x5d428d954ca8932e!2sAgung%20Laundry!5e0!3m2!1sid!2sid!4v1764386914150!5m2!1sid!2sid"
-          width="100%"
-          height="350"
-          class="rounded-xl shadow-lg max-w-3xl"
-          allowfullscreen=""
-          loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-      </div>
-    </div>
-
+    
+    <p class="text-white/60 text-sm mt-8">
+      <i class="fas fa-lock mr-1"></i> 100% aman • 
+      <i class="fas fa-credit-card mr-1 ml-2"></i> Pembayaran mudah • 
+      <i class="fas fa-bolt mr-1 ml-2"></i> Proses cepat
+    </p>
   </div>
 </section>
+
+<script>
+  // Scroll progress indicator
+  window.addEventListener('scroll', () => {
+    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    document.getElementById('scrollProgress').style.width = scrolled + "%";
+  });
+
+  // Counter animation
+  document.addEventListener('DOMContentLoaded', () => {
+    const counters = document.querySelectorAll('.counter');
+    const speed = 200;
+
+    counters.forEach(counter => {
+      const updateCount = () => {
+        const target = parseInt(counter.getAttribute('data-target'));
+        let count = parseInt(counter.innerText.replace(/[^0-9]/g, ''));
+        const increment = Math.ceil(target / speed);
+
+        if (count < target) {
+          counter.innerText = (count + increment).toLocaleString() + (counter.innerText.includes('%') ? '%' : '');
+          setTimeout(updateCount, 10);
+        } else {
+          counter.innerText = target.toLocaleString() + (counter.innerText.includes('%') ? '%' : '');
+        }
+      };
+
+      // Start counter when in viewport
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            updateCount();
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.5 });
+
+      observer.observe(counter);
+    });
+
+    // Intersection Observer for animations
+    const animatedElements = document.querySelectorAll('.animate-fade-in-up');
+    const animationObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.1 });
+
+    animatedElements.forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(30px)';
+      el.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+      animationObserver.observe(el);
+    });
+  });
+
+  // Parallax effect for hero image
+  window.addEventListener('scroll', () => {
+    const scrolled = window.pageYOffset;
+    const heroImage = document.querySelector('.floating');
+    if (heroImage) {
+      const rate = scrolled * -0.5;
+      heroImage.style.transform = `translateY(${rate}px)`;
+    }
+  });
+</script>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 {% endblock %}

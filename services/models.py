@@ -8,9 +8,10 @@ class Service(models.Model):
     ]
 
     DURATION_CHOICES = [
-        ('biasa', 'Biasa (2-3 hari)'),
-        ('sicepat', 'SiCepat (1 hari)'),
+        ('reguler', 'Reguler ( -3 hari)'),
+        ('kilat', 'Kilat (1 hari)'),
         ('express', 'Express (6 jam)'),
+        ('express1', 'Express (3 jam)'),
     ]
 
     name = models.CharField(max_length=100)
@@ -22,6 +23,15 @@ class Service(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_type_display()})"
+    
+    def get_duration_display(self):
+        duration_map = {
+            'reguler': 'Reguler ( -3 hari)',
+            'kilat': 'Kilat (1 hari)',
+            'express': 'Express (6 Jam)',
+            'express1': 'Express (3 Jam)',
+        }
+        return duration_map.get(self.duration, self.duration)
 
 class ItemType(models.Model):
     """Jenis item untuk layanan per item"""

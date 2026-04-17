@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}FreshWash Laundry{% endblock %}</title>
+  <title>{% block title %}Menara Laundry{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -52,7 +52,7 @@
     <div class="max-w-7xl mx-auto flex justify-between items-center px-6 py-4">
       <a href="/" class="text-2xl font-bold flex items-center space-x-2 hover:text-blue-200 transition">
         <i data-lucide="droplets"></i>
-        <span>FreshWash</span>
+        <span>Menara Laundry</span>
       </a>
 
       <!-- ✅ Menu utama (Desktop) -->
@@ -163,6 +163,11 @@
             <span>Daftar Pesanan</span>
             <span id="order-badge-mobile" class="hidden ml-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">0</span>
           </a>
+          {% if user.is_staff or user.is_superuser %}
+            <a href="{% url 'accounts:admin_dashboard' %}" class="flex items-center space-x-1 px-3 py-1.5 rounded-md transition duration-200 {% if request.path == '/accounts/admin/dashboard/' %}bg-white text-blue-600 font-semibold shadow{% else %}hover:bg-white hover:text-blue-600{% endif %}">
+              <i data-lucide="layout-dashboard"></i> <span>Admin Dashboard</span>
+            </a>
+          {% endif %}
           <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2 px-3 py-2 rounded hover:bg-blue-600">
             <i data-lucide="user"></i> <span>Profil</span>
           </a>
@@ -197,7 +202,7 @@
   <!-- ⚓ Footer -->
   <footer class="bg-blue-700 text-white py-4 mt-10">
     <div class="max-w-7xl mx-auto text-center text-sm">
-      &copy; 2025 <strong>FreshWash Laundry</strong> — Semua hak dilindungi.
+      &copy; 2025 <strong>Menara Laundry</strong> — Semua hak dilindungi.
     </div>
   </footer>
 

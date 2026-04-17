@@ -1,179 +1,1139 @@
 {% extends 'base.html' %}
 {% block content %}
-<div x-data="{ open: false, user: {} }" class="min-h-screen bg-gray-50 p-6">
+{% load humanize %}
 
-  <h1 class="text-3xl font-bold text-blue-600 mb-6 text-center">Manajemen Akun</h1>
+<style>
+  /* Custom animations */
+  @keyframes slideInUp {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .animate-slide-up {
+    animation: slideInUp 0.3s ease-out;
+  }
+  
+  /* Card hover effects */
+  .user-card {
+    transition: all 0.3s ease;
+  }
+  
+  .user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Badge styles */
+  .badge-admin {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+  }
+  
+  .badge-courier {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  }
+  
+  .badge-member {
+    background: linear-gradient(135deg, #10b981, #059669);
+  }
+  
+  /* Tab animation */
+  .tab-indicator {
+    transition: all 0.3s ease;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .table-container {
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    
+    .mobile-card {
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    
+    /* Pagination responsive */
+    .pagination-mobile-stack {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .pagination-mobile-stack > * {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+  
+  /* Custom scrollbar for table */
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  
+  /* Sticky column for actions */
+  .sticky-action-column {
+    position: sticky;
+    right: 0;
+    background: white;
+    z-index: 1;
+  }
+  
+  tr:hover .sticky-action-column {
+    background-color: #f0f9ff;
+  }
+  
+  /* Pagination styles */
+  .pagination-btn {
+    transition: all 0.2s ease;
+  }
+  
+  .pagination-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+</style>
 
-  <!-- Tombol Tambah -->
-  <div class="flex justify-end mb-4 gap-2">
-    <a href="{% url 'accounts:add_user' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-      + Tambah Member
-    </a>
-    <a href="{% url 'accounts:add_courier' %}" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 shadow transition">
-      + Kurir
-    </a>
-  </div>
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Bagian Karyawan (Admin & Kurir) -->
-  <div class="bg-white p-6 rounded-xl shadow-md overflow-x-auto mb-8">
-    <h2 class="text-2xl font-semibold text-gray-700 mb-4">Karyawan (Admin & Kurir)</h2>
-    <table class="min-w-full border border-gray-200 rounded-lg">
-      <thead class="bg-gray-100">
-        <tr>
-          <th class="px-4 py-2 text-left">ID</th>
-          <th class="px-4 py-2 text-left">Username</th>
-          <th class="px-4 py-2 text-left">Email</th>
-          <th class="px-4 py-2 text-left">Role</th>
-          <th class="px-4 py-2 text-center">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users_data %}
-          {% if u.is_staff or u.is_courier %}
-          <tr class="border-t hover:bg-blue-50 transition">
-            <td class="px-4 py-2">{{ u.id }}</td>
-            <td class="px-4 py-2">{{ u.username }}</td>
-            <td class="px-4 py-2">{{ u.email }}</td>
-            <td class="px-4 py-2">{% if u.is_staff %}Admin{% else %}Kurir{% endif %}</td>
-            <td class="px-4 py-2 text-center flex justify-center gap-2">
-              <!-- Tombol Detail -->
-              <button 
-                @click="user = {
-                  id: '{{ u.id }}',
-                  username: '{{ u.username|escapejs }}',
-                  first_name: '{{ u.first_name|escapejs }}',
-                  last_name: '{{ u.last_name|escapejs }}',
-                  email: '{{ u.email|escapejs }}',
-                  role: '{{ u.is_staff|yesno:'Admin,Kurir' }}',
-                }; open = true"
-                class="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs transition"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Detail
-              </button>
+<div id="user-management" class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8">
+  <!-- Header Section -->
+  <div class="max-w-7xl mx-auto">
+    <div class="mb-8 animate-slide-up">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900">
+            <span class="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Manajemen Akun
+            </span>
+          </h1>
+          <p class="text-slate-600 text-sm sm:text-base mt-1">Kelola semua akun pengguna sistem</p>
+        </div>
+        
+        <!-- Add User Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <!-- Add Courier Button -->
+          <a href="{% url 'accounts:add_courier' %}" 
+             id="add-courier-btn"
+             class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-300 font-medium text-sm sm:text-base">
+            <i data-lucide="user-plus" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            <span class="hidden sm:inline">Tambah Kurir</span>
+            <span class="sm:hidden">+ Kurir</span>
+          </a>
+          
+          <!-- Add Member Button -->
+          <a href="{% url 'accounts:add_user' %}" 
+             id="add-member-btn"
+             class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-medium text-sm sm:text-base">
+            <i data-lucide="user-plus" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            <span class="hidden sm:inline">Tambah Member</span>
+            <span class="sm:hidden">+ Member</span>
+          </a>
+        </div>
+      </div>
+      
+      <!-- Search Bar -->
+      <div class="relative max-w-md">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <i data-lucide="search" class="h-5 w-5 text-slate-400"></i>
+        </div>
+        <input id="search-input" 
+               type="text" 
+               placeholder="Cari username atau email..."
+               class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+        >
+      </div>
+    </div>
 
-              <!-- Tombol Hapus -->
-              <form action="{% url 'accounts:delete_user' u.id %}" method="post" class="inline">
-                {% csrf_token %}
-                <button type="submit" onclick="return confirm('Yakin ingin menghapus pengguna ini?')" 
-                  class="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a1 1 0 011 1v1H9V4a1 1 0 011-1z" />
-                  </svg>
-                  Hapus
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endif %}
-        {% empty %}
-        <tr>
-          <td colspan="5" class="text-center py-4 text-gray-500">Belum ada karyawan.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- Tabs -->
+    <div class="mb-8 bg-white rounded-xl p-1 shadow-sm max-w-md">
+      <div class="flex relative">
+        <!-- Tab Indicator -->
+        <div id="tab-indicator" class="absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-300 translate-x-0"></div>
+        
+        <!-- Staff Tab -->
+        <button id="staff-tab"
+                class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors z-10 text-blue-700 font-semibold">
+          <i data-lucide="users" class="w-5 h-5"></i>
+          <span class="font-medium">Karyawan</span>
+          <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+            {{ staff_users|length }}
+          </span>
+        </button>
+        
+        <!-- Members Tab -->
+        <button id="members-tab"
+                class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors z-10 text-slate-600">
+          <i data-lucide="user-check" class="w-5 h-5"></i>
+          <span class="font-medium">Member</span>
+          <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+            {{ member_users|length }}
+          </span>
+        </button>
+      </div>
+    </div>
 
-  <!-- Bagian Member -->
-  <div class="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
-    <h2 class="text-2xl font-semibold text-gray-700 mb-4">Member</h2>
-    <table class="min-w-full border border-gray-200 rounded-lg">
-      <thead class="bg-gray-100">
-        <tr>
-          <th class="px-4 py-2 text-left">ID</th>
-          <th class="px-4 py-2 text-left">Username</th>
-          <th class="px-4 py-2 text-left">Email</th>
-          <th class="px-4 py-2 text-center">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users_data %}
-          {% if not u.is_staff and not u.is_courier %}
-          <tr class="border-t hover:bg-blue-50 transition">
-            <td class="px-4 py-2">{{ u.id }}</td>
-            <td class="px-4 py-2">{{ u.username }}</td>
-            <td class="px-4 py-2">{{ u.email }}</td>
-            <td class="px-4 py-2 text-center flex justify-center gap-2">
-                <!-- Tombol Detail -->
-              <button 
-                @click="user = {
-                  id: '{{ u.id }}',
-                  username: '{{ u.username|escapejs }}',
-                  first_name: '{{ u.first_name|escapejs }}',
-                  last_name: '{{ u.last_name|escapejs }}',
-                  email: '{{ u.email|escapejs }}',
-                  role: `{% if u.is_staff %}Admin{% elif u.is_courier %}Kurir{% else %}Member{% endif %}`,
-                }; open = true"
-                class="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs transition"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Detail
-              </button>
-
-              <!-- Tombol Hapus -->
-              <form action="{% url 'accounts:delete_user' u.id %}" method="post" class="inline">
-                {% csrf_token %}
-                <button type="submit" onclick="return confirm('Yakin ingin menghapus pengguna ini?')" 
-                  class="flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs transition">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a1 1 0 011 1v1H9V4a1 1 0 011-1z" />
-                  </svg>
-                  Hapus
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endif %}
-        {% empty %}
-        <tr>
-          <td colspan="4" class="text-center py-4 text-gray-500">Belum ada member.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Modal Detail User -->
-  <div x-cloak x-show="open" x-transition
-       @click.away="open=false"
-       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-xl w-96 relative">
-      <button @click="open=false" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800">&times;</button>
-      <h2 class="text-2xl font-bold mb-4">Detail User</h2>
-
-      <div class="space-y-2">
-        <p><strong>ID:</strong> <span x-text="user.id"></span></p>
-        <p><strong>Username:</strong> <span x-text="user.username"></span></p>
-        <p><strong>Nama Depan:</strong> <span x-text="user.first_name"></span></p>
-        <p><strong>Nama Belakang:</strong> <span x-text="user.last_name"></span></p>
-        <p><strong>Email:</strong> <span x-text="user.email"></span></p>
-        <p><strong>Role:</strong> <span x-text="user.role"></span></p>
+    <!-- Staff Tab Content -->
+    <div id="staff-content" class="animate-slide-up">
+      <!-- Mobile Card View -->
+      <div class="block lg:hidden">
+        <div id="staff-mobile-cards" class="space-y-4"></div>
+        
+        <!-- Pagination for Mobile -->
+        <div id="staff-mobile-pagination" class="mt-6"></div>
       </div>
 
-      <div class="mt-4 text-right">
-        <button @click="open=false" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md">Tutup</button>
+      <!-- Desktop Table View -->
+      <div class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full min-w-[800px]">
+            <thead class="bg-slate-50 sticky top-0 z-10">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Pengguna</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Role</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Bergabung</th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider sticky-action-column sticky right-0 bg-slate-50">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="staff-table-body" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination for Desktop -->
+        <div id="staff-desktop-pagination" class="px-6 py-4 border-t border-slate-200 bg-white"></div>
+      </div>
+    </div>
+
+    <!-- Members Tab Content - Hidden by default -->
+    <div id="members-content" class="animate-slide-up hidden">
+      <!-- Mobile Card View -->
+      <div class="block lg:hidden">
+        <div id="members-mobile-cards" class="space-y-4"></div>
+        
+        <!-- Pagination for Mobile -->
+        <div id="members-mobile-pagination" class="mt-6"></div>
+      </div>
+
+      <!-- Desktop Table View -->
+      <div class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full min-w-[800px]">
+            <thead class="bg-slate-50 sticky top-0 z-10">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Pengguna</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Role</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Bergabung</th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-700 uppercase tracking-wider sticky-action-column sticky right-0 bg-slate-50">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="members-table-body" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+        
+        <!-- Pagination for Desktop -->
+        <div id="members-desktop-pagination" class="px-6 py-4 border-t border-slate-200 bg-white"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- User Detail Modal -->
+  <div id="user-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-slide-up">
+      <!-- Modal Header -->
+      <div class="sticky top-0 bg-white p-6 border-b border-slate-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="user-avatar" class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-semibold">
+              A
+            </div>
+            <div>
+              <h2 id="user-name" class="text-xl font-bold text-slate-900">Username</h2>
+              <p id="user-email" class="text-sm text-slate-500">email@example.com</p>
+            </div>
+          </div>
+          <button onclick="closeModal()"
+                  class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Modal Content -->
+      <div class="p-6 space-y-6">
+        <!-- User Info -->
+        <div class="space-y-4">
+          <h3 class="font-semibold text-slate-900">Informasi Pengguna</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-4 rounded-lg">
+              <div class="text-xs text-slate-500 mb-1">ID Pengguna</div>
+              <div id="user-id" class="font-mono font-semibold text-slate-900">#0</div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-lg">
+              <div class="text-xs text-slate-500 mb-1">Role</div>
+              <div id="user-role" class="font-semibold text-slate-900">Role</div>
+            </div>
+          </div>
+          
+          <!-- Name -->
+          <div class="bg-slate-50 p-4 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Nama Lengkap</div>
+            <div id="user-fullname" class="font-semibold text-slate-900">
+              Nama Lengkap
+            </div>
+          </div>
+          
+          <!-- Status -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-4 rounded-lg">
+              <div class="text-xs text-slate-500 mb-1">Status Akun</div>
+              <div class="flex items-center gap-2">
+                <span id="user-status-dot" class="w-2 h-2 rounded-full bg-green-500"></span>
+                <span id="user-status" class="font-semibold text-slate-900">Aktif</span>
+              </div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-lg">
+              <div class="text-xs text-slate-500 mb-1">Bergabung</div>
+              <div id="user-joined" class="font-semibold text-slate-900">01 Jan 2024</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="pt-4 border-t border-slate-200">
+          <div class="flex gap-3">
+            <button onclick="closeModal()"
+                    class="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-medium">
+              Tutup
+            </button>
+            <button onclick="confirmDeleteUser()"
+                    class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+              Hapus Akun
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
 </div>
 
-<!-- Alpine.js & x-cloak CSS -->
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script>
+// User data from Django
+const userData = {
+  staff: [
+    {% for u in staff_users %}
+    {
+      id: {{ u.id }},
+      username: '{{ u.username|escapejs }}',
+      first_name: '{{ u.first_name|escapejs }}',
+      last_name: '{{ u.last_name|escapejs }}',
+      email: '{{ u.email|escapejs }}',
+      role: '{{ u.is_staff|yesno:"Admin,Kurir" }}',
+      created_at: '{{ u.date_joined|date:"d M Y" }}',
+      is_staff: {{ u.is_staff|yesno:"true,false" }},
+      is_active: {{ u.is_active|yesno:"true,false" }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  members: [
+    {% for u in member_users %}
+    {
+      id: {{ u.id }},
+      username: '{{ u.username|escapejs }}',
+      first_name: '{{ u.first_name|escapejs }}',
+      last_name: '{{ u.last_name|escapejs }}',
+      email: '{{ u.email|escapejs }}',
+      role: 'Member',
+      created_at: '{{ u.date_joined|date:"d M Y" }}',
+      is_active: {{ u.is_active|yesno:"true,false" }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+};
+
+// Store current user to delete
+let currentUserId = null;
+let currentUserType = null;
+
+// Pagination settings
+const ITEMS_PER_PAGE = 10;
+let currentPage = {
+  staff: 1,
+  members: 1
+};
+
+// DOM elements
+const staffTab = document.getElementById('staff-tab');
+const membersTab = document.getElementById('members-tab');
+const tabIndicator = document.getElementById('tab-indicator');
+const staffContent = document.getElementById('staff-content');
+const membersContent = document.getElementById('members-content');
+const addCourierBtn = document.getElementById('add-courier-btn');
+const addMemberBtn = document.getElementById('add-member-btn');
+const searchInput = document.getElementById('search-input');
+
+// Tab content containers
+const staffMobileCards = document.getElementById('staff-mobile-cards');
+const membersMobileCards = document.getElementById('members-mobile-cards');
+const staffTableBody = document.getElementById('staff-table-body');
+const membersTableBody = document.getElementById('members-table-body');
+
+// Pagination containers
+const staffMobilePagination = document.getElementById('staff-mobile-pagination');
+const staffDesktopPagination = document.getElementById('staff-desktop-pagination');
+const membersMobilePagination = document.getElementById('members-mobile-pagination');
+const membersDesktopPagination = document.getElementById('members-desktop-pagination');
+
+// Modal elements
+const userModal = document.getElementById('user-modal');
+const userAvatar = document.getElementById('user-avatar');
+const userName = document.getElementById('user-name');
+const userEmail = document.getElementById('user-email');
+const userId = document.getElementById('user-id');
+const userRole = document.getElementById('user-role');
+const userFullname = document.getElementById('user-fullname');
+const userStatusDot = document.getElementById('user-status-dot');
+const userStatus = document.getElementById('user-status');
+const userJoined = document.getElementById('user-joined');
+
+// Current active tab
+let activeTab = 'staff';
+
+// Filtered data for search
+let filteredData = {
+  staff: [...userData.staff],
+  members: [...userData.members]
+};
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  // Tab switching
+  staffTab.addEventListener('click', () => switchTab('staff'));
+  membersTab.addEventListener('click', () => switchTab('members'));
+  
+  // Search functionality
+  searchInput.addEventListener('input', filterUsers);
+  
+  // Initialize button visibility
+  updateButtonVisibility();
+  
+  // Render initial data
+  renderStaffData();
+  renderMemberData();
+  
+  // Auto-focus search input
+  setTimeout(() => searchInput.focus(), 100);
+  
+  // Initialize Lucide icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+});
+
+// Switch between tabs
+function switchTab(tab) {
+  activeTab = tab;
+  
+  // Update tab indicator
+  if (tab === 'staff') {
+    tabIndicator.classList.remove('translate-x-full');
+    tabIndicator.classList.add('translate-x-0');
+    
+    staffTab.classList.remove('text-slate-600');
+    staffTab.classList.add('text-blue-700', 'font-semibold');
+    
+    membersTab.classList.remove('text-blue-700', 'font-semibold');
+    membersTab.classList.add('text-slate-600');
+    
+    staffContent.classList.remove('hidden');
+    membersContent.classList.add('hidden');
+  } else {
+    tabIndicator.classList.remove('translate-x-0');
+    tabIndicator.classList.add('translate-x-full');
+    
+    membersTab.classList.remove('text-slate-600');
+    membersTab.classList.add('text-blue-700', 'font-semibold');
+    
+    staffTab.classList.remove('text-blue-700', 'font-semibold');
+    staffTab.classList.add('text-slate-600');
+    
+    staffContent.classList.add('hidden');
+    membersContent.classList.remove('hidden');
+  }
+  
+  // Update button visibility
+  updateButtonVisibility();
+}
+
+// Update button visibility based on active tab
+function updateButtonVisibility() {
+  if (activeTab === 'staff') {
+    addCourierBtn.classList.remove('hidden');
+    addMemberBtn.classList.add('hidden');
+  } else {
+    addCourierBtn.classList.add('hidden');
+    addMemberBtn.classList.remove('hidden');
+  }
+}
+
+// Filter users based on search input
+function filterUsers() {
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  
+  // Filter staff users
+  filteredData.staff = userData.staff.filter(user => {
+    return user.username.toLowerCase().includes(searchTerm) ||
+           user.email.toLowerCase().includes(searchTerm);
+  });
+  
+  // Filter member users
+  filteredData.members = userData.members.filter(user => {
+    return user.username.toLowerCase().includes(searchTerm) ||
+           user.email.toLowerCase().includes(searchTerm);
+  });
+  
+  // Reset to page 1 when searching
+  currentPage.staff = 1;
+  currentPage.members = 1;
+  
+  // Re-render data
+  renderStaffData();
+  renderMemberData();
+}
+
+// Render staff data with pagination
+function renderStaffData() {
+  const users = filteredData.staff;
+  const currentPageNum = currentPage.staff;
+  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  
+  // Calculate start and end indices
+  const startIndex = (currentPageNum - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, users.length);
+  const currentUsers = users.slice(startIndex, endIndex);
+  
+  // Render mobile cards
+  renderStaffMobileCards(currentUsers);
+  
+  // Render desktop table
+  renderStaffTable(currentUsers);
+  
+  // Render pagination
+  renderPagination('staff', users.length, currentPageNum, totalPages, startIndex, endIndex);
+  
+  // Update empty state text based on search
+  updateEmptyStateText('staff', users.length > 0);
+}
+
+// Render staff mobile cards
+function renderStaffMobileCards(users) {
+  if (users.length === 0) {
+    staffMobileCards.innerHTML = `
+      <div class="text-center py-12 bg-white rounded-xl border border-slate-200">
+        <i data-lucide="users" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+        <p id="staff-empty-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan'}</p>
+        <p id="staff-empty-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru'}</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let cardsHTML = '';
+  users.forEach(user => {
+    const badgeClass = user.is_staff ? 'badge-admin' : 'badge-courier';
+    const roleText = user.is_staff ? 'Admin' : 'Kurir';
+    const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
+    const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    
+    cardsHTML += `
+      <div class="user-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
+              <span>${user.username.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-slate-900">${user.username}</h3>
+              <p class="text-sm text-slate-500">${user.email}</p>
+            </div>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${badgeClass}">
+            ${roleText}
+          </span>
+        </div>
+        
+        <!-- Details -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-slate-50 p-3 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">ID Pengguna</div>
+            <div class="font-mono font-semibold text-slate-900">#${user.id}</div>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Bergabung</div>
+            <div class="font-medium text-slate-900">${user.created_at}</div>
+          </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex gap-2">
+          <button onclick="showUserDetail(${user.id}, 'staff')"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+            Detail
+          </button>
+          
+          <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Hapus
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  staffMobileCards.innerHTML = cardsHTML;
+  
+  // Re-initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// Render staff table for desktop
+function renderStaffTable(users) {
+  if (users.length === 0) {
+    staffTableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="px-6 py-12 text-center">
+          <i data-lucide="users" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+          <p id="staff-empty-desktop-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan'}</p>
+          <p id="staff-empty-desktop-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru'}</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  let tableHTML = '';
+  users.forEach(user => {
+    const badgeClass = user.is_staff ? 'badge-admin' : 'badge-courier';
+    const roleText = user.is_staff ? 'Admin' : 'Kurir';
+    const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
+    const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    
+    tableHTML += `
+      <tr class="hover:bg-blue-50 transition-colors group">
+        <td class="px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
+              <span>${user.username.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">${user.username}</div>
+              <div class="text-sm text-slate-500">ID: #${user.id}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <div class="text-slate-900">${user.email}</div>
+        </td>
+        <td class="px-6 py-4">
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${badgeClass}">
+            ${roleText}
+          </span>
+        </td>
+        <td class="px-6 py-4">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full ${statusDotClass}"></span>
+            <span class="text-sm font-medium">${statusText}</span>
+          </span>
+        </td>
+        <td class="px-6 py-4">
+          <div class="text-slate-900">${user.created_at}</div>
+        </td>
+        <td class="px-6 py-4 sticky-action-column sticky right-0 bg-white group-hover:bg-blue-50 border-l border-slate-200">
+          <div class="flex justify-center gap-3 min-w-[120px]">
+            <button onclick="showUserDetail(${user.id}, 'staff')"
+                    class="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 hover:border-blue-300 pagination-btn"
+                    title="Detail">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+            
+            <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
+                    class="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200 hover:border-red-300 pagination-btn"
+                    title="Hapus">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+  
+  staffTableBody.innerHTML = tableHTML;
+  
+  // Re-initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// Render member data with pagination
+function renderMemberData() {
+  const users = filteredData.members;
+  const currentPageNum = currentPage.members;
+  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  
+  // Calculate start and end indices
+  const startIndex = (currentPageNum - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, users.length);
+  const currentUsers = users.slice(startIndex, endIndex);
+  
+  // Render mobile cards
+  renderMemberMobileCards(currentUsers);
+  
+  // Render desktop table
+  renderMemberTable(currentUsers);
+  
+  // Render pagination
+  renderPagination('members', users.length, currentPageNum, totalPages, startIndex, endIndex);
+  
+  // Update empty state text based on search
+  updateEmptyStateText('members', users.length > 0);
+}
+
+// Render member mobile cards
+function renderMemberMobileCards(users) {
+  if (users.length === 0) {
+    membersMobileCards.innerHTML = `
+      <div class="text-center py-12 bg-white rounded-xl border border-slate-200">
+        <i data-lucide="user-check" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+        <p id="member-empty-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Member tidak ditemukan' : 'Belum ada member'}</p>
+        <p id="member-empty-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan member baru'}</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let cardsHTML = '';
+  users.forEach(user => {
+    const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
+    const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    
+    cardsHTML += `
+      <div class="user-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center text-white font-semibold">
+              <span>${user.username.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <h3 class="font-semibold text-slate-900">${user.username}</h3>
+              <p class="text-sm text-slate-500">${user.email}</p>
+            </div>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white badge-member">
+            Member
+          </span>
+        </div>
+        
+        <!-- Details -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-slate-50 p-3 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">ID Pengguna</div>
+            <div class="font-mono font-semibold text-slate-900">#${user.id}</div>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Bergabung</div>
+            <div class="font-medium text-slate-900">${user.created_at}</div>
+          </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex gap-2">
+          <button onclick="showUserDetail(${user.id}, 'member')"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+            Detail
+          </button>
+          
+          <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
+                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Hapus
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  membersMobileCards.innerHTML = cardsHTML;
+  
+  // Re-initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// Render member table for desktop
+function renderMemberTable(users) {
+  if (users.length === 0) {
+    membersTableBody.innerHTML = `
+      <tr>
+        <td colspan="6" class="px-6 py-12 text-center">
+          <i data-lucide="user-check" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+          <p id="member-empty-desktop-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Member tidak ditemukan' : 'Belum ada member'}</p>
+          <p id="member-empty-desktop-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan member baru'}</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  let tableHTML = '';
+  users.forEach(user => {
+    const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
+    const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    
+    tableHTML += `
+      <tr class="hover:bg-blue-50 transition-colors group">
+        <td class="px-6 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center text-white font-semibold">
+              <span>${user.username.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <div class="font-semibold text-slate-900">${user.username}</div>
+              <div class="text-sm text-slate-500">ID: #${user.id}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4">
+          <div class="text-slate-900">${user.email}</div>
+        </td>
+        <td class="px-6 py-4">
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white badge-member">
+            Member
+          </span>
+        </td>
+        <td class="px-6 py-4">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full ${statusDotClass}"></span>
+            <span class="text-sm font-medium">${statusText}</span>
+          </span>
+        </td>
+        <td class="px-6 py-4">
+          <div class="text-slate-900">${user.created_at}</div>
+        </td>
+        <td class="px-6 py-4 sticky-action-column sticky right-0 bg-white group-hover:bg-blue-50 border-l border-slate-200">
+          <div class="flex justify-center gap-3 min-w-[120px]">
+            <button onclick="showUserDetail(${user.id}, 'member')"
+                    class="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 hover:border-blue-300 pagination-btn"
+                    title="Detail">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+            
+            <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
+                    class="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200 hover:border-red-300 pagination-btn"
+                    title="Hapus">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+  
+  membersTableBody.innerHTML = tableHTML;
+  
+  // Re-initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// Render pagination
+function renderPagination(type, totalUsers, currentPageNum, totalPages, startIndex, endIndex) {
+  const mobilePagination = type === 'staff' ? staffMobilePagination : membersMobilePagination;
+  const desktopPagination = type === 'staff' ? staffDesktopPagination : membersDesktopPagination;
+  
+  // Hide pagination if no pages or only one page
+  if (totalPages <= 1) {
+    mobilePagination.innerHTML = '';
+    desktopPagination.innerHTML = '';
+    return;
+  }
+  
+  const paginationHTML = `
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pagination-mobile-stack">
+      <!-- Info jumlah data -->
+      <div class="text-sm text-slate-600">
+        Menampilkan 
+        <span class="font-semibold">${startIndex + 1}</span>
+        -
+        <span class="font-semibold">${endIndex}</span>
+        dari
+        <span class="font-semibold">${totalUsers}</span>
+        ${type === 'staff' ? 'karyawan' : 'member'}
+      </div>
+      
+      <!-- Pagination buttons -->
+      <div class="flex items-center gap-2">
+        <!-- Previous button -->
+        <button onclick="changePage('${type}', ${currentPageNum - 1})" 
+                ${currentPageNum === 1 ? 'disabled' : ''}
+                class="p-2.5 rounded-lg border border-slate-300 text-slate-700 transition-colors pagination-btn ${currentPageNum === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        
+        <!-- Page numbers -->
+        <div class="flex items-center gap-1">
+          ${generatePageNumbers(type, currentPageNum, totalPages)}
+        </div>
+        
+        <!-- Next button -->
+        <button onclick="changePage('${type}', ${currentPageNum + 1})" 
+                ${currentPageNum === totalPages ? 'disabled' : ''}
+                class="p-2.5 rounded-lg border border-slate-300 text-slate-700 transition-colors pagination-btn ${currentPageNum === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  `;
+  
+  mobilePagination.innerHTML = paginationHTML;
+  desktopPagination.innerHTML = paginationHTML;
+  
+  // Re-initialize icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// Generate page number buttons
+function generatePageNumbers(type, currentPageNum, totalPages) {
+  let pageButtons = '';
+  const maxVisiblePages = 5;
+  
+  // Calculate start and end pages
+  let startPage = Math.max(1, currentPageNum - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  // Adjust start page if we're at the end
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  // Add first page if needed
+  if (startPage > 1) {
+    pageButtons += `
+      <button onclick="changePage('${type}', 1)"
+              class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn text-slate-700 hover:bg-slate-100 border-slate-300">
+        1
+      </button>
+      ${startPage > 2 ? '<span class="text-slate-400">...</span>' : ''}
+    `;
+  }
+  
+  // Add page numbers
+  for (let i = startPage; i <= endPage; i++) {
+    const isActive = i === currentPageNum;
+    pageButtons += `
+      <button onclick="changePage('${type}', ${i})"
+              class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn ${isActive ? 'bg-blue-600 text-white border-blue-600' : 'text-slate-700 hover:bg-slate-100 border-slate-300'}">
+        ${i}
+      </button>
+    `;
+  }
+  
+  // Add last page if needed
+  if (endPage < totalPages) {
+    pageButtons += `
+      ${endPage < totalPages - 1 ? '<span class="text-slate-400">...</span>' : ''}
+      <button onclick="changePage('${type}', ${totalPages})"
+              class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn text-slate-700 hover:bg-slate-100 border-slate-300">
+        ${totalPages}
+      </button>
+    `;
+  }
+  
+  return pageButtons;
+}
+
+// Change page
+function changePage(type, newPage) {
+  const totalPages = Math.ceil(filteredData[type].length / ITEMS_PER_PAGE);
+  
+  // Validate page number
+  if (newPage < 1 || newPage > totalPages) {
+    return;
+  }
+  
+  // Update current page
+  currentPage[type] = newPage;
+  
+  // Re-render data
+  if (type === 'staff') {
+    renderStaffData();
+  } else {
+    renderMemberData();
+  }
+}
+
+// Update empty state text based on search
+function updateEmptyStateText(type, hasData) {
+  const searchTerm = searchInput.value.trim();
+  const isEmpty = !hasData;
+  
+  if (type === 'staff') {
+    if (isEmpty) {
+      const emptyText = searchTerm ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan';
+      const emptySubtext = searchTerm ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru';
+      
+      // Update mobile
+      const mobileText = document.getElementById('staff-empty-text');
+      const mobileSubtext = document.getElementById('staff-empty-subtext');
+      if (mobileText) mobileText.textContent = emptyText;
+      if (mobileSubtext) mobileSubtext.textContent = emptySubtext;
+      
+      // Update desktop
+      const desktopText = document.getElementById('staff-empty-desktop-text');
+      const desktopSubtext = document.getElementById('staff-empty-desktop-subtext');
+      if (desktopText) desktopText.textContent = emptyText;
+      if (desktopSubtext) desktopSubtext.textContent = emptySubtext;
+    }
+  } else {
+    if (isEmpty) {
+      const emptyText = searchTerm ? 'Member tidak ditemukan' : 'Belum ada member';
+      const emptySubtext = searchTerm ? 'Coba dengan kata kunci lain' : 'Tambahkan member baru';
+      
+      // Update mobile
+      const mobileText = document.getElementById('member-empty-text');
+      const mobileSubtext = document.getElementById('member-empty-subtext');
+      if (mobileText) mobileText.textContent = emptyText;
+      if (mobileSubtext) mobileSubtext.textContent = emptySubtext;
+      
+      // Update desktop
+      const desktopText = document.getElementById('member-empty-desktop-text');
+      const desktopSubtext = document.getElementById('member-empty-desktop-subtext');
+      if (desktopText) desktopText.textContent = emptyText;
+      if (desktopSubtext) desktopSubtext.textContent = emptySubtext;
+    }
+  }
+}
+
+// Show user detail modal
+function showUserDetail(userId, userType) {
+  const users = userType === 'staff' ? userData.staff : userData.members;
+  const user = users.find(u => u.id === userId);
+  
+  if (!user) return;
+  
+  // Store current user for delete
+  currentUserId = user.id;
+  currentUserType = userType;
+  
+  // Update modal content
+  userAvatar.textContent = user.username.charAt(0).toUpperCase();
+  userName.textContent = user.username;
+  userEmail.textContent = user.email;
+  document.getElementById('user-id').textContent = '#' + user.id;
+  document.getElementById('user-role').textContent = user.role;
+  
+  const fullName = (user.first_name || user.last_name) 
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
+    : 'Tidak diisi';
+  document.getElementById('user-fullname').textContent = fullName;
+  
+  // Update status
+  const statusDot = document.getElementById('user-status-dot');
+  const statusText = document.getElementById('user-status');
+  if (user.is_active) {
+    statusDot.className = 'w-2 h-2 rounded-full bg-green-500';
+    statusText.textContent = 'Aktif';
+  } else {
+    statusDot.className = 'w-2 h-2 rounded-full bg-red-500';
+    statusText.textContent = 'Nonaktif';
+  }
+  
+  document.getElementById('user-joined').textContent = user.created_at;
+  
+  // Show modal
+  userModal.classList.remove('hidden');
+}
+
+// Confirm delete user with SweetAlert2
+function confirmDeleteUser(userId, username) {
+  Swal.fire({
+    title: 'Hapus Pengguna?',
+    html: `Apakah Anda yakin ingin menghapus pengguna <strong>"${username}"</strong>?<br>Tindakan ini tidak dapat dibatalkan.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'Ya, Hapus',
+    cancelButtonText: 'Batal',
+    reverseButtons: true
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Submit form delete
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `{% url 'accounts:delete_user' 0 %}`.replace('0', userId);
+      
+      const csrfToken = document.createElement('input');
+      csrfToken.type = 'hidden';
+      csrfToken.name = 'csrfmiddlewaretoken';
+      csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+      
+      form.appendChild(csrfToken);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  });
+}
+
+// Close modal
+function closeModal() {
+  userModal.classList.add('hidden');
+}
+
+// Close modal when clicking outside
+userModal.addEventListener('click', function(e) {
+  if (e.target === userModal) {
+    closeModal();
+  }
+});
+</script>
+
 <style>
-  [x-cloak] { display: none !important; }
+[x-cloak] { display: none !important; }
 </style>
 {% endblock %}

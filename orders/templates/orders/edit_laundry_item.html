@@ -1,55 +1,365 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-2xl shadow-lg">
-  <h1 class="text-3xl font-bold text-blue-700 mb-6 text-center">✏️ Edit Laundry Item</h1>
+<style>
+  /* Modern Form Styles */
+  .form-card {
+    background: white;
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
+    overflow: hidden;
+  }
+  
+  .form-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .form-body {
+    padding: 2rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-label i {
+    margin-right: 0.5rem;
+    color: #3b82f6;
+    width: 1.25rem;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: #ffffff;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  .form-input:hover {
+    border-color: #94a3b8;
+  }
+  
+  /* Image Preview Styles */
+  .current-image {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    display: inline-block;
+  }
+  
+  .current-image-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  
+  .current-image-img {
+    width: 6rem;
+    height: 6rem;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* File Upload Area */
+  .upload-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: #fafbfc;
+  }
+  
+  .upload-area:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+  }
+  
+  .upload-area.dragover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+  
+  /* Buttons */
+  .btn-save {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+  }
+  
+  .btn-cancel {
+    background: #64748b;
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .btn-cancel:hover {
+    background: #475569;
+    transform: translateY(-2px);
+  }
+  
+  /* Animation */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  
+  /* Preview Image */
+  .image-preview {
+    margin-top: 1rem;
+    display: none;
+  }
+  
+  .image-preview img {
+    width: 5rem;
+    height: 5rem;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 2px solid #e2e8f0;
+  }
+</style>
 
-  <form method="post" enctype="multipart/form-data" class="space-y-5">
-    {% csrf_token %}
-
-    <!-- Nama Item -->
-    <div>
-      <label class="block font-medium text-gray-700 mb-1">Nama Item</label>
-      <input type="text" name="name" value="{{ item.name }}" required
-        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
-    </div>
-
-    <!-- Harga -->
-    <div>
-      <label class="block font-medium text-gray-700 mb-1">Harga (Rp)</label>
-      <input type="number" name="price" value="{{ item.price }}" required min="0"
-        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition">
-    </div>
-
-    <!-- Gambar -->
-    <div>
-      <label class="block font-medium text-gray-700 mb-1">Gambar Item</label>
-
-      {% if item.image %}
-      <div class="mb-3">
-        <p class="text-sm text-gray-600 mb-1">Gambar Saat Ini:</p>
-        <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-32 h-32 object-cover rounded-lg border shadow-sm">
+<div class="max-w-2xl mx-auto mt-8 px-4">
+  <!-- Header -->
+  <div class="mb-8 fade-in">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+        <i class="fas fa-pen text-white text-xl"></i>
       </div>
-      {% endif %}
-
-      <input type="file" name="image" accept="image/*"
-        class="w-full border border-gray-300 rounded-lg px-4 py-2 bg-gray-50 cursor-pointer focus:ring-2 focus:ring-blue-400 transition">
-      <p class="text-sm text-gray-500 mt-1">Kosongkan jika tidak ingin mengganti gambar.</p>
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">
+          Edit Item Laundry
+        </h1>
+        <p class="text-sm text-gray-600">Perbarui informasi item laundry</p>
+      </div>
     </div>
+  </div>
 
-    <!-- Tombol Aksi -->
-    <div class="flex justify-center space-x-3 pt-4">
-      <button type="submit"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-300 shadow">
-        💾 Simpan Perubahan
-      </button>
-
-      <a href="{% url 'orders:add_laundry_item' %}"
-        class="bg-gray-400 hover:bg-gray-500 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-300 shadow">
-        ❌ Batal
-      </a>
+  <!-- Form Card -->
+  <div class="form-card fade-in">
+    <div class="form-header">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-tshirt text-blue-600 text-lg"></i>
+        <span class="font-semibold text-gray-800">Form Edit Item</span>
+      </div>
     </div>
-  </form>
+    
+    <div class="form-body">
+      <form method="post" enctype="multipart/form-data" id="editForm">
+        {% csrf_token %}
+        
+        <!-- Nama Item -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-tag"></i>Nama Item
+          </label>
+          <input type="text" name="name" value="{{ item.name }}" required
+                 placeholder="Contoh: Kemeja Putih, Celana Jeans"
+                 class="form-input">
+        </div>
+        
+        <!-- Harga -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-money-bill-wave"></i>Harga (Rp)
+          </label>
+          <input type="number" name="price" value="{{ item.price }}" required min="0" step="1000"
+                 placeholder="Contoh: 15000"
+                 class="form-input">
+        </div>
+        
+        <!-- Gambar -->
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-image"></i>Gambar Item
+          </label>
+          
+          {% if item.image %}
+          <div class="current-image">
+            <span class="current-image-label">
+              <i class="fas fa-image text-blue-500 mr-1"></i>Gambar Saat Ini:
+            </span>
+            <div>
+              <img src="{{ item.image.url }}" alt="{{ item.name }}" class="current-image-img">
+            </div>
+          </div>
+          {% endif %}
+          
+          <!-- Upload Area -->
+          <div class="upload-area" id="uploadArea">
+            <input type="file" name="image" accept="image/*" id="imageInput" class="hidden">
+            <label for="imageInput" class="cursor-pointer block">
+              <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+              <p class="text-gray-600 text-sm">Klik atau drag & drop untuk mengganti gambar</p>
+              <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, max 2MB</p>
+            </label>
+          </div>
+          
+          <!-- Preview Gambar Baru -->
+          <div id="imagePreview" class="image-preview">
+            <span class="text-xs text-gray-500 mb-1 block">
+              <i class="fas fa-eye text-blue-500 mr-1"></i>Preview Gambar Baru:
+            </span>
+            <img id="previewImg" src="#" alt="Preview">
+          </div>
+          
+          <p class="text-xs text-gray-500 mt-2">
+            <i class="fas fa-info-circle"></i> Kosongkan jika tidak ingin mengganti gambar.
+          </p>
+        </div>
+        
+        <!-- Tombol Aksi -->
+        <div class="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+          <button type="submit" class="btn-save">
+            <i class="fas fa-save"></i>
+            Simpan Perubahan
+          </button>
+          
+          <a href="{% url 'orders:add_laundry_item' %}" class="btn-cancel">
+            <i class="fas fa-times"></i>
+            Batal
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
+<!-- JavaScript untuk preview gambar dan drag & drop -->
+<script>
+  // Preview gambar sebelum upload
+  const imageInput = document.getElementById('imageInput');
+  const imagePreview = document.getElementById('imagePreview');
+  const previewImg = document.getElementById('previewImg');
+  const uploadArea = document.getElementById('uploadArea');
+  
+  if (imageInput) {
+    imageInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          previewImg.src = event.target.result;
+          imagePreview.style.display = 'block';
+          imagePreview.style.animation = 'fadeIn 0.3s ease-out';
+        }
+        reader.readAsDataURL(file);
+      } else {
+        imagePreview.style.display = 'none';
+      }
+    });
+  }
+  
+  // Drag & drop functionality
+  if (uploadArea) {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+      uploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight(e) {
+      uploadArea.classList.add('dragover');
+    }
+    
+    function unhighlight(e) {
+      uploadArea.classList.remove('dragover');
+    }
+    
+    uploadArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length) {
+        imageInput.files = files;
+        const event = new Event('change');
+        imageInput.dispatchEvent(event);
+      }
+    }
+  }
+  
+  // Konfirmasi sebelum submit jika ada perubahan
+  let formChanged = false;
+  const form = document.getElementById('editForm');
+  const formInputs = document.querySelectorAll('.form-input');
+  
+  formInputs.forEach(input => {
+    input.addEventListener('change', () => { formChanged = true; });
+  });
+  
+  if (imageInput) {
+    imageInput.addEventListener('change', () => { formChanged = true; });
+  }
+  
+  // Tampilkan tooltip atau info
+  console.log('Form edit item siap digunakan');
+</script>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
 {% endblock %}

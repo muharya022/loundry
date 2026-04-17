@@ -10,10 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
-from dotenv import load_dotenv
 from pathlib import Path
 
-load_dotenv() 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,8 +31,12 @@ SECRET_KEY = 'django-insecure-61qn3skdxxii!gsrmltyewzxoat5-&@90^1^*k@7-(wa*+ff0w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.13', ' 192.168.1.12', '*', 'https://gentle-candles-tan.loca.lt/', 'https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev']
+ALLOWED_HOSTS = ['subcorymbosely-nonmythologic-marcelina.ngrok-free.dev', 'localhost', '127.0.0.1', "app.gunungsari.biz.id",]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev",
+    "https://app.gunungsari.biz.id",
+]
 
 # Application definition
 
@@ -49,9 +56,6 @@ INSTALLED_APPS = [
     'courier',
     'rest_framework',
 ]
-CSRF_TRUSTED_ORIGINS = [
-    "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev",
-]
 
 # settings.py
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -59,19 +63,14 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'muhammadaryaalfajar@gmail.com'
-EMAIL_HOST_PASSWORD = 'owak akui ywpg yphr'
+EMAIL_HOST_PASSWORD = 'bfvj ybaq ixzf onmk'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 AUTH_USER_MODEL = 'accounts.User'
 
-MIDTRANS = {
-    'SERVER_KEY': os.getenv("MIDTRANS_SERVER_KEY"),
-    'CLIENT_KEY': os.getenv("MIDTRANS_CLIENT_KEY"),
-    'IS_PRODUCTION': os.getenv("MIDTRANS_IS_PRODUCTION", "False") == "True",
-}
-
-
+MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
+MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -163,3 +162,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+# ===== MIDTRANS Configuration =====
+MIDTRANS = {
+    "IS_PRODUCTION": False,
+    "SERVER_KEY": os.getenv("MIDTRANS_SERVER_KEY", ""),
+    "CLIENT_KEY": os.getenv("MIDTRANS_CLIENT_KEY", ""),
+}

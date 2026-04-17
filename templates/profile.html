@@ -2,100 +2,206 @@
 {% block title %}Profil - FreshWash Laundry{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-lg shadow-md space-y-12">
 
-  <h1 class="text-3xl font-bold text-blue-600 mb-6 flex items-center space-x-2">
-    <i data-lucide="user" class="inline-block"></i>
-    <span>Profil Saya</span>
-  </h1>
+<div class="max-w-5xl mx-auto mt-10">
 
-  <!-- Info User -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-    <div class="flex items-center space-x-2">
-      <i data-lucide="user"></i>
-      <div>
-        <label class="block text-gray-700 font-medium">Username</label>
-        <p class="mt-1 text-gray-900">{{ request.user.username }}</p>
-      </div>
-    </div>
-    <div class="flex items-center space-x-2">
-      <i data-lucide="user-check"></i>
-      <div>
-        <label class="block text-gray-700 font-medium">Nama Depan</label>
-        <p class="mt-1 text-gray-900">{{ request.user.first_name|default:"-" }}</p>
-      </div>
-    </div>
-    <div class="flex items-center space-x-2">
-      <i data-lucide="user-check"></i>
-      <div>
-        <label class="block text-gray-700 font-medium">Nama Belakang</label>
-        <p class="mt-1 text-gray-900">{{ request.user.last_name|default:"-" }}</p>
-      </div>
-    </div>
-    <div class="flex items-center space-x-2">
-      <i data-lucide="mail"></i>
-      <div>
-        <label class="block text-gray-700 font-medium">Email</label>
-        <p class="mt-1 text-gray-900">{{ request.user.email }}</p>
-      </div>
-    </div>
-    <div class="flex items-center space-x-2">
-      <i data-lucide="phone"></i>
-      <div>
-        <label class="block text-gray-700 font-medium">Telepon</label>
-        <p class="mt-1 text-gray-900">{{ request.user.phone|default:"-" }}</p>
-      </div>
-    </div>
-    <div class="md:col-span-2 flex items-start space-x-2">
-      <i data-lucide="map-pin" class="mt-2"></i>
-      <div>
-        <label class="block text-gray-700 font-medium">Alamat</label>
-        <p class="mt-1 text-gray-900">{{ request.user.address|default:"-" }}</p>
-      </div>
+  <!-- HEADER -->
+  <div class="mb-6 text-center">
+    <h1 class="text-3xl font-bold text-blue-600">
+      Profil Saya
+    </h1>
+    <p class="text-gray-500 mt-1">
+      Kelola informasi akun Anda
+    </p>
+  </div>
+
+  <!-- ================= TABS ================= -->
+  <div class="bg-white rounded-xl shadow p-4 mb-6">
+    <div class="flex gap-6 border-b">
+      <button class="tab-btn active" data-tab="tab-info">Profil</button>
+      <button class="tab-btn" data-tab="tab-edit">Edit Profil</button>
+      <button class="tab-btn" data-tab="tab-password">Password</button>
     </div>
   </div>
 
-  <!-- Form Update Profil -->
-  <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
-    <h2 class="text-xl font-semibold mb-4 text-blue-600 flex items-center space-x-2">
-      <i data-lucide="edit-3"></i>
-      <span>Edit Profil</span>
-    </h2>
-    <form method="POST" class="space-y-4">
-      {% csrf_token %}
-      {{ profile_form.as_p }}
-      <button type="submit" name="update_profile"
-              class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition duration-200 flex items-center space-x-2">
-        <i data-lucide="save"></i>
-        <span>Simpan Perubahan</span>
-      </button>
-    </form>
+  <!-- ================= TAB PROFIL ================= -->
+  <div id="tab-info" class="tab-content">
+
+    <div class="bg-white p-8 rounded-xl shadow">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div>
+          <label class="label">Username</label>
+          <p class="value">{{ request.user.username }}</p>
+        </div>
+
+        <div>
+          <label class="label">Email</label>
+          <p class="value">{{ request.user.email }}</p>
+        </div>
+
+        <div>
+          <label class="label">Nama Depan</label>
+          <p class="value">{{ request.user.first_name|default:"-" }}</p>
+        </div>
+
+        <div>
+          <label class="label">Nama Belakang</label>
+          <p class="value">{{ request.user.last_name|default:"-" }}</p>
+        </div>
+
+        <div>
+          <label class="label">Telepon</label>
+          <p class="value">{{ request.user.phone|default:"-" }}</p>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="label">Alamat</label>
+          <p class="value">{{ request.user.address|default:"-" }}</p>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
-  <!-- Spacer -->
-  <div class="my-6 border-t border-gray-300"></div>
+  <!-- ================= TAB EDIT PROFIL ================= -->
+  <div id="tab-edit" class="tab-content hidden">
 
-  <!-- Form Update Password -->
-  <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
-    <h2 class="text-xl font-semibold mb-4 text-red-600 flex items-center space-x-2">
-      <i data-lucide="lock"></i>
-      <span>Ganti Password</span>
-    </h2>
-    <form method="POST" class="space-y-4">
-      {% csrf_token %}
-      {{ password_form.as_p }}
-      <button type="submit" name="update_password"
-              class="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition duration-200 flex items-center space-x-2">
-        <i data-lucide="save"></i>
-        <span>Update Password</span>
-      </button>
-    </form>
+    <div class="bg-white p-8 rounded-xl shadow">
+      <h2 class="text-xl font-semibold text-blue-600 mb-4">
+        Edit Profil
+      </h2>
+
+      <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        {{ profile_form.as_p }}
+
+        <button type="submit" name="update_profile" class="btn-blue">
+          Simpan Perubahan
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- ================= TAB PASSWORD ================= -->
+  <div id="tab-password" class="tab-content hidden">
+
+    <div class="bg-white p-8 rounded-xl shadow">
+      <h2 class="text-xl font-semibold text-red-600 mb-4">
+        Ganti Password
+      </h2>
+
+      <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        {{ password_form.as_p }}
+
+        <button type="submit" name="update_password" class="btn-red">
+          Update Password
+        </button>
+      </form>
+    </div>
+
   </div>
 
 </div>
 
-<!-- Render Lucide Icons -->
+<!-- ================= STYLE ================= -->
+<style>
+/* TAB */
+.tab-btn {
+  padding: 10px 18px;
+  font-weight: 600;
+  color: #6b7280;
+  border-bottom: 3px solid transparent;
+  transition: .2s;
+}
+.tab-btn.active {
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+/* INFO LABEL */
+.label {
+  font-size: 13px;
+  color: #6b7280;
+}
+.value {
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* BUTTON */
+.btn-blue {
+  background:#2563eb;
+  color:#fff;
+  padding:10px 20px;
+  border-radius:8px;
+  font-weight:600;
+}
+.btn-blue:hover {
+  background:#1d4ed8;
+}
+
+.btn-red {
+  background:#dc2626;
+  color:#fff;
+  padding:10px 20px;
+  border-radius:8px;
+  font-weight:600;
+}
+.btn-red:hover {
+  background:#b91c1c;
+}
+
+/* === FORM STYLE SERAGAM (EDIT & PASSWORD) === */
+form p {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+form label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+form input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  outline: none;
+  transition: .2s;
+}
+
+form input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.2);
+}
+
+/* PASSWORD INPUT */
+#tab-password form input {
+  background-color: #f9fafb;
+}
+</style>
+
+<!-- ================= SCRIPT TAB ================= -->
 <script>
-  lucide.createIcons();
+const tabs = document.querySelectorAll('.tab-btn');
+const contents = document.querySelectorAll('.tab-content');
+
+tabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('active'));
+    contents.forEach(c => c.classList.add('hidden'));
+
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.remove('hidden');
+  });
+});
 </script>
+
 {% endblock %}

@@ -5,6 +5,7 @@ from decimal import Decimal
 from datetime import timedelta
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.http import HttpResponse
@@ -13,21 +14,34 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils import timezone
 from django.conf import settings
+from django.db.models import Sum, Count
 
 import midtransclient
 from xhtml2pdf import pisa
 
 from services.models import Service
-from .models import Order, LaundryItem
+from .models import Order, LaundryItem, Promo
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
 # ===============================
-# 🔹 HOME VIEW
+# Helper Functions
 # ===============================
-from .models import Promo
+def cleanup_cancelled_orders():
+    """Hapus order yang statusnya 'cancelled' lebih dari 2 hari."""
+    two_days_ago = timezone.now() - timedelta(days=2)
+    Order.objects.filter(order_status='cancelled', created_at__lte=two_days_ago).delete()
 
+
+def admin_required(user):
+    """Hanya admin/staff yang bisa mengakses."""
+    return user.is_staff
+
+
+# ===============================
+# Home View
+# ===============================
 def home(request):
     promos = Promo.objects.filter(is_active=True).order_by('-created_at')
     return render(request, 'home.html', {
@@ -78,7 +92,8 @@ def get_address(lat, lng):
 
 
 from decimal import Decimal
-from .models import Promo, Order
+from .models import Promo, Order, OrderItem, LaundryItem
+import json
 
 @login_required
 def create_order(request):
@@ -87,6 +102,12 @@ def create_order(request):
     customers = User.objects.all() if request.user.is_staff else None
 
     if request.method == "POST":
+        print("=" * 50)
+        print("POST DATA RECEIVED:")
+        for key, value in request.POST.items():
+            print(f"{key}: {value}")
+        print("=" * 50)
+        
         # ===== Pilih customer =====
         if request.user.is_staff:
             customer_id = request.POST.get("customer")
@@ -108,6 +129,7 @@ def create_order(request):
         payment_method = request.POST.get("payment_method")
         scheduled_pickup = request.POST.get("scheduled_pickup")
         weight = request.POST.get("weight", None)
+        shipping_cost = Decimal(request.POST.get("shipping_cost", 0) or 0)
 
         # ===== Ambil lokasi pickup =====
         latitude = request.POST.get("latitude")
@@ -120,8 +142,12 @@ def create_order(request):
         pickup_address = get_address(lat, lng)
 
         # ===== Ambil items jika per-item =====
+        service_ids = request.POST.getlist("service_id[]")
+        weights = request.POST.getlist("weight[]")
         item_names = request.POST.getlist("item_name[]")
         item_qtys = request.POST.getlist("item_qty[]")
+        
+        # Process items data
         items_data = []
         for name, qty in zip(item_names, item_qtys):
             if name and qty:
@@ -129,60 +155,149 @@ def create_order(request):
                     "name": name,
                     "quantity": int(qty)
                 })
+        
+        print(f"[DEBUG] Service type: {service.type}")
+        print(f"[DEBUG] Service IDs: {service_ids}")
+        print(f"[DEBUG] Weights: {weights}")
+        print(f"[DEBUG] Item names: {item_names}")
+        print(f"[DEBUG] Item qtys: {item_qtys}")
+        print(f"[DEBUG] Items data: {items_data}")
 
         # ===== Hitung total =====
         total_price = Decimal(0)
-        if service.type == "per_kilo" and weight:
-            total_price += Decimal(weight) * service.price
-        elif service.type == "per_item":
-            # Tambahkan harga layanan per-item (misal fee layanan tetap)
+        
+        # Data untuk disimpan ke OrderItem
+        order_items_to_create = []
+        
+        # Hitung dari service_ids dan weights (untuk per_kilo)
+        for i, s_id in enumerate(service_ids):
+            try:
+                srv = Service.objects.get(id=s_id)
+                if srv.type == "per_kilo" and i < len(weights) and weights[i]:
+                    weight_val = Decimal(weights[i])
+                    item_subtotal = weight_val * srv.price
+                    total_price += item_subtotal
+                    print(f"[DEBUG] Added per_kilo: {weight_val} kg x {srv.price} = {item_subtotal}")
+                    
+                    # Simpan ke OrderItem nanti
+                    order_items_to_create.append({
+                        'service': srv,
+                        'laundry_item': None,
+                        'quantity': None,
+                        'weight': weight_val,
+                        'price': srv.price,
+                        'subtotal': item_subtotal
+                    })
+            except Service.DoesNotExist:
+                pass
+        
+        # Hitung dari items (untuk per_item)
+        for item_data in items_data:
+            item_obj = LaundryItem.objects.filter(name=item_data["name"]).first()
+            if item_obj:
+                item_price = Decimal(item_obj.price) * Decimal(item_data["quantity"])
+                total_price += item_price
+                print(f"[DEBUG] Item '{item_data['name']}' qty {item_data['quantity']}: +{item_price}")
+                
+                # Simpan ke OrderItem nanti
+                order_items_to_create.append({
+                    'service': None,
+                    'laundry_item': item_obj,
+                    'quantity': item_data["quantity"],
+                    'weight': None,
+                    'price': item_obj.price,
+                    'subtotal': item_price
+                })
+        
+        # Tambahkan harga service itu sendiri jika per_item
+        if service.type == "per_item":
             total_price += service.price
-            # Tambahkan harga semua item
-            for i, q in zip(item_names, item_qtys):
-                item_obj = LaundryItem.objects.filter(name=i).first()
-                if item_obj:
-                    total_price += Decimal(item_obj.price) * int(q)
+            print(f"[DEBUG] Service price added: {service.price}")
+            
+            # Simpan service sebagai OrderItem juga
+            order_items_to_create.append({
+                'service': service,
+                'laundry_item': None,
+                'quantity': 1,
+                'weight': None,
+                'price': service.price,
+                'subtotal': service.price
+            })
+        
+        # ===== Tambahkan shipping cost =====
+        total_price += shipping_cost
+        
+        print(f"[DEBUG] Total price before discount: {total_price}")
+        
+        # Validasi total_price
+        if total_price <= 0:
+            messages.error(request, "Total harga harus lebih dari 0. Pastikan sudah memilih layanan dan item.")
+            return redirect("orders:order")
 
-         # ================= PROMO (USER PROMO) =================
-        user_promo = UserPromo.objects.filter(
-            user=customer,
-            is_used=False,
-            promo__is_active=True,
-            promo__min_transaction__lte=total_price
-        ).select_related("promo").first()
-
+        # ================= PROMO (USER PROMO) =================
+        selected_promo_id = request.POST.get("selected_promo")
+        
         discount_percent = None
         total_price_after_discount = total_price
+        applied_promo = None
 
-        if user_promo:
-            discount_percent = user_promo.promo.discount
-            discount_amount = total_price * Decimal(discount_percent) / 100
-            total_price_after_discount -= discount_amount
+        if selected_promo_id:
+            user_promo = UserPromo.objects.filter(
+                user=customer,
+                promo_id=selected_promo_id,
+                is_used=False,
+                promo__is_active=True,
+                promo__min_transaction__lte=total_price
+            ).select_related("promo").first()
 
-            # tandai promo sudah dipakai
-            user_promo.is_used = True
-            user_promo.save()
-            
+            if user_promo:
+                discount_amount = user_promo.promo.discount_amount  # 🔥 langsung ambil nominal
+                
+                total_price_after_discount = total_price - Decimal(discount_amount)
+
+                applied_promo = user_promo
+
+                # tandai promo sudah dipakai
+                user_promo.is_used = True
+                user_promo.save()
+        
         # ===== Simpan order =====
         order = Order.objects.create(
             customer=customer,
             service=service,
-            items=items_data if items_data else None,
             weight=weight if weight else None,
             price_total=total_price_after_discount,
             discount_percent=discount_percent,
             scheduled_pickup=scheduled_pickup,
             payment_method=payment_method,
             order_status="pending",
+            payment_status="unpaid",
             latitude=latitude,
             longitude=longitude,
             pickup_address=pickup_address
         )
+        
+        # ===== Simpan OrderItems =====
+        for item_data in order_items_to_create:
+            OrderItem.objects.create(
+                order=order,
+                service=item_data['service'],
+                laundry_item=item_data['laundry_item'],
+                quantity=item_data['quantity'],
+                weight=item_data['weight'],
+                price=item_data['price'],
+                subtotal=item_data['subtotal']
+            )
+        
+        print(f"[DEBUG] Order created with ID: {order.id}")
+        print(f"[DEBUG] Total OrderItems created: {len(order_items_to_create)}")
+        print(f"[DEBUG] Final price: {total_price_after_discount}")
 
         # ===== Midtrans jika QRIS =====
         if payment_method == "qris":
             import midtransclient
             from django.conf import settings
+            import time
 
             snap = midtransclient.Snap(
                 is_production=settings.MIDTRANS["IS_PRODUCTION"],
@@ -218,27 +333,42 @@ def create_order(request):
         messages.success(request, f"Pesanan #{order.id} berhasil dibuat. Diskon: {discount_percent if discount_percent else 0}%")
         return redirect("orders:order_list")
 
+    # ===== Ambil promo yang tersedia untuk user =====
+    available_promos = UserPromo.objects.filter(
+        user=request.user,
+        is_used=False,
+        promo__is_active=True
+    ).select_related("promo")
+
     return render(request, "orders/order.html", {
         "services": services,
         "laundry_items": laundry_items,
-        "customers": customers
+        "customers": customers,
+        "available_promos": available_promos
     })
-
 
 @login_required
 def payment(request, order_id):
-    """Halaman pembayaran Midtrans"""
+    """Halaman pembayaran untuk order"""
     order = get_object_or_404(Order, id=order_id, customer=request.user)
+    
+    # Pastikan order status masih pending
+    if order.order_status != 'pending':
+        messages.error(request, "Order ini sudah diproses atau dibayar.")
+        return redirect('orders:order_detail', order_id=order.id)
+    
+    # Pastikan snap_token ada
     if not order.snap_token:
-        messages.error(request, "Transaksi tidak ditemukan.")
-        return redirect("orders:order_list")
-
-    return render(request, "orders/payment.html", {
-        "order": order,
-        "snap_token": order.snap_token,
-        "client_key": settings.MIDTRANS["CLIENT_KEY"],
-    })
-
+        messages.error(request, "Token pembayaran tidak ditemukan.")
+        return redirect('orders:order_list')
+    
+    context = {
+        'order': order,
+        'snap_token': order.snap_token,
+        'client_key': settings.MIDTRANS.get('CLIENT_KEY', ''),
+    }
+    
+    return render(request, 'orders/payment.html', context)
 
 @login_required
 def payment_success(request):
@@ -288,38 +418,39 @@ def callback_midtrans(request):
             return HttpResponse("Error", status=500)
     return HttpResponse("Invalid method", status=405)
 
-# orders/views.py
-from django.shortcuts import render
-from django.db.models import Count, Sum
-from .models import Order
-from services.models import Service
 
+@login_required
 def order_list(request):
+    """Menampilkan daftar pesanan user dengan pagination."""
     # Ambil semua order milik user
-    orders = Order.objects.filter(customer=request.user).order_by('-created_at')
+    orders_query = Order.objects.filter(customer=request.user).order_by('-created_at')
 
-    # Statistik sederhana
-    total_orders = orders.count()
-    success_orders = orders.filter(order_status='delivered').count()
-    pending_orders = orders.filter(order_status='pending').count()
-    cancelled_orders = orders.filter(order_status='cancelled').count()
+    # Statistik
+    total_orders = orders_query.count()
+    success_orders = orders_query.filter(order_status='delivered').count()
+    pending_orders = orders_query.filter(order_status='pending').count()
+    cancelled_orders = orders_query.filter(order_status='cancelled').count()
 
     # Total transaksi yang sudah dibayar
-    total_paid_value = orders.filter(payment_status__in=['paid', 'settlement']).aggregate(
-        total=Sum('price_total')
-    )['total'] or 0
+    total_paid_value = orders_query.filter(
+        payment_status__in=['paid', 'settlement']
+    ).aggregate(total=Sum('price_total'))['total'] or 0
 
-    # 🔹 Layanan yang sering digunakan
-    # Mengelompokkan berdasarkan service, hitung jumlah order
+    # Layanan yang sering digunakan
     frequent_services = (
-        orders.values('service')  # ambil id service
-              .annotate(count=Count('service'))
-              .order_by('-count')
+        orders_query.values('service')
+        .annotate(count=Count('service'))
+        .order_by('-count')[:5]
     )
 
-    # Ambil objek Service lengkap untuk tiap service
+    # Ambil objek Service lengkap
     for fs in frequent_services:
         fs['service'] = Service.objects.get(pk=fs['service'])
+
+    # Pagination
+    paginator = Paginator(orders_query, 10)
+    page_number = request.GET.get('page')
+    orders = paginator.get_page(page_number)
 
     context = {
         'orders': orders,
@@ -350,10 +481,24 @@ def cancel_order(request, order_id):
 # ===============================
 # 🔹 Views Admin
 # ===============================
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import user_passes_test
+from orders.models import Order
+# from accounts.models import User
+
+# def admin_required(user):
+#     return user.is_authenticated and user.is_admin
+
 @login_required
 @user_passes_test(admin_required)
 def update_order_status(request, order_id):
     order = get_object_or_404(Order, id=order_id)
+    
+    # Simpan halaman saat ini untuk redirect kembali
+    current_page = request.GET.get('orders_page', 1)
+    
     if request.method == "POST":
         new_status = request.POST.get("order_status")
         if new_status in dict(Order.ORDER_STATUS_CHOICES):
@@ -362,62 +507,83 @@ def update_order_status(request, order_id):
             messages.success(request, f"Status pesanan #{order.id} diperbarui menjadi {order.get_order_status_display()}.")
         else:
             messages.error(request, "Status yang dipilih tidak valid.")
-    return redirect('accounts:admin_dashboard')
-
+    
+    # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
+    return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
 @login_required
 @user_passes_test(admin_required)
 def update_payment_status(request, order_id):
     order = get_object_or_404(Order, id=order_id)
+    
+    # Simpan halaman saat ini untuk redirect kembali
+    current_page = request.GET.get('orders_page', 1)
+    
     if request.method == "POST":
         new_status = request.POST.get("payment_status")
         if new_status in dict(Order.PAYMENT_STATUS_CHOICES):
             order.payment_status = new_status
             order.save()
             messages.success(request, f"Status pembayaran pesanan #{order.id} diperbarui menjadi {order.get_payment_status_display()}.")
-    return redirect("accounts:admin_dashboard")
-
+    
+    # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
+    return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
 @login_required
 @user_passes_test(admin_required)
 def assign_courier(request, order_id):
     order = get_object_or_404(Order, id=order_id)
+    
+    # Simpan halaman saat ini untuk redirect kembali
+    current_page = request.GET.get('orders_page', 1)
+    
     if request.method == "POST":
         courier_id = request.POST.get("courier")
         if not courier_id:
             order.assigned_courier = None
             order.save()
             messages.info(request, f"Kurir untuk pesanan #{order.id} telah dihapus.")
-            return redirect('accounts:admin_dashboard')
-
-        try:
-            courier = User.objects.get(id=courier_id, is_courier=True)
-            order.assigned_courier = courier
-            order.save()
-            messages.success(request, f"Kurir '{courier.username}' telah ditugaskan ke pesanan #{order.id}.")
-        except User.DoesNotExist:
-            messages.error(request, "Kurir yang dipilih tidak valid.")
-    return redirect('accounts:admin_dashboard')
-
+        else:
+            try:
+                courier = User.objects.get(id=courier_id, is_courier=True)
+                order.assigned_courier = courier
+                order.save()
+                messages.success(request, f"Kurir '{courier.username}' telah ditugaskan ke pesanan #{order.id}.")
+            except User.DoesNotExist:
+                messages.error(request, "Kurir yang dipilih tidak valid.")
+    
+    # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
+    return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
 @login_required
 @user_passes_test(admin_required)
 def delete_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
+    
+    # Simpan halaman saat ini untuk redirect kembali
+    current_page = request.GET.get('orders_page', 1)
+    
     if request.method == "POST":
         order.delete()
         messages.success(request, f"Pesanan #{order.id} berhasil dihapus.")
-    return redirect('orders:order_list')
+    
+    # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
+    return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
-from django.shortcuts import render, redirect
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Promo
-from .forms import AssignPromoForm
+from django.contrib import messages
+from .models import Promo, UserPromo
+from .forms import AssignPromoForm, PromoForm
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 @staff_member_required
 def assign_promo(request):
     promos = Promo.objects.filter(is_active=True).order_by('-created_at')
+    user_promos = UserPromo.objects.select_related('user', 'promo').order_by('-assigned_at')
 
     if request.method == 'POST':
         form = AssignPromoForm(request.POST)
@@ -427,83 +593,75 @@ def assign_promo(request):
     else:
         form = AssignPromoForm()
 
-    context = {
+    return render(request, 'orders/assign_promo.html', {
         'form': form,
-        'promos': promos
-    }
-    return render(request, 'orders/assign_promo.html', context)
-
-
-from decimal import Decimal
-from .models import UserPromo
-def apply_promo(user, total_price):
-    user_promo = UserPromo.objects.filter(
-        user=user,
-        is_used=False,
-        promo__is_active=True,
-        promo__min_transaction__lte=total_price
-    ).select_related('promo').first()
-
-    if user_promo:
-        discount_amount = total_price * user_promo.promo.discount / 100
-        total_after_discount = total_price - discount_amount
-
-        user_promo.is_used = True
-        user_promo.save()
-
-        return total_after_discount, user_promo.promo.discount
-
-    return total_price, 0
-
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .forms import PromoForm
-
-def is_admin(user):
-    return user.is_staff or user.is_superuser
-
-@login_required
-@user_passes_test(is_admin)
-def add_promo(request):
-    form = PromoForm(request.POST or None, request.FILES or None)
-
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, 'Promo berhasil ditambahkan.')
-        return redirect('orders:promo_assign')
-
-    return render(request, 'orders/promo_add.html', {'form': form})
-
-@login_required
-@user_passes_test(is_admin)
-def edit_promo(request, promo_id):
-    promo = get_object_or_404(Promo, id=promo_id)
-    form = PromoForm(request.POST or None, request.FILES or None, instance=promo)
-
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, 'Promo berhasil diperbarui.')
-        return redirect('orders:promo_assign')
-
-    return render(request, 'orders/promo_edit.html', {
-        'form': form,
-        'promo': promo
+        'promos': promos,
+        'user_promos': user_promos
     })
 
-@login_required
-@user_passes_test(is_admin)
-def delete_promo(request, promo_id):
-    promo = get_object_or_404(Promo, id=promo_id)
 
+@staff_member_required
+def add_promo(request):
     if request.method == 'POST':
+        form = PromoForm(request.POST, request.FILES)
+        if form.is_valid():
+            promo = form.save()
+            messages.success(request, f"Promo '{promo.title}' berhasil ditambahkan")
+            return redirect('orders:promo_assign')
+    else:
+        form = PromoForm()
+    
+    return render(request, 'orders/promo_add.html', {'form': form})
+
+
+@staff_member_required
+def edit_promo(request, promo_id):
+    promo = get_object_or_404(Promo, id=promo_id)
+    
+    if request.method == 'POST':
+        form = PromoForm(request.POST, request.FILES, instance=promo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Promo '{promo.title}' berhasil diperbarui")
+            return redirect('orders:promo_assign')
+    else:
+        form = PromoForm(instance=promo)
+    
+    return render(request, 'orders/promo_edit.html', {'form': form, 'promo': promo})
+
+@staff_member_required
+def delete_promo(request, promo_id):
+    """Hapus promo - langsung redirect tanpa template"""
+    promo = get_object_or_404(Promo, id=promo_id)
+    promo_title = promo.title
+    
+    if request.method == 'POST':
+        # Hapus juga UserPromo yang terkait
+        UserPromo.objects.filter(promo=promo).delete()
         if promo.image:
             promo.image.delete(save=False)
         promo.delete()
-        messages.success(request, 'Promo berhasil dihapus.')
+        messages.success(request, f"Promo '{promo_title}' berhasil dihapus")
         return redirect('orders:promo_assign')
+    
+    # Jika bukan POST, redirect ke halaman assign (tidak pakai template konfirmasi)
+    return redirect('orders:promo_assign')
 
-    return render(request, 'orders/promo_confirm_delete.html', {'promo': promo})
+
+@staff_member_required
+def user_promo_delete(request, pk):
+    """Hapus user promo - langsung redirect tanpa template"""
+    user_promo = get_object_or_404(UserPromo, id=pk)
+    user_name = user_promo.user.username
+    promo_title = user_promo.promo.title
+    
+    if request.method == 'POST':
+        user_promo.delete()
+        messages.success(request, f"Promo '{promo_title}' untuk {user_name} berhasil dihapus")
+        return redirect('orders:promo_assign')
+    
+    # Jika bukan POST, redirect ke halaman assign (tidak pakai template konfirmasi)
+    return redirect('orders:promo_assign')
 
 
 # ===============================
