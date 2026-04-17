@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-61qn3skdxxii!gsrmltyewzxoat5-&@90^1^*k@7-(wa*+ff0w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['subcorymbosely-nonmythologic-marcelina.ngrok-free.dev', 'localhost', '127.0.0.1', "app.gunungsari.biz.id",]
+ALLOWED_HOSTS = ['subcorymbosely-nonmythologic-marcelina.ngrok-free.dev', 'localhost', '127.0.0.1', "http://103.55.37.191:8000/",]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev",
