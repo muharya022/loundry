@@ -5,32 +5,81 @@
     {% csrf_token %}
     <h2 class="text-2xl font-semibold text-center text-blue-600 mb-4">Daftar Akun Baru</h2>
 
-    <label class="block text-gray-700">Nama Depan</label>
-    <input type="text" name="first_name" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
-    
-    <label class="block text-gray-700">Nama Belakang</label>
-    <input type="text" name="last_name" required class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div>
+        <label class="block text-gray-700 text-sm font-medium mb-1">Nama Depan</label>
+        <input type="text" name="first_name" required 
+               class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      
+      <div>
+        <label class="block text-gray-700 text-sm font-medium mb-1">Nama Belakang</label>
+        <input type="text" name="last_name" 
+               class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+    </div>
 
-    <label class="block text-gray-700">Username</label>
-    <input type="text" name="username" required class="w-full border rounded-lg px-4 py-2 mb-3">
+    <div class="mb-3">
+      <label class="block text-gray-700 text-sm font-medium mb-1">Username</label>
+      <input type="text" name="username" required 
+             class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <p class="text-xs text-gray-500 mt-1">Username akan digunakan untuk login</p>
+    </div>
 
-    <label class="block text-gray-700">Email</label>
-    <input type="email" name="email" required class="w-full border rounded-lg px-4 py-2 mb-3">
+    <div class="mb-3">
+      <label class="block text-gray-700 text-sm font-medium mb-1">Nomor WhatsApp</label>
+      <input type="tel" name="phone" required 
+             placeholder="Contoh: 628123456789"
+             class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <p class="text-xs text-gray-500 mt-1">Gunakan format internasional tanpa tanda + (contoh: 628123456789)</p>
+    </div>
 
-    <label class="block text-gray-700">Nomor Telepon</label>
-    <input type="text" name="phone" required class="w-full border rounded-lg px-4 py-2 mb-3">
+    <div class="mb-3">
+      <label class="block text-gray-700 text-sm font-medium mb-1">Password</label>
+      <input type="password" name="password1" required 
+             class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <p class="text-xs text-gray-500 mt-1">Minimal 8 karakter</p>
+    </div>
 
-    <label class="block text-gray-700">Password</label>
-    <input type="password" name="password1" required class="w-full border rounded-lg px-4 py-2 mb-3">
+    <div class="mb-4">
+      <label class="block text-gray-700 text-sm font-medium mb-1">Konfirmasi Password</label>
+      <input type="password" name="password2" required 
+             class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </div>
 
-    <label class="block text-gray-700">Konfirmasi Password</label>
-    <input type="password" name="password2" required class="w-full border rounded-lg px-4 py-2 mb-3">
+    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
+      Daftar
+    </button>
 
-    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Daftar</button>
-
-    <p class="text-center text-sm mt-4">Sudah punya akun? 
-      <a href="{% url 'accounts:login' %}" class="text-blue-600 hover:underline">Login</a>
+    <p class="text-center text-sm mt-4 text-gray-600">
+      Sudah punya akun? 
+      <a href="{% url 'accounts:login' %}" class="text-blue-600 hover:underline font-medium">Login</a>
     </p>
   </form>
 </div>
+
+<!-- Script untuk validasi nomor HP -->
+<script>
+  document.querySelector('form').addEventListener('submit', function(e) {
+    var phone = document.querySelector('input[name="phone"]').value;
+    // Hapus semua karakter non-digit
+    var cleanPhone = phone.replace(/\D/g, '');
+    
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      e.preventDefault();
+      alert('Nomor WhatsApp harus antara 10-15 digit angka!');
+      return false;
+    }
+    
+    // Pastikan dimulai dengan 62 atau 0
+    if (!cleanPhone.startsWith('62') && !cleanPhone.startsWith('0')) {
+      e.preventDefault();
+      alert('Nomor WhatsApp harus dimulai dengan 62 atau 0 (contoh: 628123456789)');
+      return false;
+    }
+    
+    // Update input dengan nomor yang sudah dibersihkan
+    document.querySelector('input[name="phone"]').value = cleanPhone;
+  });
+</script>
 {% endblock %}

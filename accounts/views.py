@@ -1,6 +1,8 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
-from django.contrib.auth import login, get_user_model
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import get_user_model
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.tokens import default_token_generator
@@ -8,103 +10,171 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.contrib.auth.forms import PasswordChangeForm 
-from .forms import CustomPasswordChangeForm, ProfileForm
-from django.contrib.auth import update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.conf import settings
+from django.core.paginator import Paginator
+from django.db.models import Sum
+from django.utils.timezone import now
+from datetime import timedelta
+from django.http import HttpResponse
+import random
+import time
+
+from orders.models import Order, Promo
+from services.models import Service
+from .forms import CustomPasswordChangeForm, ProfileForm, CustomUserCreationForm
+from .models import PasswordResetOTP
+from .waha_service import WAHAHandler
 
 User = get_user_model()
 
-# ===============================
-# 🔹 REGISTER DENGAN EMAIL VERIFIKASI
-# ===============================
-def register(request):
-    """Registrasi akun baru dengan verifikasi email"""
-    if request.method == 'POST':
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
 
-        # Validasi password
+def register(request):
+    """Registrasi akun baru dengan verifikasi WhatsApp"""
+    
+    # DEBUG: Cetak method request
+    print(f"=== REGISTER VIEW ===")
+    print(f"Method: {request.method}")
+    
+    # Handle POST request
+    if request.method == 'POST':
+        print("Processing POST request...")
+        
+        # Cek apakah ini step verifikasi OTP
+        if request.POST.get('step') == 'verify_otp':
+            print("Step: verify_otp")
+            return verify_registration_otp(request)
+        
+        # Proses registrasi normal
+        print("Processing registration...")
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        username = request.POST.get('username', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        password1 = request.POST.get('password1', '')
+        password2 = request.POST.get('password2', '')
+        
+        # Validasi
+        if not first_name:
+            messages.error(request, "Nama depan wajib diisi!")
+            return redirect('accounts:register')
+        
+        if not username:
+            messages.error(request, "Username wajib diisi!")
+            return redirect('accounts:register')
+        
+        if not phone:
+            messages.error(request, "Nomor HP wajib diisi!")
+            return redirect('accounts:register')
+        
         if password1 != password2:
             messages.error(request, "Password tidak cocok!")
             return redirect('accounts:register')
-
-        # Cek username/email sudah ada
+        
+        if len(password1) < 8:
+            messages.error(request, "Password minimal 8 karakter!")
+            return redirect('accounts:register')
+        
+        # Cek username
         if User.objects.filter(username=username).exists():
             messages.error(request, "Username sudah digunakan!")
             return redirect('accounts:register')
-
-        if User.objects.filter(email=email).exists():
-            messages.error(request, "Email sudah terdaftar!")
+        
+        # Format nomor HP
+        phone = ''.join(filter(str.isdigit, phone))
+        if phone.startswith('0'):
+            phone = '62' + phone[1:]
+        
+        if not phone.startswith('62'):
+            messages.error(request, "Nomor HP harus dimulai dengan 62 atau 0")
             return redirect('accounts:register')
-
-        # Buat user tapi belum aktif
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password1,
-            first_name=first_name,
-            last_name=last_name,
-        )
-
-        # Tambahkan phone jika field ada
-        if hasattr(user, 'phone'):
-            user.phone = phone
-
-        # Nonaktifkan akun sampai diverifikasi, kecuali admin
-        if not user.is_staff and not user.is_superuser:
-            user.is_active = False
-        user.save()
-
-        # Kirim email verifikasi
-        current_site = get_current_site(request)
-        mail_subject = 'Aktivasi Akun Anda'
-        message = render_to_string('accounts/activate_email.html', {
-            'user': user,
-            'domain': current_site.domain,
-            'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-            'token': default_token_generator.make_token(user),
-        })
-        email_message = EmailMessage(mail_subject, message, to=[email])
-        email_message.content_subtype = 'html'
-        email_message.send()
-
-        messages.success(request, "Akun berhasil dibuat! Silakan cek email Anda untuk aktivasi.")
-        return redirect('accounts:login')
-
+        
+        # Cek nomor HP
+        if User.objects.filter(phone=phone).exists():
+            messages.error(request, "Nomor HP sudah terdaftar!")
+            return redirect('accounts:register')
+        
+        # Untuk sementara, langsung buat akun (bypass WAHA)
+        try:
+            user = User.objects.create_user(
+                username=username,
+                password=password1,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                is_active=True  # Langsung aktif
+            )
+            
+            messages.success(request, "Akun berhasil dibuat! Silakan login.")
+            return redirect('accounts:login')
+            
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            messages.error(request, "Terjadi kesalahan saat membuat akun.")
+            return redirect('accounts:register')
+    
+    # Handle GET request - Tampilkan form registrasi
+    print("Showing registration form (GET request)")
     return render(request, 'accounts/register.html')
 
-# ===============================
-# 🔹 AKTIVASI AKUN
-# ===============================
-def activate(request, uidb64, token):
-    """Aktivasi akun dari email"""
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        user = None
 
-    if user and default_token_generator.check_token(user, token):
-        user.is_active = True
-        user.save()
-        messages.success(request, "Akun Anda telah aktif! Silakan login.")
-        return redirect('accounts:login')
-    else:
-        messages.error(request, "Link aktivasi tidak valid atau sudah digunakan.")
+def verify_registration_otp(request):
+    """Verifikasi OTP untuk registrasi"""
+    
+    reg_data = request.session.get('reg_data')
+    
+    if not reg_data:
+        messages.error(request, "Sesi registrasi tidak ditemukan. Silakan registrasi ulang.")
         return redirect('accounts:register')
+    
+    # Cek apakah OTP sudah kadaluarsa
+    if time.time() > reg_data.get('otp_expiry', 0):
+        messages.error(request, "Kode OTP sudah kadaluarsa. Silakan registrasi ulang.")
+        # Hapus data session
+        if 'reg_data' in request.session:
+            del request.session['reg_data']
+        return redirect('accounts:register')
+    
+    input_otp = request.POST.get('otp')
+    
+    if input_otp == reg_data.get('otp'):
+        # =====================
+        # BUAT AKUN BARU (TANPA EMAIL)
+        # =====================
+        try:
+            user = User.objects.create_user(
+                username=reg_data['username'],
+                password=reg_data['password'],
+                first_name=reg_data['first_name'],
+                last_name=reg_data['last_name'],
+                email=None  # Email dikosongkan
+            )
+            
+            # Simpan nomor HP
+            user.phone = reg_data['phone']
+            user.is_active = True  # Langsung aktif karena sudah verifikasi via WA
+            user.save()
+            
+            # Hapus data session
+            if 'reg_data' in request.session:
+                del request.session['reg_data']
+            
+            messages.success(
+                request, 
+                "Akun berhasil dibuat! Silakan login dengan username dan password Anda."
+            )
+            return redirect('accounts:login')
+            
+        except Exception as e:
+            print(f"Error membuat akun: {e}")
+            messages.error(request, "Terjadi kesalahan saat membuat akun. Silakan coba lagi.")
+            return redirect('accounts:register')
+    else:
+        messages.error(request, "Kode OTP salah! Silakan coba lagi.")
+        return render(request, 'accounts/verify_otp.html', {
+            'phone': reg_data.get('phone'),
+            'step': 'verify'
+        })
 
-
-# ===============================
-# 🔹 LOGIN VIEW
-# ===============================
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
-from django.shortcuts import render, redirect
 
 def user_login(request):
     """Login user dan arahkan berdasarkan role"""
@@ -175,21 +245,6 @@ def profile_view(request):
         'password_form': password_form,
     }
     return render(request, 'profile.html', context)
-
-# ===============================
-# 🔹 ADMIN DASHBOARD (dengan grafik pendapatan + pagination)
-# ===============================
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib.auth import get_user_model
-from django.core.paginator import Paginator
-from django.db.models import Sum
-from django.utils.timezone import now
-from datetime import timedelta
-from orders.models import Order
-from services.models import Service
-
-User = get_user_model()
 
 @login_required
 def admin_dashboard(request):
@@ -262,14 +317,6 @@ def admin_dashboard(request):
 
     return render(request, "accounts/admin_dashboard.html", context)
 
-
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib import messages
-
-User = get_user_model()
-
 @login_required
 def add_courier(request):
     if not request.user.is_staff:
@@ -278,29 +325,99 @@ def add_courier(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
-        email = request.POST.get("email")
-
+        phone = request.POST.get("phone")  # Ganti email jadi phone
+        
+        # Validasi username
         if User.objects.filter(username=username).exists():
             messages.error(request, "Username sudah digunakan.")
-        else:
+            return redirect('accounts:add_courier')
+        
+        # Validasi nomor HP
+        if not phone:
+            messages.error(request, "Nomor HP wajib diisi!")
+            return redirect('accounts:add_courier')
+        
+        # Format nomor HP (hapus spasi, strip, dan karakter khusus)
+        phone = ''.join(filter(str.isdigit, phone))
+        
+        # Jika dimulai dengan 0, ganti jadi 62
+        if phone.startswith('0'):
+            phone = '62' + phone[1:]
+        
+        # Validasi nomor HP hanya angka dan panjangnya sesuai
+        if not phone.isdigit():
+            messages.error(request, "Nomor HP harus berupa angka!")
+            return redirect('accounts:add_courier')
+        
+        if len(phone) < 10 or len(phone) > 15:
+            messages.error(request, "Nomor HP harus antara 10-15 digit!")
+            return redirect('accounts:add_courier')
+        
+        if not phone.startswith('62'):
+            messages.error(request, "Nomor HP harus dimulai dengan 62 (contoh: 628123456789)")
+            return redirect('accounts:add_courier')
+        
+        # Cek nomor HP sudah terdaftar
+        if User.objects.filter(phone=phone).exists():
+            messages.error(request, "Nomor HP sudah digunakan!")
+            return redirect('accounts:add_courier')
+        
+        # Buat akun kurir
+        try:
             courier = User.objects.create_user(
                 username=username,
-                email=email,
                 password=password,
+                phone=phone,
+                email=None,  # Email dikosongkan
                 is_courier=True,
-                is_customer = False
+                is_customer=False,
+                is_active=True  # Langsung aktif
             )
+            
             messages.success(request, f"Kurir '{courier.username}' berhasil ditambahkan!")
-            return redirect('accounts:manage_users')
+            
+            # Opsional: Kirim notifikasi WhatsApp ke kurir
+            try:
+                from .waha_service import WAHAHandler
+                waha = WAHAHandler()
+                message = f"""🎉 *Selamat! Anda Telah Menjadi Kurir*
+
+Halo {username}!
+
+Anda telah ditambahkan sebagai kurir di Menara Laundry.
+
+━━━━━━━━━━━━━━━━━━━━
+📋 *Informasi Akun*
+━━━━━━━━━━━━━━━━━━━━
+
+👤 *Username:* {username}
+🔑 *Password:* {password}
+📱 *Nomor HP:* {phone}
+
+━━━━━━━━━━━━━━━━━━━━
+🔗 *Link Login:*
+━━━━━━━━━━━━━━━━━━━━
+
+https://www.menaralaundry.site/accounts/login/
+
+━━━━━━━━━━━━━━━━━━━━
+
+Segera ganti password setelah login untuk keamanan.
+
+---
+Menara Laundry"""
+                
+                waha.send_message(phone, message)
+            except Exception as e:
+                print(f"Gagal kirim notifikasi: {e}")
+                
+        except Exception as e:
+            messages.error(request, f"Error: {e}")
+            return redirect('accounts:add_courier')
+        
+        return redirect('accounts:manage_users')
 
     return render(request, 'accounts/add_courier.html')
-
-from django.shortcuts import render
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.core.paginator import Paginator
-
-User = get_user_model()
 
 def admin_required(user):
     return user.is_staff
@@ -330,9 +447,6 @@ def manage_users(request):
     })
 
 
-# views.py
-from .forms import CustomUserCreationForm
-
 @login_required
 @user_passes_test(admin_required)
 def add_user(request):
@@ -342,22 +456,83 @@ def add_user(request):
             user = form.save(commit=False)
             user.is_active = True  # langsung aktif
             user.save()
+            
+            # =====================
+            # KIRIM NOTIFIKASI VIA WHATSAPP
+            # =====================
+            from .waha_service import WAHAHandler
+            
+            waha = WAHAHandler()
+            
+            # Format nomor HP
+            phone = getattr(user, 'phone', None)
+            
+            if phone:
+                # Format pesan WhatsApp (bukan OTP)
+                message = f"""🎉 *Selamat! Akun Anda Telah Dibuat*
 
-            # Kirim notifikasi akun baru (bukan aktivasi)
-            mail_subject = 'Akun Anda Telah Dibuat'
-            message = render_to_string('accounts/account_created_email.html', {
-                'user': user,
-                'password': '*** (dikirim terpisah atau diset manual)',
-                'domain': get_current_site(request).domain,
-            })
-            email_message = EmailMessage(mail_subject, message, to=[user.email])
-            email_message.content_subtype = 'html'
-            email_message.send()
+Halo {user.first_name or user.username}!
 
+Akun Menara Laundry Anda telah berhasil dibuat oleh Admin.
+
+━━━━━━━━━━━━━━━━━━━━
+📋 *Informasi Akun*
+━━━━━━━━━━━━━━━━━━━━
+
+👤 *Username:* {user.username}
+🔑 *Password:* (Password yang Anda daftarkan)
+📱 *Nomor HP:* {phone}
+
+━━━━━━━━━━━━━━━━━━━━
+🔗 *Link Login:*
+━━━━━━━━━━━━━━━━━━━━
+
+https://www.menaralaundry.site/accounts/login/
+
+━━━━━━━━━━━━━━━━━━━━
+💡 *Tips:*
+━━━━━━━━━━━━━━━━━━━━
+
+1. Simpan username dan password Anda dengan aman
+2. Jangan berikan informasi akun kepada siapapun
+3. Segera ganti password setelah login untuk keamanan
+
+Jika ada kendala, silakan hubungi admin.
+
+---
+Menara Laundry - Solusi Laundry Praktis & Terpercaya"""
+                
+                # 🔥 PERBAIKAN: Gunakan send_message, BUKAN send_otp
+                try:
+                    success = waha.send_message(phone, message)  # ✅ Gunakan send_message
+                    
+                    if success:
+                        messages.success(
+                            request, 
+                            f"User '{user.username}' berhasil ditambahkan. Notifikasi telah dikirim ke WhatsApp {phone}."
+                        )
+                    else:
+                        messages.warning(
+                            request, 
+                            f"User '{user.username}' berhasil ditambahkan, tapi gagal mengirim notifikasi WhatsApp."
+                        )
+                except Exception as e:
+                    print(f"Error kirim WA: {e}")
+                    messages.warning(
+                        request, 
+                        f"User '{user.username}' berhasil ditambahkan, tapi notifikasi WhatsApp gagal dikirim."
+                    )
+            else:
+                messages.success(
+                    request, 
+                    f"User '{user.username}' berhasil ditambahkan (tanpa notifikasi karena nomor HP tidak tersedia)."
+                )
+            
+            return redirect('accounts:manage_users')
     else:
         form = CustomUserCreationForm()
+    
     return render(request, 'accounts/add_user.html', {'form': form})
-
 
 @login_required
 @user_passes_test(admin_required)
@@ -368,111 +543,79 @@ def delete_user(request, user_id):
         messages.success(request, f"Pengguna {user.username} berhasil dihapus.")
     return redirect('accounts:manage_users')
 
-import random
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
-from django.conf import settings
-from .models import PasswordResetOTP
-
-User = get_user_model()
-
+# views.py - Password reset dengan nomor HP
 def password_reset_otp(request):
     if request.method == "POST":
         step = request.POST.get("step")
 
         # =====================
-        # STEP 1: KIRIM OTP
+        # STEP 1: KIRIM OTP VIA WHATSAPP
         # =====================
         if step == "send_otp":
-            email = request.POST.get("email")
-            user = User.objects.filter(email=email).first()
+            phone = request.POST.get("phone")
+            
+            # Format nomor HP
+            phone = ''.join(filter(str.isdigit, phone))
+            if phone.startswith('0'):
+                phone = '62' + phone[1:]
+            
+            user = User.objects.filter(phone=phone).first()
 
             if user:
-                
+                # Hapus OTP lama
                 PasswordResetOTP.objects.filter(user=user).delete()
 
+                # Generate OTP
                 otp = str(random.randint(100000, 999999))
                 PasswordResetOTP.objects.create(user=user, otp=otp)
 
-                subject = "🔐 Reset Password Akun FreshWash"
-                message = f"""
-                Halo,
+                # Kirim via WAHA
+                from .waha_service import WAHAHandler
+                waha = WAHAHandler()
+                
+                message = f"""🔐 *Reset Password Menara Laundry*
 
-                Kami menerima permintaan reset password untuk akun Anda.
+Halo {user.first_name or user.username}!
 
-                Kode OTP:
-                {otp}
+Kami menerima permintaan reset password.
 
-                Kode ini berlaku selama 5 menit.
-                Jika Anda tidak merasa melakukan permintaan ini, abaikan email ini.
+━━━━━━━━━━━━━━━━━━━━
+🔑 *Kode OTP Anda:*
+*{otp}*
+━━━━━━━━━━━━━━━━━━━━
 
-                Terima kasih,
-                FreshWash Laundry
-                """
+⏰ Kode ini berlaku *5 menit*
 
-                html_message = f"""
-                <div style="font-family: Arial, sans-serif; background:#f4f6f8; padding:20px;">
-                <div style="max-width:500px; margin:auto; background:white;
-                            border-radius:10px; padding:30px; box-shadow:0 10px 25px rgba(0,0,0,.08)">
+Jika Anda tidak meminta reset password, abaikan pesan ini.
 
-                    <h2 style="color:#2563eb; text-align:center; margin-bottom:10px;">
-                    Reset Password
-                    </h2>
-
-                    <p style="color:#374151; font-size:14px;">
-                    Kami menerima permintaan untuk mereset password akun Anda.
-                    </p>
-
-                    <div style="
-                    margin:25px 0;
-                    text-align:center;
-                    font-size:32px;
-                    font-weight:bold;
-                    letter-spacing:6px;
-                    color:#16a34a;
-                    ">
-                    {otp}
-                    </div>
-
-                    <p style="color:#374151; font-size:14px;">
-                    Kode OTP ini berlaku selama
-                    <strong>5 menit</strong>.
-                    </p>
-
-                    <p style="color:#6b7280; font-size:13px; margin-top:20px;">
-                    Jika Anda tidak melakukan permintaan ini,
-                    silakan abaikan email ini.
-                    </p>
-
-                    <hr style="margin:25px 0; border:none; border-top:1px solid #e5e7eb">
-
-                    <p style="text-align:center; color:#9ca3af; font-size:12px;">
-                    © 2026 FreshWash Laundry
-                    </p>
-
-                </div>
-                </div>
-                """
-
-                send_mail(
-                    subject,
-                    message,                 # fallback text
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    html_message=html_message
+---
+Menara Laundry"""
+                
+                success = waha.send_message(phone, message)
+                
+                if success:
+                    messages.success(
+                        request,
+                        f"Kode OTP telah dikirim ke WhatsApp {phone}"
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "Gagal mengirim OTP. Silakan coba lagi."
+                    )
+                    return redirect("accounts:password_reset_otp")
+            else:
+                # Tetap tampilkan pesan sukses untuk keamanan
+                messages.success(
+                    request,
+                    "Jika nomor HP terdaftar, OTP akan dikirim."
                 )
+                return redirect("accounts:password_reset_otp")
 
-
-            messages.success(
-                request,
-                "Jika email terdaftar, OTP telah dikirim."
-            )
             return render(
                 request,
                 "accounts/password_reset_otp.html",
-                {"step": "verify", "email": email}
+                {"step": "verify", "phone": phone}
             )
 
         # =====================
@@ -481,23 +624,39 @@ def password_reset_otp(request):
         if step == "verify_otp":
             otp = request.POST.get("otp")
             password = request.POST.get("password")
+            confirm_password = request.POST.get("confirm_password")
 
+            # Validasi password
+            if not password or not confirm_password:
+                messages.error(request, "Password harus diisi!")
+                return redirect("accounts:password_reset_otp")
+            
+            if password != confirm_password:
+                messages.error(request, "Password dan konfirmasi tidak cocok!")
+                return redirect("accounts:password_reset_otp")
+            
+            if len(password) < 8:
+                messages.error(request, "Password minimal 8 karakter!")
+                return redirect("accounts:password_reset_otp")
+
+            # Cek OTP
             record = PasswordResetOTP.objects.filter(otp=otp).first()
 
             if not record or record.is_expired():
                 messages.error(request, "OTP tidak valid atau sudah kadaluarsa.")
                 return redirect("accounts:password_reset_otp")
 
+            # Reset password
             user = record.user
             user.set_password(password)
             user.save()
-
             record.delete()
 
             messages.success(
                 request,
-                "Password berhasil direset. Silakan login."
+                "Password berhasil direset. Silakan login dengan password baru."
             )
             return redirect("accounts:login")
 
+    # GET request - tampilkan form input nomor HP
     return render(request, "accounts/password_reset_otp.html", {"step": "email"})

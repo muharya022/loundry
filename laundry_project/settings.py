@@ -72,6 +72,11 @@ AUTH_USER_MODEL = 'accounts.User'
 MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
 MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
 
+# WAHA Configuration
+WAHA_API_KEY = "123456"
+WAHA_BASE_URL = "http://localhost:3000/api"
+WAHA_SESSION_NAME = "default"
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

@@ -61,6 +61,7 @@
       </div>
 
       <!-- Price and Action -->
+      <!-- Price and Action - Icon Button Large -->
       <div class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
         <div class="flex flex-col">
           <span class="text-xs text-gray-400">Mulai dari</span>
@@ -70,9 +71,10 @@
         </div>
 
         {% if not user.is_staff %}
-        <a href="{% url 'orders:order' %}"
-           class="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-lg transform hover:scale-110 transition-all duration-300 group/btn">
-          <i class="fas fa-shopping-cart group-hover/btn:rotate-12 transition-transform duration-300"></i>
+        <a href="{% url 'orders:order' %}?service={{ s.id }}"
+          class="relative inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-xl transform hover:scale-110 transition-all duration-300 group/btn"
+          title="Buat Pesanan">
+          <i data-lucide="shopping-cart" class="w-6 h-6 group-hover/btn:rotate-12 transition-transform duration-300"></i>
           <div class="absolute inset-0 rounded-full bg-white opacity-0 group-hover/btn:opacity-20 transition-opacity duration-300"></div>
         </a>
         {% endif %}
@@ -103,3 +105,7 @@
   </div>
   {% endfor %}
 </div>
+
+<script>
+  lucide.createIcons();
+</script>

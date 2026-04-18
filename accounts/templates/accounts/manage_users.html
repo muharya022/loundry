@@ -59,7 +59,6 @@
       overflow: hidden;
     }
     
-    /* Pagination responsive */
     .pagination-mobile-stack {
       flex-direction: column;
       gap: 1rem;
@@ -132,7 +131,6 @@
         
         <!-- Add User Buttons -->
         <div class="flex flex-col sm:flex-row gap-3">
-          <!-- Add Courier Button -->
           <a href="{% url 'accounts:add_courier' %}" 
              id="add-courier-btn"
              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-300 font-medium text-sm sm:text-base">
@@ -141,7 +139,6 @@
             <span class="sm:hidden">+ Kurir</span>
           </a>
           
-          <!-- Add Member Button -->
           <a href="{% url 'accounts:add_user' %}" 
              id="add-member-btn"
              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-medium text-sm sm:text-base">
@@ -152,14 +149,14 @@
         </div>
       </div>
       
-      <!-- Search Bar -->
+      <!-- Search Bar - Updated untuk cari nama dan no HP -->
       <div class="relative max-w-md">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <i data-lucide="search" class="h-5 w-5 text-slate-400"></i>
         </div>
         <input id="search-input" 
                type="text" 
-               placeholder="Cari username atau email..."
+               placeholder="Cari nama atau nomor HP..."
                class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
         >
       </div>
@@ -168,10 +165,8 @@
     <!-- Tabs -->
     <div class="mb-8 bg-white rounded-xl p-1 shadow-sm max-w-md">
       <div class="flex relative">
-        <!-- Tab Indicator -->
         <div id="tab-indicator" class="absolute top-1 bottom-1 w-1/2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg transition-all duration-300 translate-x-0"></div>
         
-        <!-- Staff Tab -->
         <button id="staff-tab"
                 class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors z-10 text-blue-700 font-semibold">
           <i data-lucide="users" class="w-5 h-5"></i>
@@ -181,7 +176,6 @@
           </span>
         </button>
         
-        <!-- Members Tab -->
         <button id="members-tab"
                 class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-colors z-10 text-slate-600">
           <i data-lucide="user-check" class="w-5 h-5"></i>
@@ -195,22 +189,18 @@
 
     <!-- Staff Tab Content -->
     <div id="staff-content" class="animate-slide-up">
-      <!-- Mobile Card View -->
       <div class="block lg:hidden">
         <div id="staff-mobile-cards" class="space-y-4"></div>
-        
-        <!-- Pagination for Mobile -->
         <div id="staff-mobile-pagination" class="mt-6"></div>
       </div>
 
-      <!-- Desktop Table View -->
       <div class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
           <table class="w-full min-w-[800px]">
             <thead class="bg-slate-50 sticky top-0 z-10">
               <tr>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Pengguna</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Nomor HP</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Role</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Bergabung</th>
@@ -221,29 +211,24 @@
           </table>
         </div>
         
-        <!-- Pagination for Desktop -->
         <div id="staff-desktop-pagination" class="px-6 py-4 border-t border-slate-200 bg-white"></div>
       </div>
     </div>
 
-    <!-- Members Tab Content - Hidden by default -->
+    <!-- Members Tab Content -->
     <div id="members-content" class="animate-slide-up hidden">
-      <!-- Mobile Card View -->
       <div class="block lg:hidden">
         <div id="members-mobile-cards" class="space-y-4"></div>
-        
-        <!-- Pagination for Mobile -->
         <div id="members-mobile-pagination" class="mt-6"></div>
       </div>
 
-      <!-- Desktop Table View -->
       <div class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
           <table class="w-full min-w-[800px]">
             <thead class="bg-slate-50 sticky top-0 z-10">
               <tr>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Pengguna</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Nomor HP</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Role</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Bergabung</th>
@@ -254,7 +239,6 @@
           </table>
         </div>
         
-        <!-- Pagination for Desktop -->
         <div id="members-desktop-pagination" class="px-6 py-4 border-t border-slate-200 bg-white"></div>
       </div>
     </div>
@@ -263,7 +247,6 @@
   <!-- User Detail Modal -->
   <div id="user-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
     <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-slide-up">
-      <!-- Modal Header -->
       <div class="sticky top-0 bg-white p-6 border-b border-slate-200">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -272,7 +255,7 @@
             </div>
             <div>
               <h2 id="user-name" class="text-xl font-bold text-slate-900">Username</h2>
-              <p id="user-email" class="text-sm text-slate-500">email@example.com</p>
+              <p id="user-phone" class="text-sm text-slate-500">Nomor HP</p>
             </div>
           </div>
           <button onclick="closeModal()"
@@ -282,9 +265,7 @@
         </div>
       </div>
       
-      <!-- Modal Content -->
       <div class="p-6 space-y-6">
-        <!-- User Info -->
         <div class="space-y-4">
           <h3 class="font-semibold text-slate-900">Informasi Pengguna</h3>
           <div class="grid grid-cols-2 gap-4">
@@ -298,15 +279,16 @@
             </div>
           </div>
           
-          <!-- Name -->
           <div class="bg-slate-50 p-4 rounded-lg">
             <div class="text-xs text-slate-500 mb-1">Nama Lengkap</div>
-            <div id="user-fullname" class="font-semibold text-slate-900">
-              Nama Lengkap
-            </div>
+            <div id="user-fullname" class="font-semibold text-slate-900"></div>
           </div>
           
-          <!-- Status -->
+          <div class="bg-slate-50 p-4 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Nomor WhatsApp</div>
+            <div id="user-phone-detail" class="font-semibold text-slate-900 font-mono"></div>
+          </div>
+          
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-slate-50 p-4 rounded-lg">
               <div class="text-xs text-slate-500 mb-1">Status Akun</div>
@@ -322,7 +304,6 @@
           </div>
         </div>
         
-        <!-- Actions -->
         <div class="pt-4 border-t border-slate-200">
           <div class="flex gap-3">
             <button onclick="closeModal()"
@@ -338,7 +319,6 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <script>
@@ -351,7 +331,7 @@ const userData = {
       username: '{{ u.username|escapejs }}',
       first_name: '{{ u.first_name|escapejs }}',
       last_name: '{{ u.last_name|escapejs }}',
-      email: '{{ u.email|escapejs }}',
+      phone: '{{ u.phone|default:""|escapejs }}',
       role: '{{ u.is_staff|yesno:"Admin,Kurir" }}',
       created_at: '{{ u.date_joined|date:"d M Y" }}',
       is_staff: {{ u.is_staff|yesno:"true,false" }},
@@ -366,7 +346,7 @@ const userData = {
       username: '{{ u.username|escapejs }}',
       first_name: '{{ u.first_name|escapejs }}',
       last_name: '{{ u.last_name|escapejs }}',
-      email: '{{ u.email|escapejs }}',
+      phone: '{{ u.phone|default:""|escapejs }}',
       role: 'Member',
       created_at: '{{ u.date_joined|date:"d M Y" }}',
       is_active: {{ u.is_active|yesno:"true,false" }}
@@ -375,18 +355,15 @@ const userData = {
   ]
 };
 
-// Store current user to delete
 let currentUserId = null;
 let currentUserType = null;
 
-// Pagination settings
 const ITEMS_PER_PAGE = 10;
 let currentPage = {
   staff: 1,
   members: 1
 };
 
-// DOM elements
 const staffTab = document.getElementById('staff-tab');
 const membersTab = document.getElementById('members-tab');
 const tabIndicator = document.getElementById('tab-indicator');
@@ -396,100 +373,71 @@ const addCourierBtn = document.getElementById('add-courier-btn');
 const addMemberBtn = document.getElementById('add-member-btn');
 const searchInput = document.getElementById('search-input');
 
-// Tab content containers
 const staffMobileCards = document.getElementById('staff-mobile-cards');
 const membersMobileCards = document.getElementById('members-mobile-cards');
 const staffTableBody = document.getElementById('staff-table-body');
 const membersTableBody = document.getElementById('members-table-body');
 
-// Pagination containers
 const staffMobilePagination = document.getElementById('staff-mobile-pagination');
 const staffDesktopPagination = document.getElementById('staff-desktop-pagination');
 const membersMobilePagination = document.getElementById('members-mobile-pagination');
 const membersDesktopPagination = document.getElementById('members-desktop-pagination');
 
-// Modal elements
 const userModal = document.getElementById('user-modal');
 const userAvatar = document.getElementById('user-avatar');
 const userName = document.getElementById('user-name');
-const userEmail = document.getElementById('user-email');
+const userPhone = document.getElementById('user-phone');
 const userId = document.getElementById('user-id');
 const userRole = document.getElementById('user-role');
 const userFullname = document.getElementById('user-fullname');
+const userPhoneDetail = document.getElementById('user-phone-detail');
 const userStatusDot = document.getElementById('user-status-dot');
 const userStatus = document.getElementById('user-status');
 const userJoined = document.getElementById('user-joined');
 
-// Current active tab
 let activeTab = 'staff';
-
-// Filtered data for search
 let filteredData = {
   staff: [...userData.staff],
   members: [...userData.members]
 };
 
-// Initialize
 document.addEventListener('DOMContentLoaded', function() {
-  // Tab switching
   staffTab.addEventListener('click', () => switchTab('staff'));
   membersTab.addEventListener('click', () => switchTab('members'));
-  
-  // Search functionality
   searchInput.addEventListener('input', filterUsers);
-  
-  // Initialize button visibility
   updateButtonVisibility();
-  
-  // Render initial data
   renderStaffData();
   renderMemberData();
-  
-  // Auto-focus search input
   setTimeout(() => searchInput.focus(), 100);
-  
-  // Initialize Lucide icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 
-// Switch between tabs
 function switchTab(tab) {
   activeTab = tab;
   
-  // Update tab indicator
   if (tab === 'staff') {
     tabIndicator.classList.remove('translate-x-full');
     tabIndicator.classList.add('translate-x-0');
-    
     staffTab.classList.remove('text-slate-600');
     staffTab.classList.add('text-blue-700', 'font-semibold');
-    
     membersTab.classList.remove('text-blue-700', 'font-semibold');
     membersTab.classList.add('text-slate-600');
-    
     staffContent.classList.remove('hidden');
     membersContent.classList.add('hidden');
   } else {
     tabIndicator.classList.remove('translate-x-0');
     tabIndicator.classList.add('translate-x-full');
-    
     membersTab.classList.remove('text-slate-600');
     membersTab.classList.add('text-blue-700', 'font-semibold');
-    
     staffTab.classList.remove('text-blue-700', 'font-semibold');
     staffTab.classList.add('text-slate-600');
-    
     staffContent.classList.add('hidden');
     membersContent.classList.remove('hidden');
   }
   
-  // Update button visibility
   updateButtonVisibility();
 }
 
-// Update button visibility based on active tab
 function updateButtonVisibility() {
   if (activeTab === 'staff') {
     addCourierBtn.classList.remove('hidden');
@@ -500,63 +448,56 @@ function updateButtonVisibility() {
   }
 }
 
-// Filter users based on search input
+// 🔥 PERBAIKAN: Filter berdasarkan NAMA dan NOMOR HP (bukan email)
 function filterUsers() {
   const searchTerm = searchInput.value.toLowerCase().trim();
   
-  // Filter staff users
   filteredData.staff = userData.staff.filter(user => {
-    return user.username.toLowerCase().includes(searchTerm) ||
-           user.email.toLowerCase().includes(searchTerm);
+    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+    const username = user.username.toLowerCase();
+    const phone = user.phone ? user.phone.toString().toLowerCase() : '';
+    
+    return fullName.includes(searchTerm) || 
+           username.includes(searchTerm) || 
+           phone.includes(searchTerm);
   });
   
-  // Filter member users
   filteredData.members = userData.members.filter(user => {
-    return user.username.toLowerCase().includes(searchTerm) ||
-           user.email.toLowerCase().includes(searchTerm);
+    const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+    const username = user.username.toLowerCase();
+    const phone = user.phone ? user.phone.toString().toLowerCase() : '';
+    
+    return fullName.includes(searchTerm) || 
+           username.includes(searchTerm) || 
+           phone.includes(searchTerm);
   });
   
-  // Reset to page 1 when searching
   currentPage.staff = 1;
   currentPage.members = 1;
-  
-  // Re-render data
   renderStaffData();
   renderMemberData();
 }
 
-// Render staff data with pagination
 function renderStaffData() {
   const users = filteredData.staff;
   const currentPageNum = currentPage.staff;
   const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
-  
-  // Calculate start and end indices
   const startIndex = (currentPageNum - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, users.length);
   const currentUsers = users.slice(startIndex, endIndex);
   
-  // Render mobile cards
   renderStaffMobileCards(currentUsers);
-  
-  // Render desktop table
   renderStaffTable(currentUsers);
-  
-  // Render pagination
   renderPagination('staff', users.length, currentPageNum, totalPages, startIndex, endIndex);
-  
-  // Update empty state text based on search
-  updateEmptyStateText('staff', users.length > 0);
 }
 
-// Render staff mobile cards
 function renderStaffMobileCards(users) {
   if (users.length === 0) {
     staffMobileCards.innerHTML = `
       <div class="text-center py-12 bg-white rounded-xl border border-slate-200">
         <i data-lucide="users" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-        <p id="staff-empty-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan'}</p>
-        <p id="staff-empty-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru'}</p>
+        <p class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan'}</p>
+        <p class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru'}</p>
       </div>
     `;
     return;
@@ -568,10 +509,11 @@ function renderStaffMobileCards(users) {
     const roleText = user.is_staff ? 'Admin' : 'Kurir';
     const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
     const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    const fullName = (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '-';
+    const displayPhone = user.phone || '-';
     
     cardsHTML += `
       <div class="user-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <!-- Header -->
         <div class="flex items-start justify-between mb-3">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
@@ -579,19 +521,16 @@ function renderStaffMobileCards(users) {
             </div>
             <div>
               <h3 class="font-semibold text-slate-900">${user.username}</h3>
-              <p class="text-sm text-slate-500">${user.email}</p>
+              <p class="text-sm text-slate-500">${displayPhone}</p>
             </div>
           </div>
-          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${badgeClass}">
-            ${roleText}
-          </span>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${badgeClass}">${roleText}</span>
         </div>
         
-        <!-- Details -->
         <div class="grid grid-cols-2 gap-3 mb-4">
           <div class="bg-slate-50 p-3 rounded-lg">
-            <div class="text-xs text-slate-500 mb-1">ID Pengguna</div>
-            <div class="font-mono font-semibold text-slate-900">#${user.id}</div>
+            <div class="text-xs text-slate-500 mb-1">Nama</div>
+            <div class="font-medium text-slate-900">${fullName}</div>
           </div>
           <div class="bg-slate-50 p-3 rounded-lg">
             <div class="text-xs text-slate-500 mb-1">Bergabung</div>
@@ -599,18 +538,14 @@ function renderStaffMobileCards(users) {
           </div>
         </div>
         
-        <!-- Actions -->
         <div class="flex gap-2">
           <button onclick="showUserDetail(${user.id}, 'staff')"
                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
-            <i data-lucide="eye" class="w-4 h-4"></i>
-            Detail
+            <i data-lucide="eye" class="w-4 h-4"></i> Detail
           </button>
-          
           <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
                   class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-            Hapus
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus
           </button>
         </div>
       </div>
@@ -618,24 +553,16 @@ function renderStaffMobileCards(users) {
   });
   
   staffMobileCards.innerHTML = cardsHTML;
-  
-  // Re-initialize icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Render staff table for desktop
 function renderStaffTable(users) {
   if (users.length === 0) {
     staffTableBody.innerHTML = `
-      <tr>
-        <td colspan="6" class="px-6 py-12 text-center">
-          <i data-lucide="users" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-          <p id="staff-empty-desktop-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan'}</p>
-          <p id="staff-empty-desktop-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru'}</p>
-        </td>
-      </tr>
+      <tr><td colspan="6" class="px-6 py-12 text-center">
+        <i data-lucide="users" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+        <p class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan'}</p>
+      </td></tr>
     `;
     return;
   }
@@ -646,6 +573,7 @@ function renderStaffTable(users) {
     const roleText = user.is_staff ? 'Admin' : 'Kurir';
     const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
     const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    const displayPhone = user.phone || '-';
     
     tableHTML += `
       <tr class="hover:bg-blue-50 transition-colors group">
@@ -656,40 +584,18 @@ function renderStaffTable(users) {
             </div>
             <div>
               <div class="font-semibold text-slate-900">${user.username}</div>
-              <div class="text-sm text-slate-500">ID: #${user.id}</div>
+              <div class="text-sm text-slate-500">${user.first_name || ''} ${user.last_name || ''}</div>
             </div>
           </div>
         </td>
-        <td class="px-6 py-4">
-          <div class="text-slate-900">${user.email}</div>
-        </td>
-        <td class="px-6 py-4">
-          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${badgeClass}">
-            ${roleText}
-          </span>
-        </td>
-        <td class="px-6 py-4">
-          <span class="inline-flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full ${statusDotClass}"></span>
-            <span class="text-sm font-medium">${statusText}</span>
-          </span>
-        </td>
-        <td class="px-6 py-4">
-          <div class="text-slate-900">${user.created_at}</div>
-        </td>
+        <td class="px-6 py-4"><div class="text-slate-900 font-mono text-sm">${displayPhone}</div></td>
+        <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${badgeClass}">${roleText}</span></td>
+        <td class="px-6 py-4"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${statusDotClass}"></span><span class="text-sm font-medium">${statusText}</span></span></td>
+        <td class="px-6 py-4"><div class="text-slate-900">${user.created_at}</div></td>
         <td class="px-6 py-4 sticky-action-column sticky right-0 bg-white group-hover:bg-blue-50 border-l border-slate-200">
           <div class="flex justify-center gap-3 min-w-[120px]">
-            <button onclick="showUserDetail(${user.id}, 'staff')"
-                    class="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 hover:border-blue-300 pagination-btn"
-                    title="Detail">
-              <i data-lucide="eye" class="w-4 h-4"></i>
-            </button>
-            
-            <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
-                    class="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200 hover:border-red-300 pagination-btn"
-                    title="Hapus">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
+            <button onclick="showUserDetail(${user.id}, 'staff')" class="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" title="Detail"><i data-lucide="eye" class="w-4 h-4"></i></button>
+            <button onclick="confirmDeleteUser(${user.id}, '${user.username}')" class="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </div>
         </td>
       </tr>
@@ -697,45 +603,28 @@ function renderStaffTable(users) {
   });
   
   staffTableBody.innerHTML = tableHTML;
-  
-  // Re-initialize icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Render member data with pagination
 function renderMemberData() {
   const users = filteredData.members;
   const currentPageNum = currentPage.members;
   const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
-  
-  // Calculate start and end indices
   const startIndex = (currentPageNum - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, users.length);
   const currentUsers = users.slice(startIndex, endIndex);
   
-  // Render mobile cards
   renderMemberMobileCards(currentUsers);
-  
-  // Render desktop table
   renderMemberTable(currentUsers);
-  
-  // Render pagination
   renderPagination('members', users.length, currentPageNum, totalPages, startIndex, endIndex);
-  
-  // Update empty state text based on search
-  updateEmptyStateText('members', users.length > 0);
 }
 
-// Render member mobile cards
 function renderMemberMobileCards(users) {
   if (users.length === 0) {
     membersMobileCards.innerHTML = `
       <div class="text-center py-12 bg-white rounded-xl border border-slate-200">
         <i data-lucide="user-check" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-        <p id="member-empty-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Member tidak ditemukan' : 'Belum ada member'}</p>
-        <p id="member-empty-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan member baru'}</p>
+        <p class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Member tidak ditemukan' : 'Belum ada member'}</p>
       </div>
     `;
     return;
@@ -745,10 +634,11 @@ function renderMemberMobileCards(users) {
   users.forEach(user => {
     const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
     const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    const fullName = (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '-';
+    const displayPhone = user.phone || '-';
     
     cardsHTML += `
       <div class="user-card bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-        <!-- Header -->
         <div class="flex items-start justify-between mb-3">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-green-600 flex items-center justify-center text-white font-semibold">
@@ -756,19 +646,16 @@ function renderMemberMobileCards(users) {
             </div>
             <div>
               <h3 class="font-semibold text-slate-900">${user.username}</h3>
-              <p class="text-sm text-slate-500">${user.email}</p>
+              <p class="text-sm text-slate-500">${displayPhone}</p>
             </div>
           </div>
-          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white badge-member">
-            Member
-          </span>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white badge-member">Member</span>
         </div>
         
-        <!-- Details -->
         <div class="grid grid-cols-2 gap-3 mb-4">
           <div class="bg-slate-50 p-3 rounded-lg">
-            <div class="text-xs text-slate-500 mb-1">ID Pengguna</div>
-            <div class="font-mono font-semibold text-slate-900">#${user.id}</div>
+            <div class="text-xs text-slate-500 mb-1">Nama</div>
+            <div class="font-medium text-slate-900">${fullName}</div>
           </div>
           <div class="bg-slate-50 p-3 rounded-lg">
             <div class="text-xs text-slate-500 mb-1">Bergabung</div>
@@ -776,18 +663,12 @@ function renderMemberMobileCards(users) {
           </div>
         </div>
         
-        <!-- Actions -->
         <div class="flex gap-2">
-          <button onclick="showUserDetail(${user.id}, 'member')"
-                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
-            <i data-lucide="eye" class="w-4 h-4"></i>
-            Detail
+          <button onclick="showUserDetail(${user.id}, 'member')" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium border border-blue-200">
+            <i data-lucide="eye" class="w-4 h-4"></i> Detail
           </button>
-          
-          <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
-                  class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-            Hapus
+          <button onclick="confirmDeleteUser(${user.id}, '${user.username}')" class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus
           </button>
         </div>
       </div>
@@ -795,25 +676,12 @@ function renderMemberMobileCards(users) {
   });
   
   membersMobileCards.innerHTML = cardsHTML;
-  
-  // Re-initialize icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Render member table for desktop
 function renderMemberTable(users) {
   if (users.length === 0) {
-    membersTableBody.innerHTML = `
-      <tr>
-        <td colspan="6" class="px-6 py-12 text-center">
-          <i data-lucide="user-check" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-          <p id="member-empty-desktop-text" class="text-slate-900 font-medium mb-2">${searchInput.value ? 'Member tidak ditemukan' : 'Belum ada member'}</p>
-          <p id="member-empty-desktop-subtext" class="text-slate-600 text-sm">${searchInput.value ? 'Coba dengan kata kunci lain' : 'Tambahkan member baru'}</p>
-        </td>
-      </tr>
-    `;
+    membersTableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-12 text-center"><p class="text-slate-900 font-medium">${searchInput.value ? 'Member tidak ditemukan' : 'Belum ada member'}</p></td></tr>`;
     return;
   }
   
@@ -821,6 +689,7 @@ function renderMemberTable(users) {
   users.forEach(user => {
     const statusDotClass = user.is_active ? 'bg-green-500' : 'bg-red-500';
     const statusText = user.is_active ? 'Aktif' : 'Nonaktif';
+    const displayPhone = user.phone || '-';
     
     tableHTML += `
       <tr class="hover:bg-blue-50 transition-colors group">
@@ -831,40 +700,18 @@ function renderMemberTable(users) {
             </div>
             <div>
               <div class="font-semibold text-slate-900">${user.username}</div>
-              <div class="text-sm text-slate-500">ID: #${user.id}</div>
+              <div class="text-sm text-slate-500">${user.first_name || ''} ${user.last_name || ''}</div>
             </div>
           </div>
         </td>
-        <td class="px-6 py-4">
-          <div class="text-slate-900">${user.email}</div>
-        </td>
-        <td class="px-6 py-4">
-          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white badge-member">
-            Member
-          </span>
-        </td>
-        <td class="px-6 py-4">
-          <span class="inline-flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full ${statusDotClass}"></span>
-            <span class="text-sm font-medium">${statusText}</span>
-          </span>
-        </td>
-        <td class="px-6 py-4">
-          <div class="text-slate-900">${user.created_at}</div>
-        </td>
+        <td class="px-6 py-4"><div class="text-slate-900 font-mono text-sm">${displayPhone}</div></td>
+        <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-semibold text-white badge-member">Member</span></td>
+        <td class="px-6 py-4"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${statusDotClass}"></span><span class="text-sm font-medium">${statusText}</span></span></td>
+        <td class="px-6 py-4"><div class="text-slate-900">${user.created_at}</div></td>
         <td class="px-6 py-4 sticky-action-column sticky right-0 bg-white group-hover:bg-blue-50 border-l border-slate-200">
           <div class="flex justify-center gap-3 min-w-[120px]">
-            <button onclick="showUserDetail(${user.id}, 'member')"
-                    class="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 hover:border-blue-300 pagination-btn"
-                    title="Detail">
-              <i data-lucide="eye" class="w-4 h-4"></i>
-            </button>
-            
-            <button onclick="confirmDeleteUser(${user.id}, '${user.username}')"
-                    class="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200 hover:border-red-300 pagination-btn"
-                    title="Hapus">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
+            <button onclick="showUserDetail(${user.id}, 'member')" class="p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200" title="Detail"><i data-lucide="eye" class="w-4 h-4"></i></button>
+            <button onclick="confirmDeleteUser(${user.id}, '${user.username}')" class="p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200" title="Hapus"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </div>
         </td>
       </tr>
@@ -872,19 +719,13 @@ function renderMemberTable(users) {
   });
   
   membersTableBody.innerHTML = tableHTML;
-  
-  // Re-initialize icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Render pagination
 function renderPagination(type, totalUsers, currentPageNum, totalPages, startIndex, endIndex) {
   const mobilePagination = type === 'staff' ? staffMobilePagination : membersMobilePagination;
   const desktopPagination = type === 'staff' ? staffDesktopPagination : membersDesktopPagination;
   
-  // Hide pagination if no pages or only one page
   if (totalPages <= 1) {
     mobilePagination.innerHTML = '';
     desktopPagination.innerHTML = '';
@@ -893,34 +734,17 @@ function renderPagination(type, totalUsers, currentPageNum, totalPages, startInd
   
   const paginationHTML = `
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pagination-mobile-stack">
-      <!-- Info jumlah data -->
       <div class="text-sm text-slate-600">
-        Menampilkan 
-        <span class="font-semibold">${startIndex + 1}</span>
-        -
-        <span class="font-semibold">${endIndex}</span>
-        dari
-        <span class="font-semibold">${totalUsers}</span>
-        ${type === 'staff' ? 'karyawan' : 'member'}
+        Menampilkan <span class="font-semibold">${startIndex + 1}</span> - <span class="font-semibold">${endIndex}</span>
+        dari <span class="font-semibold">${totalUsers}</span> ${type === 'staff' ? 'karyawan' : 'member'}
       </div>
-      
-      <!-- Pagination buttons -->
       <div class="flex items-center gap-2">
-        <!-- Previous button -->
-        <button onclick="changePage('${type}', ${currentPageNum - 1})" 
-                ${currentPageNum === 1 ? 'disabled' : ''}
+        <button onclick="changePage('${type}', ${currentPageNum - 1})" ${currentPageNum === 1 ? 'disabled' : ''}
                 class="p-2.5 rounded-lg border border-slate-300 text-slate-700 transition-colors pagination-btn ${currentPageNum === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}">
           <i data-lucide="chevron-left" class="w-4 h-4"></i>
         </button>
-        
-        <!-- Page numbers -->
-        <div class="flex items-center gap-1">
-          ${generatePageNumbers(type, currentPageNum, totalPages)}
-        </div>
-        
-        <!-- Next button -->
-        <button onclick="changePage('${type}', ${currentPageNum + 1})" 
-                ${currentPageNum === totalPages ? 'disabled' : ''}
+        <div class="flex items-center gap-1">${generatePageNumbers(type, currentPageNum, totalPages)}</div>
+        <button onclick="changePage('${type}', ${currentPageNum + 1})" ${currentPageNum === totalPages ? 'disabled' : ''}
                 class="p-2.5 rounded-lg border border-slate-300 text-slate-700 transition-colors pagination-btn ${currentPageNum === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}">
           <i data-lucide="chevron-right" class="w-4 h-4"></i>
         </button>
@@ -930,166 +754,75 @@ function renderPagination(type, totalUsers, currentPageNum, totalPages, startInd
   
   mobilePagination.innerHTML = paginationHTML;
   desktopPagination.innerHTML = paginationHTML;
-  
-  // Re-initialize icons
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Generate page number buttons
 function generatePageNumbers(type, currentPageNum, totalPages) {
   let pageButtons = '';
   const maxVisiblePages = 5;
-  
-  // Calculate start and end pages
   let startPage = Math.max(1, currentPageNum - Math.floor(maxVisiblePages / 2));
   let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
   
-  // Adjust start page if we're at the end
   if (endPage - startPage + 1 < maxVisiblePages) {
     startPage = Math.max(1, endPage - maxVisiblePages + 1);
   }
   
-  // Add first page if needed
   if (startPage > 1) {
-    pageButtons += `
-      <button onclick="changePage('${type}', 1)"
-              class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn text-slate-700 hover:bg-slate-100 border-slate-300">
-        1
-      </button>
-      ${startPage > 2 ? '<span class="text-slate-400">...</span>' : ''}
-    `;
+    pageButtons += `<button onclick="changePage('${type}', 1)" class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn text-slate-700 hover:bg-slate-100 border-slate-300">1</button>`;
+    if (startPage > 2) pageButtons += '<span class="text-slate-400">...</span>';
   }
   
-  // Add page numbers
   for (let i = startPage; i <= endPage; i++) {
     const isActive = i === currentPageNum;
-    pageButtons += `
-      <button onclick="changePage('${type}', ${i})"
-              class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn ${isActive ? 'bg-blue-600 text-white border-blue-600' : 'text-slate-700 hover:bg-slate-100 border-slate-300'}">
-        ${i}
-      </button>
-    `;
+    pageButtons += `<button onclick="changePage('${type}', ${i})" class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn ${isActive ? 'bg-blue-600 text-white border-blue-600' : 'text-slate-700 hover:bg-slate-100 border-slate-300'}">${i}</button>`;
   }
   
-  // Add last page if needed
   if (endPage < totalPages) {
-    pageButtons += `
-      ${endPage < totalPages - 1 ? '<span class="text-slate-400">...</span>' : ''}
-      <button onclick="changePage('${type}', ${totalPages})"
-              class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn text-slate-700 hover:bg-slate-100 border-slate-300">
-        ${totalPages}
-      </button>
-    `;
+    if (endPage < totalPages - 1) pageButtons += '<span class="text-slate-400">...</span>';
+    pageButtons += `<button onclick="changePage('${type}', ${totalPages})" class="w-9 h-9 flex items-center justify-center rounded-lg border font-medium text-sm pagination-btn text-slate-700 hover:bg-slate-100 border-slate-300">${totalPages}</button>`;
   }
   
   return pageButtons;
 }
 
-// Change page
 function changePage(type, newPage) {
   const totalPages = Math.ceil(filteredData[type].length / ITEMS_PER_PAGE);
-  
-  // Validate page number
-  if (newPage < 1 || newPage > totalPages) {
-    return;
-  }
-  
-  // Update current page
+  if (newPage < 1 || newPage > totalPages) return;
   currentPage[type] = newPage;
-  
-  // Re-render data
-  if (type === 'staff') {
-    renderStaffData();
-  } else {
-    renderMemberData();
-  }
+  if (type === 'staff') renderStaffData();
+  else renderMemberData();
 }
 
-// Update empty state text based on search
-function updateEmptyStateText(type, hasData) {
-  const searchTerm = searchInput.value.trim();
-  const isEmpty = !hasData;
-  
-  if (type === 'staff') {
-    if (isEmpty) {
-      const emptyText = searchTerm ? 'Karyawan tidak ditemukan' : 'Belum ada karyawan';
-      const emptySubtext = searchTerm ? 'Coba dengan kata kunci lain' : 'Tambahkan kurir atau admin baru';
-      
-      // Update mobile
-      const mobileText = document.getElementById('staff-empty-text');
-      const mobileSubtext = document.getElementById('staff-empty-subtext');
-      if (mobileText) mobileText.textContent = emptyText;
-      if (mobileSubtext) mobileSubtext.textContent = emptySubtext;
-      
-      // Update desktop
-      const desktopText = document.getElementById('staff-empty-desktop-text');
-      const desktopSubtext = document.getElementById('staff-empty-desktop-subtext');
-      if (desktopText) desktopText.textContent = emptyText;
-      if (desktopSubtext) desktopSubtext.textContent = emptySubtext;
-    }
-  } else {
-    if (isEmpty) {
-      const emptyText = searchTerm ? 'Member tidak ditemukan' : 'Belum ada member';
-      const emptySubtext = searchTerm ? 'Coba dengan kata kunci lain' : 'Tambahkan member baru';
-      
-      // Update mobile
-      const mobileText = document.getElementById('member-empty-text');
-      const mobileSubtext = document.getElementById('member-empty-subtext');
-      if (mobileText) mobileText.textContent = emptyText;
-      if (mobileSubtext) mobileSubtext.textContent = emptySubtext;
-      
-      // Update desktop
-      const desktopText = document.getElementById('member-empty-desktop-text');
-      const desktopSubtext = document.getElementById('member-empty-desktop-subtext');
-      if (desktopText) desktopText.textContent = emptyText;
-      if (desktopSubtext) desktopSubtext.textContent = emptySubtext;
-    }
-  }
-}
-
-// Show user detail modal
 function showUserDetail(userId, userType) {
   const users = userType === 'staff' ? userData.staff : userData.members;
   const user = users.find(u => u.id === userId);
-  
   if (!user) return;
   
-  // Store current user for delete
   currentUserId = user.id;
   currentUserType = userType;
   
-  // Update modal content
   userAvatar.textContent = user.username.charAt(0).toUpperCase();
   userName.textContent = user.username;
-  userEmail.textContent = user.email;
-  document.getElementById('user-id').textContent = '#' + user.id;
-  document.getElementById('user-role').textContent = user.role;
+  userPhone.textContent = user.phone || 'Tidak ada nomor HP';
+  userId.textContent = '#' + user.id;
+  userRole.textContent = user.role;
   
-  const fullName = (user.first_name || user.last_name) 
-    ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-    : 'Tidak diisi';
-  document.getElementById('user-fullname').textContent = fullName;
+  const fullName = (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Tidak diisi';
+  userFullname.textContent = fullName;
+  userPhoneDetail.textContent = user.phone || 'Tidak ada nomor HP';
   
-  // Update status
-  const statusDot = document.getElementById('user-status-dot');
-  const statusText = document.getElementById('user-status');
   if (user.is_active) {
-    statusDot.className = 'w-2 h-2 rounded-full bg-green-500';
-    statusText.textContent = 'Aktif';
+    userStatusDot.className = 'w-2 h-2 rounded-full bg-green-500';
+    userStatus.textContent = 'Aktif';
   } else {
-    statusDot.className = 'w-2 h-2 rounded-full bg-red-500';
-    statusText.textContent = 'Nonaktif';
+    userStatusDot.className = 'w-2 h-2 rounded-full bg-red-500';
+    userStatus.textContent = 'Nonaktif';
   }
   
-  document.getElementById('user-joined').textContent = user.created_at;
-  
-  // Show modal
+  userJoined.textContent = user.created_at;
   userModal.classList.remove('hidden');
 }
 
-// Confirm delete user with SweetAlert2
 function confirmDeleteUser(userId, username) {
   Swal.fire({
     title: 'Hapus Pengguna?',
@@ -1103,16 +836,13 @@ function confirmDeleteUser(userId, username) {
     reverseButtons: true
   }).then((result) => {
     if (result.isConfirmed) {
-      // Submit form delete
       const form = document.createElement('form');
       form.method = 'POST';
-      form.action = `{% url 'accounts:delete_user' 0 %}`.replace('0', userId);
-      
+      form.action = `{% url 'accounts:delete_user' 0 %}`.replace('0', currentUserId || userId);
       const csrfToken = document.createElement('input');
       csrfToken.type = 'hidden';
       csrfToken.name = 'csrfmiddlewaretoken';
       csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
-      
       form.appendChild(csrfToken);
       document.body.appendChild(form);
       form.submit();
@@ -1120,16 +850,12 @@ function confirmDeleteUser(userId, username) {
   });
 }
 
-// Close modal
 function closeModal() {
   userModal.classList.add('hidden');
 }
 
-// Close modal when clicking outside
 userModal.addEventListener('click', function(e) {
-  if (e.target === userModal) {
-    closeModal();
-  }
+  if (e.target === userModal) closeModal();
 });
 </script>
 
