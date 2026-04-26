@@ -332,10 +332,27 @@
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-semibold text-slate-900 mb-2">Berat (kilogram)</label>
-                <input type="number" id="weightInput" min="0.1" step="0.1"
-                       class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition text-lg font-medium text-center"
-                       placeholder="Contoh: 3.5">
+                <input type="number" id="weightInput" min="0.1" max="50" step="0.1"
+                      class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition text-lg font-medium text-center"
+                      placeholder="Contoh: 3.5">
               </div>
+              
+              <!-- Tambahkan informasi batasan -->
+              <div class="flex items-center justify-between bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <span class="text-sm text-amber-800">Maksimal berat: <strong class="font-bold">50 kg</strong></span>
+                </div>
+                <div id="weightWarning" class="hidden text-red-600 text-sm font-medium flex items-center gap-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  Melebihi batas!
+                </div>
+              </div>
+              
               <p class="text-sm text-slate-600 flex items-center gap-2">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -473,7 +490,7 @@
                 </span>
                 <span id="shippingCost" class="font-bold text-amber-400">Rp 0</span>
               </div>
-              <div id="discountRow" class="hidden flex justify-between items-center text-emerald-400">
+              <div id="discountRow" class="hidden justify-between items-center text-emerald-400">
                 <span class="text-sm">Diskon:</span>
                 <span id="discountText" class="font-bold">-Rp 0</span>
               </div>
@@ -580,6 +597,8 @@ window.renderCart = function() {
 
         if (service.type === "per_kilo") {
             const subtotal = service.weight * service.price;
+            // Tampilkan warning jika melebihi 50 kg
+            const weightWarning = service.weight > 50 ? '<span class="text-red-400 text-xs ml-2">⚠️ Melebihi batas 50kg!</span>' : '';
             html += `
                 <div class="flex justify-between items-center text-sm">
                     <div class="flex items-center gap-2">
@@ -588,6 +607,7 @@ window.renderCart = function() {
                         <span class="font-medium">${service.weight} kg</span>
                         <button type="button" onclick="window.increaseWeight('${service.service_id}')" 
                                 class="w-6 h-6 bg-green-500 rounded hover:bg-green-600 transition">+</button>
+                        ${weightWarning}
                     </div>
                     <span>Rp ${subtotal.toLocaleString()}</span>
                 </div>
@@ -706,34 +726,134 @@ window.removeItem = function(serviceId, itemId) {
     window.renderCart();
 };
 
-// Untuk layanan per_kilo
+// Fungsi untuk menampilkan toast notification
+function showToast(message, type = 'error') {
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    const colors = {
+        error: 'bg-red-500',
+        success: 'bg-green-500',
+        warning: 'bg-yellow-500',
+        info: 'bg-blue-500'
+    };
+    
+    const icons = {
+        error: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+        success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
+        warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>',
+        info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'
+    };
+    
+    toast.className = `transform transition-all duration-500 ease-in-out ${colors[type]} text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-[300px] backdrop-blur-sm`;
+    toast.style.animation = 'slideInRight 0.3s ease-out';
+    toast.innerHTML = `
+        <div class="flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${icons[type]}
+            </svg>
+        </div>
+        <div class="flex-1 text-sm font-medium">${message}</div>
+        <button onclick="this.parentElement.remove()" class="flex-shrink-0 hover:opacity-75">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast && toast.remove) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 500);
+        }
+    }, 4000);
+}
+
+// Untuk layanan per_kilo dengan batasan maksimal 50 kg
 window.increaseWeight = function(serviceId) {
     const service = cart.find(s => s.service_id == serviceId);
     if (!service) return;
-    service.weight = (service.weight || 0) + 0.5;
+    
+    let newWeight = (service.weight || 0) + 0.5;
+    
+    // Batasi maksimal 50 kg
+    if (newWeight > 50) {
+        showToast('⚠️ Maksimal berat laundry adalah 50 kg!', 'warning');
+        return;
+    }
+    
+    service.weight = parseFloat(newWeight.toFixed(1));
     window.renderCart();
+    
     // Update input field jika service yang dipilih sama
     if (selectedService && selectedService.service_id == serviceId) {
         const weightInput = document.getElementById("weightInput");
         if (weightInput) weightInput.value = service.weight;
+        checkWeightLimit(service.weight);
     }
 };
 
 window.decreaseWeight = function(serviceId) {
     const service = cart.find(s => s.service_id == serviceId);
     if (!service) return;
-    if (service.weight > 0.5) {
-        service.weight = service.weight - 0.5;
-    } else if (service.weight === 0.5) {
-        service.weight = 0.1;
+    
+    let newWeight = service.weight - 0.5;
+    
+    // Batasi minimal 0.1 kg
+    if (newWeight < 0.1) {
+        newWeight = 0.1;
     }
+    
+    service.weight = parseFloat(newWeight.toFixed(1));
     window.renderCart();
+    
     // Update input field jika service yang dipilih sama
     if (selectedService && selectedService.service_id == serviceId) {
         const weightInput = document.getElementById("weightInput");
         if (weightInput) weightInput.value = service.weight;
+        checkWeightLimit(service.weight);
     }
 };
+
+// Fungsi untuk mengecek batasan berat
+function checkWeightLimit(weight) {
+    const weightWarning = document.getElementById("weightWarning");
+    const weightInput = document.getElementById("weightInput");
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (weight > 50) {
+        if (weightWarning) weightWarning.classList.remove("hidden");
+        if (weightInput) {
+            weightInput.classList.add("border-red-500", "bg-red-50");
+            weightInput.classList.remove("border-slate-300");
+        }
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+        }
+        return false;
+    } else {
+        if (weightWarning) weightWarning.classList.add("hidden");
+        if (weightInput) {
+            weightInput.classList.remove("border-red-500", "bg-red-50");
+            weightInput.classList.add("border-slate-300");
+        }
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
+        return true;
+    }
+}
 
 // Hapus seluruh service dari cart
 window.removeService = function(serviceId) {
@@ -751,11 +871,36 @@ window.removeService = function(serviceId) {
         // Sembunyikan section weight/item
         document.getElementById("weightInputContainer").classList.add("hidden");
         document.getElementById("itemCards").classList.add("hidden");
+        // Reset button submit
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        }
     }
 };
 
 document.addEventListener("DOMContentLoaded", () => {
     console.log("JavaScript loaded successfully");
+    
+    // Tambahkan CSS untuk toast animation
+    if (!document.querySelector('#toast-animation-style')) {
+        const style = document.createElement('style');
+        style.id = 'toast-animation-style';
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
     
     // ====================== SET TANGGAL OTOMATIS ======================
     const scheduledPickupInput = document.getElementById("scheduled_pickup");
@@ -837,7 +982,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const distance = getDistanceKm(STORE_LAT, STORE_LNG, lat, lng);
 
         if (distance > MAX_RADIUS_KM) {
-            alert(`❌ Lokasi di luar jangkauan (${distance.toFixed(1)} km)`);
+            showToast(`❌ Lokasi di luar jangkauan (${distance.toFixed(1)} km)`, 'error');
             return false;
         }
 
@@ -985,9 +1130,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         for (let service of cart) {
             if (service.type === "per_kilo") {
-                if (!service.weight || service.weight <= 0) return false;
+                if (!service.weight || service.weight <= 0) {
+                    showToast('❌ Berat laundry belum diisi!', 'error');
+                    return false;
+                }
+                if (service.weight > 50) {
+                    showToast('❌ Berat laundry melebihi batas maksimal 50 kg!', 'error');
+                    return false;
+                }
             } else if (service.type === "per_item") {
-                if (!service.items || service.items.length === 0) return false;
+                if (!service.items || service.items.length === 0) {
+                    showToast('❌ Belum ada item yang dipilih untuk laundry satuan!', 'error');
+                    return false;
+                }
             }
         }
         return true;
@@ -1040,6 +1195,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 let existing = cart.find(s => s.service_id === selectedService.service_id);
                 if (existing && existing.weight && weightInputField) {
                     weightInputField.value = existing.weight;
+                    checkWeightLimit(existing.weight);
                 }
             } else if (selectedService.type === "per_item") {
                 if (itemSection) {
@@ -1063,15 +1219,36 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     /* ======================
-       WEIGHT INPUT HANDLER
+       WEIGHT INPUT HANDLER (DENGAN VALIDASI 50 KG)
     ====================== */
     const weightInputField = document.getElementById("weightInput");
     if (weightInputField) {
         weightInputField.addEventListener("input", function() {
             if (!selectedService || selectedService.type !== "per_kilo") return;
             
-            const weight = parseFloat(this.value);
-            if (isNaN(weight) || weight <= 0) return;
+            let weight = parseFloat(this.value);
+            
+            // Validasi input kosong atau NaN
+            if (isNaN(weight)) {
+                return;
+            }
+            
+            // Batasi maksimal 50 kg
+            if (weight > 50) {
+                weight = 50;
+                this.value = 50;
+                showToast('⚠️ Maksimal berat laundry adalah 50 kg!', 'warning');
+            }
+            
+            // Batasi minimal 0.1 kg
+            if (weight < 0.1) {
+                weight = 0.1;
+                this.value = 0.1;
+            }
+            
+            // Bulatkan ke 1 desimal
+            weight = Math.round(weight * 10) / 10;
+            this.value = weight;
 
             let existing = cart.find(s => s.service_id === selectedService.service_id);
             if (existing) {
@@ -1083,6 +1260,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
             window.renderCart();
+            checkWeightLimit(weight);
+        });
+        
+        // Tambahkan event blur untuk validasi akhir
+        weightInputField.addEventListener("blur", function() {
+            let weight = parseFloat(this.value);
+            if (isNaN(weight) || weight <= 0) {
+                this.value = 0.1;
+                if (selectedService && selectedService.type === "per_kilo") {
+                    let existing = cart.find(s => s.service_id === selectedService.service_id);
+                    if (existing) {
+                        existing.weight = 0.1;
+                        window.renderCart();
+                    }
+                }
+            }
         });
     }
 
@@ -1092,7 +1285,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".item-card").forEach(card => {
         card.addEventListener("click", function () {
             if (!selectedService || selectedService.type !== "per_item") {
-                alert("Silakan pilih layanan 'Laundry Satuan' terlebih dahulu!");
+                showToast("⚠️ Silakan pilih layanan 'Laundry Satuan' terlebih dahulu!", 'warning');
                 return;
             }
 
@@ -1112,6 +1305,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let existingItem = service.items.find(i => i.id === itemId);
             if (existingItem) {
                 existingItem.qty++;
+                showToast(`✓ ${itemName} ditambahkan (total: ${existingItem.qty})`, 'success');
             } else {
                 service.items.push({
                     id: itemId,
@@ -1119,6 +1313,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     price: itemPrice,
                     qty: 1
                 });
+                showToast(`✓ ${itemName} ditambahkan ke keranjang`, 'success');
             }
 
             window.renderCart();
@@ -1160,13 +1355,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const selectedServiceId = document.getElementById("selected_service_id")?.value;
             if (!selectedServiceId) {
                 e.preventDefault();
-                alert("❌ Silakan pilih layanan terlebih dahulu!\n\nKlik pada kartu layanan yang ingin Anda pesan.");
+                showToast("❌ Silakan pilih layanan terlebih dahulu!", 'error');
                 return false;
             }
             
             if (!isCartValid()) {
                 e.preventDefault();
-                alert("❌ Keranjang masih kosong atau belum lengkap!\n\nPastikan Anda telah:\n1. Memilih layanan\n2. Mengisi berat (untuk laundry kiloan)\n3. Memilih item (untuk laundry satuan)");
                 return false;
             }
 
@@ -1174,21 +1368,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const lng = document.getElementById("longitude")?.value;
             if (!lat || !lng) {
                 e.preventDefault();
-                alert("❌ Silakan pilih lokasi pickup di peta terlebih dahulu!");
+                showToast("❌ Silakan pilih lokasi pickup di peta terlebih dahulu!", 'error');
                 return false;
             }
 
             const scheduledPickup = document.getElementById("scheduled_pickup")?.value;
             if (!scheduledPickup) {
                 e.preventDefault();
-                alert("❌ Silakan pilih tanggal dan waktu pengambilan!");
+                showToast("❌ Silakan pilih tanggal dan waktu pengambilan!", 'error');
                 return false;
             }
 
             const paymentMethod = document.querySelector('select[name="payment_method"]')?.value;
             if (!paymentMethod) {
                 e.preventDefault();
-                alert("❌ Silakan pilih metode pembayaran!");
+                showToast("❌ Silakan pilih metode pembayaran!", 'error');
                 return false;
             }
 
@@ -1199,6 +1393,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 total: document.getElementById("total_price")?.value
             });
             
+            showToast("✓ Memproses pesanan...", 'info');
             return true;
         });
     }

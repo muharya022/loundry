@@ -3,8 +3,8 @@ import requests
 
 class WAHAHandler:
     def __init__(self):
-        self.base_url = "http://localhost:3000"
-        self.api_key = "123456"
+        self.base_url = "http://waha.menaralaundry.site"
+        self.api_key = "88bce2e5513f686f2eb823004ddb48733c434e7b4e95b3228639c6f207b48b14"
         self.session_name = "default"
         self.timeout = 30
     

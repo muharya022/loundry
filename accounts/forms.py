@@ -6,7 +6,7 @@ User = get_user_model()
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'phone', 'address']
+        fields = ['username', 'first_name', 'last_name', 'phone', 'address']
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
@@ -15,9 +15,6 @@ class ProfileForm(forms.ModelForm):
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
             }),
             'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
-            }),
-            'email': forms.EmailInput(attrs={
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
             }),
             'phone': forms.TextInput(attrs={
@@ -53,14 +50,12 @@ User = get_user_model()
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'phone']
+        fields = ['username', 'first_name', 'last_name', 'phone']
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
             }),
-            'email': forms.EmailInput(attrs={
-                'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
-            }),
+
             'first_name': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
             }),

@@ -6,6 +6,7 @@ app_name = 'orders'
 urlpatterns = [
 
     # Endpoint API
+    path('get-order-status', views.get_order_status, name='get_order_status'),
     path('notifications/', views.get_order_notifications, name='get_order_notifications'),
     path('notifications/read/', views.mark_notifications_as_read, name='mark_notifications_as_read'),
 
@@ -25,8 +26,6 @@ urlpatterns = [
     path('add-item/', views.add_laundry_item, name='add_laundry_item'),
     path('edit-item/<int:item_id>/', views.edit_laundry_item, name='edit_laundry_item'),
     path('delete-item/<int:item_id>/', views.delete_laundry_item, name='delete_laundry_item'),
-    path('notifications/', views.get_order_notifications, name='get_order_notifications'),
-    path('webhook/wa/', views.get_order_status, name='webhook_wa'),
     path('promo/assign/', views.assign_promo, name='promo_assign'),
     path('promo/add/', views.add_promo, name='add_promo'),
     path('promo/edit/<int:promo_id>/', views.edit_promo, name='promo_edit'),

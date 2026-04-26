@@ -419,7 +419,7 @@
                     <span class="badge badge-purple">{{ user_promo.promo.title }}</span>
                   </td>
                   <td class="px-4 py-3">
-                    <span class="badge badge-blue">{{ user_promo.promo.discount }}%</span>
+                    <span class="badge badge-blue">{{ user_promo.promo.discount_amount }}%</span>
                   </td>
                   <td class="px-4 py-3 text-center">
                     <span class="badge {% if not user_promo.is_used %}badge-green{% else %}badge-gray{% endif %}">
@@ -468,7 +468,7 @@ function confirmDeletePromo(promoId, promoTitle) {
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#6b7280',
-    confirmButtonText: 'Ya, Hapus',
+    confirmButtonText: 'Hapus',
     cancelButtonText: 'Batal',
     reverseButtons: true
   }).then((result) => {
@@ -500,7 +500,7 @@ function confirmDeleteUserPromo(userPromoId, username, promoTitle) {
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#6b7280',
-    confirmButtonText: 'Ya, Hapus',
+    confirmButtonText: 'Hapus',
     cancelButtonText: 'Batal',
     reverseButtons: true
   }).then((result) => {

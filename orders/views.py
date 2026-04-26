@@ -313,7 +313,7 @@ def create_order(request):
                 },
                 "customer_details": {
                     "first_name": customer.username,
-                    "email": customer.email,
+                    "phone": customer.phone,
                 },
                 "enabled_payments": ["gopay", "qris", "bank_transfer"],
                 "callbacks": {"finish": finish_url},
@@ -382,6 +382,8 @@ def payment_success(request):
             order = Order.objects.get(id=real_id)
             if transaction_status in ["capture", "settlement"]:
                 order.payment_status = "paid"
+                order.save()
+
             elif transaction_status in ["cancel", "deny", "expire"]:
                 order.payment_status = "unpaid"
             else:
@@ -407,6 +409,8 @@ def callback_midtrans(request):
                 order = Order.objects.get(id=real_id)
                 if transaction_status in ["capture", "settlement"]:
                     order.payment_status = "paid"
+                    order.save()
+
                 elif transaction_status in ["cancel", "deny", "expire"]:
                     order.payment_status = "unpaid"
                 else:
@@ -486,10 +490,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from orders.models import Order
-# from accounts.models import User
-
-# def admin_required(user):
-#     return user.is_authenticated and user.is_admin
 
 @login_required
 @user_passes_test(admin_required)
@@ -504,9 +504,13 @@ def update_order_status(request, order_id):
         if new_status in dict(Order.ORDER_STATUS_CHOICES):
             order.order_status = new_status
             order.save()
+
+            trigger_n8n_webhook(order, "order_status_updated")
+
             messages.success(request, f"Status pesanan #{order.id} diperbarui menjadi {order.get_order_status_display()}.")
         else:
             messages.error(request, "Status yang dipilih tidak valid.")
+            
     
     # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
     return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
@@ -515,18 +519,23 @@ def update_order_status(request, order_id):
 @user_passes_test(admin_required)
 def update_payment_status(request, order_id):
     order = get_object_or_404(Order, id=order_id)
-    
-    # Simpan halaman saat ini untuk redirect kembali
     current_page = request.GET.get('orders_page', 1)
-    
+
     if request.method == "POST":
         new_status = request.POST.get("payment_status")
+
         if new_status in dict(Order.PAYMENT_STATUS_CHOICES):
+            old_status = order.payment_status  # simpan status lama
             order.payment_status = new_status
             order.save()
-            messages.success(request, f"Status pembayaran pesanan #{order.id} diperbarui menjadi {order.get_payment_status_display()}.")
-    
-    # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
+
+            trigger_n8n_webhook(order, "payment_status_updated")
+
+            messages.success(
+                request,
+                f"Status pembayaran pesanan #{order.id} diperbarui menjadi {order.get_payment_status_display()}."
+            )
+
     return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
 @login_required
@@ -542,12 +551,15 @@ def assign_courier(request, order_id):
         if not courier_id:
             order.assigned_courier = None
             order.save()
+            trigger_n8n_webhook(order, "courier_removed")
             messages.info(request, f"Kurir untuk pesanan #{order.id} telah dihapus.")
         else:
             try:
                 courier = User.objects.get(id=courier_id, is_courier=True)
                 order.assigned_courier = courier
                 order.save()
+                trigger_n8n_webhook(order, "courier_assigned")
+
                 messages.success(request, f"Kurir '{courier.username}' telah ditugaskan ke pesanan #{order.id}.")
             except User.DoesNotExist:
                 messages.error(request, "Kurir yang dipilih tidak valid.")
@@ -743,6 +755,7 @@ def download_invoice(request, order_id):
 
     return response
 
+
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -762,46 +775,92 @@ def mark_notifications_as_read(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
 from .models import Order
+import json
 import re
+
+User = get_user_model()
 
 @csrf_exempt
 def get_order_status(request):
-    """
-    Endpoint untuk menerima teks dari N8N dan balas data order dalam bentuk JSON.
-    """
     if request.method == "POST":
         try:
-            data = request.POST or request.GET
+            # Ambil JSON dari n8n
+            data = json.loads(request.body)
+
             message = data.get("message", "").lower().strip()
+            phone = data.get("phone", "")
 
-            response_data = {
-                "reply": "❌ Format tidak dikenali. Ketik CEK<ID> (contoh: CEK15)"
-            }
+            # Bersihkan nomor (WAHA format)
+            phone = phone.replace("@c.us", "").replace("@lid", "")
 
-            match = re.match(r"cek(\d+)", message)
+            # 🔍 Cari user dari nomor
+            user = User.objects.filter(username=phone).first()
+
+            # 🔍 Cari angka (order id dari chat)
+            match = re.search(r"\d+", message)
+
+            # =========================
+            # CASE 1: USER CEK ORDER
+            # =========================
             if match:
-                order_id = int(match.group(1))
+                order_id = int(match.group())
                 order = Order.objects.filter(id=order_id).select_related("customer", "service").first()
 
                 if order:
-                    response_data = {
+                    return JsonResponse({
                         "reply": (
                             f"📦 *Status Order #{order.id}*\n"
-                            f"👤 Pelanggan: {order.customer.first_name or order.customer.username}\n"
-                            f"🧺 Layanan: {order.service.name}\n"
+                            f"Halo Kak {order.customer.username} 😊\n"
+                            f"🧺 Layanan: {order.service.name if order.service else '-'}\n"
                             f"💰 Total: Rp{order.price_total:,.0f}\n"
                             f"🚚 Status: {order.get_order_status_display()}\n"
                             f"💵 Pembayaran: {order.get_payment_status_display()}\n"
                             f"📅 Tanggal: {order.created_at.strftime('%d-%m-%Y %H:%M')}"
-                        )
-                    }
+                        ),
+                        "status": "success"
+                    })
                 else:
-                    response_data = {"reply": f"❌ Order dengan ID {order_id} tidak ditemukan."}
+                    return JsonResponse({
+                        "reply": f"Maaf Kak {order.customer.username}, order #{order_id} tidak ditemukan 🥺",
+                        "status": "not_found"
+                    })
 
-            return JsonResponse(response_data)
+            # =========================
+            # CASE 2: CHAT BIASA
+            # =========================
+            return JsonResponse({
+                "reply": f"Halo Kak {order.customer.username} 😊 Ada yang bisa dibantu?",
+                "status": "greeting"
+            })
+
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return JsonResponse({
+                "reply": f"Terjadi error: {str(e)}",
+                "status": "error"
+            }, status=500)
+
     return JsonResponse({"error": "Gunakan POST method"}, status=405)
+
+import requests
+
+def trigger_n8n_webhook(order, event_type):
+    webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
+    
+    payload = {
+        "order_id": order.id,
+        "user": order.user.username,
+        "email": order.user.email,
+        "order_status": order.order_status,
+        "payment_status": order.payment_status,
+        "courier": order.assigned_courier.username if order.assigned_courier else None,
+        "event": event_type
+    }
+
+    try:
+        requests.post(webhook_url, json=payload, timeout=5)
+    except requests.exceptions.RequestException:
+        pass  # biar tidak ganggu flow utama

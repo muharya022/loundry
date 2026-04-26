@@ -88,11 +88,13 @@
           <i class="fas fa-edit"></i>
           Edit
         </a>
+
         <a href="{% url 'services:delete_service' s.id %}"
-           onclick="return confirm('Yakin ingin menghapus layanan ini?')"
-           class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-all duration-300 text-sm font-medium">
-          <i class="fas fa-trash-alt"></i>
-          Hapus
+           onclick="return confirmDelete(event, '{{ s.name|escapejs }}')"
+           class="btn-delete flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-400 text-white hover:bg-red-500 transition-all duration-300 text-sm font-medium"
+           title="Hapus Item">
+           <i class="fas fa-trash-alt text-xs"></i>
+           Hapus
         </a>
       </div>
       {% endif %}
@@ -105,6 +107,74 @@
   </div>
   {% endfor %}
 </div>
+<!-- JavaScript untuk preview gambar dan konfirmasi hapus modern -->
+<script>
+
+  // Konfirmasi hapus modern
+  function confirmDelete(event, itemName) {
+    event.preventDefault();
+    const url = event.currentTarget.href;
+    
+    // Buat modal konfirmasi modern
+    const modalHtml = `
+      <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="animation: fadeIn 0.2s ease-out;">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden" style="animation: scaleIn 0.2s ease-out;">
+          <div class="p-6 text-center">
+            <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <i class="fas fa-trash-alt text-red-600 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Hapus Item?</h3>
+            <p class="text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus item <span class="font-semibold">"${itemName}"</span>?<br>
+              Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div class="flex gap-3">
+              <button onclick="closeModal()" 
+                      class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
+                <i class="fas fa-times mr-2"></i>Batal
+              </button>
+              <button onclick="confirmDeleteAction('${url}')" 
+                      class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
+                <i class="fas fa-trash-alt mr-2"></i>Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+      </style>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    return false;
+  }
+  
+  function closeModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.remove();
+  }
+  
+  function confirmDeleteAction(url) {
+    window.location.href = url;
+  }
+  
+  // Tutup modal dengan ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <script>
   lucide.createIcons();

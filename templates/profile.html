@@ -36,11 +36,6 @@
         </div>
 
         <div>
-          <label class="label">Email</label>
-          <p class="value">{{ request.user.email }}</p>
-        </div>
-
-        <div>
           <label class="label">Nama Depan</label>
           <p class="value">{{ request.user.first_name|default:"-" }}</p>
         </div>
