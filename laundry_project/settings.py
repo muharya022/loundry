@@ -31,11 +31,13 @@ SECRET_KEY = 'django-insecure-61qn3skdxxii!gsrmltyewzxoat5-&@90^1^*k@7-(wa*+ff0w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['subcorymbosely-nonmythologic-marcelina.ngrok-free.dev', 'localhost', '127.0.0.1', "http://103.55.37.191:8000/",]
+ALLOWED_HOSTS = ['menaralaundry.site',
+    'www.menaralaundry.site',
+    'laundry-server', "103.55.37.191", "https://www.menaralaundry.site",]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev",
-    "https://app.gunungsari.biz.id",
+    "https://www.menaralaundry.site/",
+    'https://menaralaundry.site', "https://www.menaralaundry.site",
 ]
 
 # Application definition
@@ -57,24 +59,14 @@ INSTALLED_APPS = [
     'rest_framework',
 ]
 
-# settings.py
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'muhammadaryaalfajar@gmail.com'
-EMAIL_HOST_PASSWORD = 'bfvj ybaq ixzf onmk'
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
-
 AUTH_USER_MODEL = 'accounts.User'
 
 MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
 MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
 
 # WAHA Configuration
-WAHA_API_KEY = "123456"
-WAHA_BASE_URL = "http://localhost:3000/api"
+WAHA_API_KEY = "88bce2e5513f686f2eb823004ddb48733c434e7b4e95b3228639c6f207b48b14"
+WAHA_BASE_URL = "http://127.0.0.1:3000"
 WAHA_SESSION_NAME = "default"
 
 MIDDLEWARE = [
@@ -154,7 +146,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
-
+STATIC_ROOT = '/home/Arya/loundry/staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
