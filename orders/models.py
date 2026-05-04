@@ -35,6 +35,17 @@ class Order(models.Model):
         ('qris', 'QRIS / Transfer Online'),
     ]
 
+    # ===== METODE PENGAMBILAN & PENGIRIMAN =====
+    PICKUP_METHOD_CHOICES = [
+        ('pickup', 'Dijemput Kurir'),
+        ('dropoff', 'Antar Sendiri'),
+    ]
+
+    DELIVERY_METHOD_CHOICES = [
+        ('delivery', 'Diantar Kurir'),
+        ('pickup', 'Ambil Sendiri'),
+    ]
+
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -44,22 +55,39 @@ class Order(models.Model):
     service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, blank=True)
     notified_customer = models.BooleanField(default=False)
 
-    # Tambahan untuk layanan per item
-    # item_type = models.ForeignKey(LaundryItem, on_delete=models.SET_NULL, null=True, blank=True)
-    # quantity = models.IntegerField(default=0)
-
     # Untuk layanan per kilo
     weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
 
-    # Detail item (JSON)
-    # items = models.JSONField(blank=True, null=True)
-
     price_total = models.DecimalField(max_digits=12, decimal_places=2)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Nominal diskon yang didapat")
+    
     pickup_address = models.TextField()
     latitude = models.FloatField()
     longitude = models.FloatField()
     scheduled_pickup = models.DateTimeField()
+
+    # ===== FIELD UNTUK LAYANAN ANTAR-JEMPUT =====
+    pickup_method = models.CharField(
+        max_length=20, 
+        choices=PICKUP_METHOD_CHOICES, 
+        default='pickup',
+        help_text="Apakah laundry dijemput kurir atau diantar sendiri?"
+    )
+    
+    delivery_method = models.CharField(
+        max_length=20, 
+        choices=DELIVERY_METHOD_CHOICES, 
+        default='delivery',
+        help_text="Apakah hasil laundry diantar kurir atau diambil sendiri?"
+    )
+    
+    shipping_cost = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        help_text="Total biaya pengiriman (bisa 1x atau 2x ongkir)"
+    )
 
     # Status terpisah
     order_status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='pending')
@@ -90,19 +118,32 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Order #{self.id} - {self.customer.username} (Order: {self.order_status}, Payment: {self.payment_status})"
+        pickup_display = self.get_pickup_method_display() if self.pickup_method else '-'
+        delivery_display = self.get_delivery_method_display() if self.delivery_method else '-'
+        return f"Order #{self.id} - {self.customer.username} (Pickup: {pickup_display}, Delivery: {delivery_display})"
 
     @property
     def is_per_item(self):
-        return self.service.type == 'per_item'
+        return self.service.type == 'per_item' if self.service else False
 
-    def calculate_total(self):
-        """Hitung total otomatis berdasarkan jenis layanan."""
-        if self.is_per_item and self.item_type:
-            return self.item_type.price * self.quantity
-        elif self.service.type == 'per_kilo' and self.weight:
-            return self.service.price * self.weight
-        return 0
+    @property
+    def total_shipping(self):
+        """Total biaya pengiriman"""
+        return self.shipping_cost or 0
+
+    @property
+    def pickup_description(self):
+        """Deskripsi metode pengambilan"""
+        if self.pickup_method == 'pickup':
+            return "🚗 Dijemput Kurir"
+        return "🏪 Antar Sendiri"
+
+    @property
+    def delivery_description(self):
+        """Deskripsi metode pengiriman"""
+        if self.delivery_method == 'delivery':
+            return "🚚 Diantar Kurir"
+        return "🏪 Ambil Sendiri"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_items")

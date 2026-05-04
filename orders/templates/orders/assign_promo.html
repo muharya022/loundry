@@ -402,7 +402,7 @@
               <thead class="bg-blue-600 text-white">
                 <tr>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Pengguna</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Nomor HP</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Promo</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Diskon</th>
                   <th class="px-4 py-3 text-center text-sm font-semibold">Status</th>
@@ -414,7 +414,7 @@
                 {% for user_promo in user_promos %}
                 <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3 font-medium text-gray-900">{{ user_promo.user.username }}</td>
-                  <td class="px-4 py-3 text-gray-600">{{ user_promo.user.email|default:"-" }}</td>
+                  <td class="px-4 py-3 text-gray-600">{{ user_promo.user.phone|default:"-" }}</td>
                   <td class="px-4 py-3">
                     <span class="badge badge-purple">{{ user_promo.promo.title }}</span>
                   </td>

@@ -123,7 +123,7 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
-                Tanggal Masuk
+                Jadwal Pickup
               </span>
             </label>
             <input type="datetime-local" id="scheduled_pickup" name="scheduled_pickup"
@@ -143,11 +143,92 @@
             <select name="payment_method" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition text-sm">
               <option value="" class="bg-white">Pilih Pembayaran</option>
               <option value="cod" class="bg-white">Tunai / COD</option>
-              <option value="qris" class="bg-white">QRIS</option>
+              <option value="qris" class="bg-white">Non Tunai / QRIS</option>
             </select>
           </div>
         </div>
       </div>
+      <!-- Tambahkan di Section 1: Informasi Pelanggan, setelah metode pembayaran -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-slate-200">
+  <!-- Pilihan Pengambilan Laundry (Pickup Service) -->
+  <div>
+    <label class="block text-sm font-semibold text-slate-900 mb-2">
+      <span class="flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+        </svg>
+        Layanan Pengambilan Cucian
+      </span>
+    </label>
+    <div class="space-y-3">
+      <label class="flex items-center p-3 bg-slate-50 rounded-lg border-2 border-slate-200 cursor-pointer hover:border-blue-500 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+        <input type="radio" name="pickup_method" value="pickup" class="w-4 h-4 text-blue-600" checked>
+        <div class="ml-3 flex-1">
+          <div class="font-medium text-slate-900">🚗 Dijemput Kurir</div>
+          <p class="text-xs text-slate-500">Kurir kami akan menjemput laundry Anda di lokasi yang dipilih</p>
+        </div>
+        <div class="text-xs text-blue-600 font-medium">+ Ongkir</div>
+      </label>
+      <label class="flex items-center p-3 bg-slate-50 rounded-lg border-2 border-slate-200 cursor-pointer hover:border-blue-500 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+        <input type="radio" name="pickup_method" value="dropoff" class="w-4 h-4 text-blue-600">
+        <div class="ml-3 flex-1">
+          <div class="font-medium text-slate-900">🏪 Antar Sendiri ke Toko</div>
+          <p class="text-xs text-slate-500">Anda bisa mengantar langsung laundry ke toko kami</p>
+        </div>
+        <div class="text-xs text-green-600 font-medium">Gratis</div>
+      </label>
+    </div>
+    <p class="text-xs text-slate-500 mt-2" id="pickupInfoText">* Kurir akan menjemput sesuai jadwal yang dipilih</p>
+  </div>
+
+  <!-- Pilihan Pengambilan Hasil (Delivery Service) -->
+  <div>
+    <label class="block text-sm font-semibold text-slate-900 mb-2">
+      <span class="flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+        </svg>
+        Pengiriman Hasil Laundry
+      </span>
+    </label>
+    <div class="space-y-3">
+      <label class="flex items-center p-3 bg-slate-50 rounded-lg border-2 border-slate-200 cursor-pointer hover:border-blue-500 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+        <input type="radio" name="delivery_method" value="delivery" class="w-4 h-4 text-blue-600" checked>
+        <div class="ml-3 flex-1">
+          <div class="font-medium text-slate-900">🚚 Diantar Kurir</div>
+          <p class="text-xs text-slate-500">Hasil laundry akan diantar ke alamat Anda</p>
+        </div>
+        <div class="text-xs text-blue-600 font-medium">+ Ongkir</div>
+      </label>
+      <label class="flex items-center p-3 bg-slate-50 rounded-lg border-2 border-slate-200 cursor-pointer hover:border-blue-500 transition has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+        <input type="radio" name="delivery_method" value="pickup" class="w-4 h-4 text-blue-600">
+        <div class="ml-3 flex-1">
+          <div class="font-medium text-slate-900">🏪 Ambil Sendiri di Toko</div>
+          <p class="text-xs text-slate-500">Anda bisa mengambil sendiri laundry yang sudah selesai</p>
+        </div>
+        <div class="text-xs text-green-600 font-medium">Gratis</div>
+      </label>
+    </div>
+    <p class="text-xs text-slate-500 mt-2" id="deliveryInfoText">* Hasil laundry akan diantar ke alamat Anda setelah selesai</p>
+  </div>
+</div>
+
+<!-- Tambahkan info biaya ongkir tambahan jika pilih antar-jemput -->
+<div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 hidden" id="shippingInfoBox">
+  <div class="flex items-center gap-2">
+    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div>
+      <p class="text-sm text-amber-800 font-medium">Informasi Biaya Pengiriman</p>
+      <p class="text-xs text-amber-700" id="shippingDetailText">- Anda memilih layanan antar-jemput (jemput + antar) = 2x ongkir</p>
+    </div>
+  </div>
+  <!-- Hidden inputs untuk menyimpan pilihan -->
+<input type="hidden" name="pickup_method_hidden" id="pickup_method_hidden" value="pickup">
+<input type="hidden" name="delivery_method_hidden" id="delivery_method_hidden" value="delivery">
+<input type="hidden" name="total_shipping_cost" id="total_shipping_cost" value="0">
+</div>
 
       <!-- Section 2: Lokasi Pickup (tetap sama seperti sebelumnya) -->
       <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-slate-200">
@@ -172,7 +253,7 @@
                 Alamat Pickup
               </span>
             </label>
-            <input type="text" id="pickup_address" placeholder="Klik peta atau geser marker untuk memilih lokasi"
+            <input type="text" name="address" id="pickup_address" placeholder="Klik peta atau geser marker untuk memilih lokasi"
                    class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition placeholder-slate-500 text-sm"
                    required>
           </div>
@@ -357,7 +438,7 @@
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                Ongkir dihitung per kilogram dari jarak lokasi Anda
+                Isi perkiraan berat laundry Anda. Nanti akan ditimbang ulang oleh tim kami saat laundry telah dijemput. Biaya akan disesuaikan dengan berat aktual
               </p>
             </div>
           </div>
@@ -597,7 +678,6 @@ window.renderCart = function() {
 
         if (service.type === "per_kilo") {
             const subtotal = service.weight * service.price;
-            // Tampilkan warning jika melebihi 50 kg
             const weightWarning = service.weight > 50 ? '<span class="text-red-400 text-xs ml-2">⚠️ Melebihi batas 50kg!</span>' : '';
             html += `
                 <div class="flex justify-between items-center text-sm">
@@ -648,6 +728,79 @@ window.renderCart = function() {
     window.updateCartTotal();
 };
 
+// Fungsi untuk menghitung total ongkir berdasarkan pilihan pickup & delivery
+window.calculateTotalShipping = function() {
+    const pickupMethod = document.querySelector('input[name="pickup_method"]:checked')?.value;
+    const deliveryMethod = document.querySelector('input[name="delivery_method"]:checked')?.value;
+    const baseOngkir = parseFloat(document.getElementById("shipping_cost")?.value || 0);
+    
+    let totalOngkir = 0;
+    let description = '';
+    
+    const pickupInfoText = document.getElementById('pickupInfoText');
+    const deliveryInfoText = document.getElementById('deliveryInfoText');
+    const shippingDetailText = document.getElementById('shippingDetailText');
+    const shippingInfoBox = document.getElementById('shippingInfoBox');
+    
+    if (pickupMethod === 'pickup' && deliveryMethod === 'delivery') {
+        totalOngkir = baseOngkir * 2;
+        description = '🏠 Layanan lengkap (jemput + antar) = 2x ongkir';
+        if (pickupInfoText) pickupInfoText.innerHTML = '* 🚗 Kurir akan menjemput laundry Anda (+ ongkir jemput)';
+        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🚚 Hasil laundry akan diantar ke rumah Anda (+ ongkir antar)';
+    } 
+    else if (pickupMethod === 'pickup' && deliveryMethod === 'pickup') {
+        totalOngkir = baseOngkir;
+        description = '📦 Layanan jemput saja, ambil hasil sendiri = 1x ongkir';
+        if (pickupInfoText) pickupInfoText.innerHTML = '* 🚗 Kurir akan menjemput laundry Anda (+ ongkir jemput)';
+        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🏪 Ambil hasil laundry sendiri di toko (Gratis)';
+    }
+    else if (pickupMethod === 'dropoff' && deliveryMethod === 'delivery') {
+        totalOngkir = baseOngkir;
+        description = '📦 Antar sendiri, diantar kurir = 1x ongkir';
+        if (pickupInfoText) pickupInfoText.innerHTML = '* 🏪 Antar sendiri laundry ke toko (Gratis)';
+        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🚚 Hasil laundry akan diantar ke rumah Anda (+ ongkir antar)';
+    }
+    else {
+        totalOngkir = 0;
+        description = '✅ Layanan mandiri (antar sendiri + ambil sendiri) = GRATIS ongkir';
+        if (pickupInfoText) pickupInfoText.innerHTML = '* 🏪 Antar sendiri laundry ke toko (Gratis)';
+        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🏪 Ambil hasil laundry sendiri di toko (Gratis)';
+    }
+    
+    // Update hidden inputs
+    const totalShippingInput = document.getElementById('total_shipping_cost');
+    if (totalShippingInput) totalShippingInput.value = totalOngkir;
+    
+    // Update hidden methods
+    const pickupMethodHidden = document.getElementById('pickup_method_hidden');
+    const deliveryMethodHidden = document.getElementById('delivery_method_hidden');
+    if (pickupMethodHidden) pickupMethodHidden.value = pickupMethod || 'pickup';
+    if (deliveryMethodHidden) deliveryMethodHidden.value = deliveryMethod || 'delivery';
+    
+    // Update display
+    if (shippingDetailText) shippingDetailText.innerHTML = description;
+    if (shippingInfoBox) {
+        if (totalOngkir > 0) {
+            shippingInfoBox.classList.remove('hidden');
+        } else {
+            shippingInfoBox.classList.add('hidden');
+        }
+    }
+    
+    // Update shipping display di ringkasan
+    const shippingCostSpan = document.getElementById("shippingCost");
+    if (shippingCostSpan) {
+        if (totalOngkir === 0) {
+            shippingCostSpan.innerHTML = "Gratis";
+        } else {
+            shippingCostSpan.innerHTML = "Rp " + totalOngkir.toLocaleString();
+        }
+    }
+    
+    window.updateCartTotal();
+    return totalOngkir;
+};
+
 // Fungsi updateCartTotal harus global
 window.updateCartTotal = function() {
     let total = 0;
@@ -662,10 +815,11 @@ window.updateCartTotal = function() {
         }
     });
 
-    const ongkir = parseFloat(document.getElementById("shipping_cost")?.value || 0);
+    // Gunakan total ongkir dari perhitungan pickup/delivery
+    const totalOngkir = parseFloat(document.getElementById("total_shipping_cost")?.value || 0);
     const promoPercent = parseFloat(document.getElementById("promo_discount")?.value || 0);
 
-    let totalFinal = total + ongkir;
+    let totalFinal = total + totalOngkir;
 
     if (promoPercent > 0) {
         const discountAmount = totalFinal * (promoPercent / 100);
@@ -785,7 +939,6 @@ window.increaseWeight = function(serviceId) {
     
     let newWeight = (service.weight || 0) + 0.5;
     
-    // Batasi maksimal 50 kg
     if (newWeight > 50) {
         showToast('⚠️ Maksimal berat laundry adalah 50 kg!', 'warning');
         return;
@@ -794,7 +947,6 @@ window.increaseWeight = function(serviceId) {
     service.weight = parseFloat(newWeight.toFixed(1));
     window.renderCart();
     
-    // Update input field jika service yang dipilih sama
     if (selectedService && selectedService.service_id == serviceId) {
         const weightInput = document.getElementById("weightInput");
         if (weightInput) weightInput.value = service.weight;
@@ -808,7 +960,6 @@ window.decreaseWeight = function(serviceId) {
     
     let newWeight = service.weight - 0.5;
     
-    // Batasi minimal 0.1 kg
     if (newWeight < 0.1) {
         newWeight = 0.1;
     }
@@ -816,7 +967,6 @@ window.decreaseWeight = function(serviceId) {
     service.weight = parseFloat(newWeight.toFixed(1));
     window.renderCart();
     
-    // Update input field jika service yang dipilih sama
     if (selectedService && selectedService.service_id == serviceId) {
         const weightInput = document.getElementById("weightInput");
         if (weightInput) weightInput.value = service.weight;
@@ -859,19 +1009,15 @@ function checkWeightLimit(weight) {
 window.removeService = function(serviceId) {
     cart = cart.filter(s => s.service_id != serviceId);
     window.renderCart();
-    // Reset selected service jika yang dihapus adalah service yang dipilih
     if (selectedService && selectedService.service_id == serviceId) {
         selectedService = null;
         document.getElementById("selected_service_id").value = "";
-        // Reset highlight pada card
         document.querySelectorAll(".service-card").forEach(c => {
             c.classList.remove("border-blue-500", "shadow-md", "bg-blue-50");
             c.classList.add("border-slate-200");
         });
-        // Sembunyikan section weight/item
         document.getElementById("weightInputContainer").classList.add("hidden");
         document.getElementById("itemCards").classList.add("hidden");
-        // Reset button submit
         const submitBtn = document.querySelector('button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -889,14 +1035,8 @@ document.addEventListener("DOMContentLoaded", () => {
         style.id = 'toast-animation-style';
         style.textContent = `
             @keyframes slideInRight {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
             }
         `;
         document.head.appendChild(style);
@@ -915,15 +1055,42 @@ document.addEventListener("DOMContentLoaded", () => {
         scheduledPickupInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
     }
     
+    // ====================== HANDLER PICKUP & DELIVERY OPTIONS ======================
+    const pickupRadios = document.querySelectorAll('input[name="pickup_method"]');
+    const deliveryRadios = document.querySelectorAll('input[name="delivery_method"]');
+    
+    if (pickupRadios.length > 0) {
+        pickupRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (typeof window.calculateTotalShipping === 'function') {
+                    window.calculateTotalShipping();
+                }
+            });
+        });
+    }
+    
+    if (deliveryRadios.length > 0) {
+        deliveryRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (typeof window.calculateTotalShipping === 'function') {
+                    window.calculateTotalShipping();
+                }
+            });
+        });
+    }
+    
+    // Hitung ulang ongkir saat lokasi berubah
+    const originalUpdateLocation = window.updateLocation;
+    
     const latInput = document.getElementById("latitude");
     const lngInput = document.getElementById("longitude");
     const addressField = document.getElementById("pickup_address");
     const distanceDisplay = document.getElementById("distanceDisplay");
     const shippingEstimate = document.getElementById("shippingEstimate");
 
-    const STORE_LAT = -3.998363;
-    const STORE_LNG = 122.512690;
-    const MAX_RADIUS_KM = 10;
+    const STORE_LAT = -4.016393;
+    const STORE_LNG = 122.5255973;
+    const MAX_RADIUS_KM = 5;
 
     /* ======================
        MAP INIT
@@ -934,9 +1101,6 @@ document.addEventListener("DOMContentLoaded", () => {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    /* ======================
-       PIN ANIMASI
-    ====================== */
     const pulseIcon = L.divIcon({
         className: '',
         html: '<div class="pulse-marker"></div>',
@@ -948,15 +1112,11 @@ document.addEventListener("DOMContentLoaded", () => {
         icon: pulseIcon
     }).addTo(map);
 
-    /* ======================
-       UTIL FUNCTION
-    ====================== */
     function getDistanceKm(lat1, lng1, lat2, lng2) {
         const R = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a =
-            Math.sin(dLat / 2) ** 2 +
+        const a = Math.sin(dLat / 2) ** 2 +
             Math.cos(lat1 * Math.PI / 180) *
             Math.cos(lat2 * Math.PI / 180) *
             Math.sin(dLng / 2) ** 2;
@@ -964,7 +1124,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function calculateOngkir(distance) {
-        return Math.ceil(distance) * 3000;
+        if (distance <= 2) return 0;
+        if (distance <= 3) return 5000;
+        if (distance <= 5) return 10000;
+        return null;
     }
 
     function reverseGeocode(lat, lng) {
@@ -980,9 +1143,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateLocation(lat, lng, zoom = 16) {
         const distance = getDistanceKm(STORE_LAT, STORE_LNG, lat, lng);
+        const adjustedDistance = distance * 1.4;
 
-        if (distance > MAX_RADIUS_KM) {
-            showToast(`❌ Lokasi di luar jangkauan (${distance.toFixed(1)} km)`, 'error');
+        if (adjustedDistance > MAX_RADIUS_KM) {
+            showToast(`❌ Lokasi di luar jangkauan (${adjustedDistance.toFixed(1)} km)`, 'error');
             return false;
         }
 
@@ -991,51 +1155,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
         latInput.value = lat.toFixed(6);
         lngInput.value = lng.toFixed(6);
-
         reverseGeocode(lat, lng);
 
-        const ongkir = calculateOngkir(distance);
+        const ongkir = calculateOngkir(adjustedDistance);
         const shippingEl = document.getElementById("shippingCost");
         const distanceEl = document.getElementById("distance_km");
         const shippingCostHidden = document.getElementById("shipping_cost");
+
+        if (distanceEl) distanceEl.value = adjustedDistance.toFixed(2);
+        if (shippingCostHidden) shippingCostHidden.value = ongkir;
+
+        const ongkirText = ongkir === 0 ? "Gratis" : "Rp " + ongkir.toLocaleString();
+        if (distanceDisplay) distanceDisplay.innerText = adjustedDistance.toFixed(1) + " km";
+        if (shippingEstimate) shippingEstimate.innerText = ongkirText;
         
-        distanceEl.value = distance.toFixed(2);
-        shippingCostHidden.value = ongkir;
-        
-        if (distanceDisplay) {
-            distanceDisplay.innerText = distance.toFixed(1) + " km";
-        }
-        if (shippingEstimate) {
-            shippingEstimate.innerText = "Rp " + ongkir.toLocaleString();
-        }
-        if (shippingEl) {
-            shippingEl.innerText = "Rp " + ongkir.toLocaleString();
+        // Hitung ulang total ongkir berdasarkan pilihan pickup/delivery
+        if (typeof window.calculateTotalShipping === 'function') {
+            window.calculateTotalShipping();
+        } else {
+            if (shippingEl) shippingEl.innerText = ongkirText;
+            window.updateCartTotal();
         }
         
-        window.updateCartTotal();
         return true;
     }
-
-    /* ======================
-       GPS DEVICE
-    ====================== */
+    
+    // GPS Device
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            pos => {
-                updateLocation(pos.coords.latitude, pos.coords.longitude);
-            },
-            () => {
-                updateLocation(STORE_LAT, STORE_LNG, 13);
-            },
+            pos => { updateLocation(pos.coords.latitude, pos.coords.longitude); },
+            () => { updateLocation(STORE_LAT, STORE_LNG, 13); },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     } else {
         updateLocation(STORE_LAT, STORE_LNG, 13);
     }
 
-    /* ======================
-       EVENT MAP
-    ====================== */
+    // Event Map
     marker.on("dragend", e => {
         const p = e.target.getLatLng();
         updateLocation(p.lat, p.lng);
@@ -1045,22 +1201,14 @@ document.addEventListener("DOMContentLoaded", () => {
         updateLocation(e.latlng.lat, e.latlng.lng);
     });
 
-    /* ======================
-       SCROLL TO SECTION FUNCTION
-    ====================== */
     function scrollToElement(elementId) {
         const element = document.getElementById(elementId);
         if (element) {
-            element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
 
-    /* ======================
-       FILTER FUNCTIONS
-    ====================== */
+    // Filter Functions
     function filterServices() {
         const filterType = document.getElementById('filterType').value;
         const filterDuration = document.getElementById('filterDuration').value;
@@ -1072,7 +1220,6 @@ document.addEventListener("DOMContentLoaded", () => {
         cards.forEach(card => {
             const cardType = card.dataset.type;
             const cardDuration = card.dataset.duration;
-            
             let showByType = filterType === 'all' || cardType === filterType;
             let showByDuration = filterDuration === 'all' || cardDuration === filterDuration;
             
@@ -1087,16 +1234,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (filterPrice !== 'default') {
             const container = document.getElementById('serviceContainer');
             let visibleCards = cards.filter(card => card.style.display !== 'none');
-            
             visibleCards.sort((a, b) => {
                 const priceA = parseFloat(a.dataset.price);
                 const priceB = parseFloat(b.dataset.price);
                 return filterPrice === 'low_to_high' ? priceA - priceB : priceB - priceA;
             });
-            
-            visibleCards.forEach(card => {
-                container.appendChild(card);
-            });
+            visibleCards.forEach(card => { container.appendChild(card); });
         }
         
         const noResults = document.getElementById('noResults');
@@ -1114,18 +1257,14 @@ document.addEventListener("DOMContentLoaded", () => {
         filterServices();
     }
     
-    document.getElementById('filterType').addEventListener('change', filterServices);
-    document.getElementById('filterDuration').addEventListener('change', filterServices);
-    document.getElementById('filterPrice').addEventListener('change', filterServices);
-    document.getElementById('resetFilters').addEventListener('click', resetFilters);
+    document.getElementById('filterType')?.addEventListener('change', filterServices);
+    document.getElementById('filterDuration')?.addEventListener('change', filterServices);
+    document.getElementById('filterPrice')?.addEventListener('change', filterServices);
+    document.getElementById('resetFilters')?.addEventListener('click', resetFilters);
     
-    /* ======================
-       CART FUNCTIONS (local)
-    ====================== */
     function isCartValid() {
         const selectedServiceId = document.getElementById("selected_service_id")?.value;
         if (!selectedServiceId) return false;
-        
         if (cart.length === 0) return false;
 
         for (let service of cart) {
@@ -1148,25 +1287,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
-    /* ======================
-       PILIH SERVICE
-    ====================== */
+    // Pilih Service
     document.querySelectorAll(".service-card").forEach(card => {
         card.addEventListener("click", function () {
-            console.log("Service selected:", {
-                id: this.dataset.id,
-                name: this.dataset.name,
-                type: this.dataset.type
-            });
-            
             const itemSection = document.getElementById("itemCards");
             const weightSection = document.getElementById("weightInputContainer");
             const weightInputField = document.getElementById("weightInput");
             
             const selectedServiceIdInput = document.getElementById("selected_service_id");
-            if (selectedServiceIdInput) {
-                selectedServiceIdInput.value = this.dataset.id;
-            }
+            if (selectedServiceIdInput) selectedServiceIdInput.value = this.dataset.id;
 
             selectedService = {
                 service_id: this.dataset.id,
@@ -1185,9 +1314,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (selectedService.type === "per_kilo") {
                 if (weightSection) {
                     weightSection.classList.remove("hidden");
-                    setTimeout(() => {
-                        scrollToElement("weightInputContainer");
-                    }, 100);
+                    setTimeout(() => scrollToElement("weightInputContainer"), 100);
                 }
                 if (itemSection) itemSection.classList.add("hidden");
                 if (weightInputField) weightInputField.value = "";
@@ -1200,53 +1327,35 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (selectedService.type === "per_item") {
                 if (itemSection) {
                     itemSection.classList.remove("hidden");
-                    setTimeout(() => {
-                        scrollToElement("itemCards");
-                    }, 100);
+                    setTimeout(() => scrollToElement("itemCards"), 100);
                 }
                 if (weightSection) weightSection.classList.add("hidden");
                 
                 let existing = cart.find(s => s.service_id === selectedService.service_id);
                 if (!existing) {
-                    cart.push({
-                        ...selectedService,
-                        items: []
-                    });
+                    cart.push({ ...selectedService, items: [] });
                     window.renderCart();
                 }
             }
         });
     });
 
-    /* ======================
-       WEIGHT INPUT HANDLER (DENGAN VALIDASI 50 KG)
-    ====================== */
+    // Weight Input Handler
     const weightInputField = document.getElementById("weightInput");
     if (weightInputField) {
         weightInputField.addEventListener("input", function() {
             if (!selectedService || selectedService.type !== "per_kilo") return;
-            
             let weight = parseFloat(this.value);
-            
-            // Validasi input kosong atau NaN
-            if (isNaN(weight)) {
-                return;
-            }
-            
-            // Batasi maksimal 50 kg
+            if (isNaN(weight)) return;
             if (weight > 50) {
                 weight = 50;
                 this.value = 50;
                 showToast('⚠️ Maksimal berat laundry adalah 50 kg!', 'warning');
             }
-            
-            // Batasi minimal 0.1 kg
             if (weight < 0.1) {
                 weight = 0.1;
                 this.value = 0.1;
             }
-            
-            // Bulatkan ke 1 desimal
             weight = Math.round(weight * 10) / 10;
             this.value = weight;
 
@@ -1254,16 +1363,12 @@ document.addEventListener("DOMContentLoaded", () => {
             if (existing) {
                 existing.weight = weight;
             } else if (selectedService) {
-                cart.push({
-                    ...selectedService,
-                    weight: weight
-                });
+                cart.push({ ...selectedService, weight: weight });
             }
             window.renderCart();
             checkWeightLimit(weight);
         });
         
-        // Tambahkan event blur untuk validasi akhir
         weightInputField.addEventListener("blur", function() {
             let weight = parseFloat(this.value);
             if (isNaN(weight) || weight <= 0) {
@@ -1279,9 +1384,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    /* ======================
-       TAMBAH ITEM
-    ====================== */
+    // Tambah Item
     document.querySelectorAll(".item-card").forEach(card => {
         card.addEventListener("click", function () {
             if (!selectedService || selectedService.type !== "per_item") {
@@ -1291,10 +1394,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             let service = cart.find(s => s.service_id === selectedService.service_id);
             if (!service) {
-                service = {
-                    ...selectedService,
-                    items: []
-                };
+                service = { ...selectedService, items: [] };
                 cart.push(service);
             }
 
@@ -1307,34 +1407,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 existingItem.qty++;
                 showToast(`✓ ${itemName} ditambahkan (total: ${existingItem.qty})`, 'success');
             } else {
-                service.items.push({
-                    id: itemId,
-                    name: itemName,
-                    price: itemPrice,
-                    qty: 1
-                });
+                service.items.push({ id: itemId, name: itemName, price: itemPrice, qty: 1 });
                 showToast(`✓ ${itemName} ditambahkan ke keranjang`, 'success');
             }
-
             window.renderCart();
-            
             this.style.transform = "scale(0.95)";
-            setTimeout(() => {
-                this.style.transform = "";
-            }, 150);
+            setTimeout(() => { this.style.transform = ""; }, 150);
         });
     });
 
-    /* ======================
-       PROMO HANDLER
-    ====================== */
+    // Promo Handler
     document.querySelectorAll('input[name="selected_promo"]').forEach(radio => {
         radio.addEventListener("change", function () {
             const discountInput = document.getElementById("promo_discount");
             if (this.value === "") {
                 if (discountInput) discountInput.value = 0;
             } else {
-                const label = this.parentElement?.querySelector('.text-xs.font-bold');
+                const label = this.closest('label')?.querySelector('.text-xs.font-bold');
                 if (label && discountInput) {
                     const match = label.textContent.match(/(\d+)%/);
                     discountInput.value = match ? match[1] : 0;
@@ -1344,14 +1433,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    /* ======================
-       FORM SUBMIT VALIDATION
-    ====================== */
+    // Form Submit Validation
     const form = document.getElementById("orderForm");
     if (form) {
         form.addEventListener("submit", function (e) {
-            console.log("Form submission triggered");
-            
             const selectedServiceId = document.getElementById("selected_service_id")?.value;
             if (!selectedServiceId) {
                 e.preventDefault();
@@ -1387,15 +1472,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             document.getElementById("cart_data").value = JSON.stringify(cart);
-            console.log("DATA DIKIRIM:", {
-                service_id: selectedServiceId,
-                cart: cart,
-                total: document.getElementById("total_price")?.value
-            });
-            
             showToast("✓ Memproses pesanan...", 'info');
             return true;
         });
+    }
+    
+    // Inisialisasi perhitungan ongkir awal
+    if (typeof window.calculateTotalShipping === 'function') {
+        setTimeout(() => window.calculateTotalShipping(), 500);
     }
 });
 </script>

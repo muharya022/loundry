@@ -31,5 +31,7 @@ urlpatterns = [
     path('promo/edit/<int:promo_id>/', views.edit_promo, name='promo_edit'),
     path('promo-delete/<int:promo_id>/', views.delete_promo, name='promo_delete'),
     path('user-promo-delete/<int:pk>/', views.user_promo_delete, name='user_promo_delete'),
+    path('update-order-weight/<int:order_id>/', views.update_order_weight, name='update_order_weight'),
+    path('update-order-item-weight/<int:item_id>/', views.update_order_item_weight, name='update_order_item_weight'),
 
 ]

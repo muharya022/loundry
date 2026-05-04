@@ -50,7 +50,7 @@ User = get_user_model()
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'phone']
+        fields = ['username', 'first_name', 'last_name', 'phone', 'address']
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
@@ -64,6 +64,10 @@ class CustomUserCreationForm(UserCreationForm):
             }),
             'phone': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400'
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400',
+                'rows': 3
             }),
         }
 

@@ -253,6 +253,30 @@
     ring: 2px solid #3b82f6;
   }
   
+  /* Weight Edit Button */
+  .weight-edit-btn {
+    background-color: #f59e0b;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+    margin-left: 0.5rem;
+  }
+  
+  .weight-edit-btn:hover {
+    background-color: #d97706;
+  }
+  
+  /* Weight Display */
+  .weight-display {
+    background-color: #fef3c7;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    color: #92400e;
+  }
+  
   /* Modal Styles */
   .modal-overlay {
     position: fixed;
@@ -316,28 +340,6 @@
     text-align: right;
   }
   
-  .items-list {
-    background: #f9fafb;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    margin-top: 0.5rem;
-  }
-  
-  .item-detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.25rem 0;
-    font-size: 0.875rem;
-  }
-  
-  /* Line clamping */
-  .line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  
   /* Animation for modal */
   @keyframes fadeIn {
     from { opacity: 0; }
@@ -357,7 +359,14 @@
        selectedOrderId: null,
        showDeleteModal: false,
        deleteOrderId: null,
-       deleteOrderNumber: null
+       deleteOrderNumber: null,
+       showWeightModal: false,
+       weightOrderId: null,
+       weightOrderNumber: null,
+       weightItemId: null,
+       currentWeight: 0,
+       newWeight: 0,
+       isUpdatingWeight: false
      }"
      x-init="
         const urlParams = new URLSearchParams(window.location.search);
@@ -492,7 +501,7 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
+      <!-- Quick Actions (sama) -->
       <div class="mb-6">
         <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <div class="flex items-center justify-between mb-4">
@@ -509,21 +518,18 @@
               </svg>
               <span class="text-sm font-medium">Tambah Layanan</span>
             </a>
-            
             <a href="{% url 'orders:add_laundry_item' %}" class="quick-action-btn bg-gradient-to-r from-green-600 to-green-700">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
               </svg>
               <span class="text-sm font-medium">Item Laundry</span>
             </a>
-            
             <a href="{% url 'orders:promo_assign' %}" class="quick-action-btn bg-gradient-to-r from-purple-600 to-purple-700">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               <span class="text-sm font-medium">Kelola Promo</span>
             </a>
-            
             <a href="{% url 'accounts:manage_users' %}" class="quick-action-btn bg-gradient-to-r from-indigo-600 to-indigo-700">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-10a3.5 3.5 0 11-7 0 3.5 3.5 0 017 0z"/>
@@ -542,22 +548,15 @@
             <div class="flex flex-col sm:flex-row gap-4">
               <div class="flex items-center gap-2">
                 <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
-                <span class="text-sm text-gray-600">
-                  Total Transaksi: 
-                  <span class="font-semibold text-gray-900">{{ total_transactions }}</span>
-                </span>
+                <span class="text-sm text-gray-600">Total Transaksi: <span class="font-semibold text-gray-900">{{ total_transactions }}</span></span>
               </div>
               <div class="flex items-center gap-2">
                 <div class="w-3 h-3 bg-green-600 rounded-full"></div>
-                <span class="text-sm text-gray-600">
-                  Hari Ini: 
-                  <span class="font-semibold text-green-700">Rp {{ today_income|floatformat:0|intcomma }}</span>
-                </span>
+                <span class="text-sm text-gray-600">Hari Ini: <span class="font-semibold text-green-700">Rp {{ today_income|floatformat:0|intcomma }}</span></span>
               </div>
             </div>
           </div>
         </div>
-        
         <div class="h-64 sm:h-72">
           <canvas id="incomeChart"></canvas>
         </div>
@@ -565,19 +564,80 @@
     </div>
 
     <!-- ================= ORDERS TAB ================= -->
+     <!-- Tambahkan di atas tabel orders, di dalam div orders tab -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div class="flex flex-wrap gap-3">
+        <!-- Tombol Export Bulan Ini -->
+        <a href="{% url 'accounts:export_orders_excel_current' %}" 
+          class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Export Transaksi Bulan Ini
+        </a>
+        
+        <!-- Dropdown Pilih Bulan & Tahun -->
+        <div x-data="{ showYearMonth: false, selectedYear: new Date().getFullYear(), selectedMonth: new Date().getMonth() + 1 }" class="relative">
+          <button @click="showYearMonth = !showYearMonth" 
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Export Per Bulan
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          
+          <div x-show="showYearMonth" @click.away="showYearMonth = false" 
+              class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-20 p-4"
+              x-cloak>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Tahun</label>
+                <select x-model="selectedYear" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Bulan</label>
+                <select x-model="selectedMonth" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="1">Januari</option>
+                  <option value="2">Februari</option>
+                  <option value="3">Maret</option>
+                  <option value="4">April</option>
+                  <option value="5">Mei</option>
+                  <option value="6">Juni</option>
+                  <option value="7">Juli</option>
+                  <option value="8">Agustus</option>
+                  <option value="9">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">Desember</option>
+                </select>
+              </div>
+            </div>
+            <a :href="`{% url 'accounts:export_orders_excel' 0 0 %}`.replace('/0/0/', `/${selectedYear}/${selectedMonth}/`)" 
+              class="w-full block text-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
+              Download Laporan
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
     <div x-show="activeTab === 'orders'" x-transition>
       <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-4 sm:p-6 border-b border-gray-200">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 class="text-lg font-bold text-gray-900">Manajemen Pesanan</h3>
-              <p class="text-sm text-gray-600">Kelola semua pesanan pelanggan</p>
+              <p class="text-sm text-gray-600">Kelola semua pesanan pelanggan | <span class="text-yellow-600 font-semibold">⚡ Klik Edit untuk mengubah berat laundry setelah di timbang</span></p>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-sm text-gray-500">
-                Menampilkan: 
-                <span class="font-semibold text-gray-900">{{ recent_orders.paginator.count }}</span> pesanan
-              </span>
+              <span class="text-sm text-gray-500">Menampilkan: <span class="font-semibold text-gray-900">{{ recent_orders.paginator.count }}</span> pesanan</span>
             </div>
           </div>
         </div>
@@ -591,19 +651,36 @@
                 <div class="font-bold text-gray-900">#{{ order.id }}</div>
                 <div class="text-sm text-gray-600">{{ order.customer.username }}</div>
               </div>
-              <span class="order-status-badge {{ order.order_status }}">
-                {{ order.get_order_status_display }}
-              </span>
+              <span class="order-status-badge {{ order.order_status }}">{{ order.get_order_status_display }}</span>
             </div>
             
-            <div class="grid grid-cols-2 gap-3 mb-4">
-              <div class="bg-white p-3 rounded-lg">
-                <div class="text-xs text-gray-500 mb-1">Layanan</div>
-                <div class="font-semibold text-gray-900 text-sm line-clamp-1">{{ order.service.name }}</div>
-              </div>
-              <div class="bg-white p-3 rounded-lg">
-                <div class="text-xs text-gray-500 mb-1">Total</div>
-                <div class="font-bold text-gray-900">Rp {{ order.price_total|floatformat:0|intcomma }}</div>
+            <!-- TAMPILKAN SEMUA LAYANAN DENGAN BERATNYA -->
+            <div class="space-y-2 mb-4">
+              {% for item in order.order_items.all %}
+                {% if item.service and item.service.type == 'per_kilo' %}
+                <div class="bg-yellow-50 p-2 rounded-lg">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <span class="text-xs text-gray-600">{{ item.service.name }}</span>
+                      <div class="font-bold text-yellow-800 text-lg">{{ item.weight|default:0 }} kg</div>
+                    </div>
+                    <button @click="weightOrderId = {{ order.id }}; weightItemId = {{ item.id }}; weightOrderNumber = '#{{ order.id }}'; currentWeight = {{ item.weight|default:0 }}; newWeight = currentWeight; showWeightModal = true"
+                            class="bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-yellow-700 transition">
+                      <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      Edit
+                    </button>
+                  </div>
+                </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+
+            <div class="bg-white p-3 rounded-lg mb-4">
+              <div class="flex justify-between">
+                <span class="text-xs text-gray-500">Total Pembayaran</span>
+                <span class="font-bold text-gray-900">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
               </div>
             </div>
             
@@ -613,15 +690,11 @@
               </span>
               <div class="text-right">
                 <div class="text-xs text-gray-500">Kurir</div>
-                <div class="text-sm font-medium text-gray-900">
-                  {{ order.assigned_courier.username|default:"-" }}
-                </div>
+                <div class="text-sm font-medium text-gray-900">{{ order.assigned_courier.username|default:"-" }}</div>
               </div>
             </div>
             
-            <div class="text-xs text-gray-500 mb-4">
-              {{ order.created_at|date:"d M Y, H:i" }}
-            </div>
+            <div class="text-xs text-gray-500 mb-4">{{ order.created_at|date:"d M Y, H:i" }}</div>
             
             <div class="flex gap-2 mb-4">
               <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}"
@@ -635,49 +708,40 @@
             </div>
             
             <div class="space-y-3">
-              <form action="{% url 'orders:update_order_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post" class="space-y-2">
+              <form action="{% url 'orders:update_order_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                 {% csrf_token %}
                 <label class="text-xs font-medium text-gray-700">Status Pesanan</label>
-                <div class="flex gap-2">
-                  <select name="order_status" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
-                    {% for value, label in order.ORDER_STATUS_CHOICES %}
-                      <option value="{{ value }}" {% if order.order_status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+                <select name="order_status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1" onchange="this.form.submit()">
+                  {% for value, label in order.ORDER_STATUS_CHOICES %}
+                    <option value="{{ value }}" {% if order.order_status == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
               </form>
               
-              <form action="{% url 'orders:update_payment_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post" class="space-y-2">
+              <form action="{% url 'orders:update_payment_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                 {% csrf_token %}
                 <label class="text-xs font-medium text-gray-700">Status Pembayaran</label>
-                <div class="flex gap-2">
-                  <select name="payment_status" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
-                    {% for value, label in order.PAYMENT_STATUS_CHOICES %}
-                      <option value="{{ value }}" {% if order.payment_status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+                <select name="payment_status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1" onchange="this.form.submit()">
+                  {% for value, label in order.PAYMENT_STATUS_CHOICES %}
+                    <option value="{{ value }}" {% if order.payment_status == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
               </form>
               
-              <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post" class="space-y-2">
+              <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                 {% csrf_token %}
                 <label class="text-xs font-medium text-gray-700">Tugas Kurir</label>
-                <div class="flex gap-2">
-                  <select name="courier" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" onchange="this.form.submit()">
-                    <option value="">-- Pilih Kurir --</option>
-                    {% for courier in couriers %}
-                      <option value="{{ courier.id }}" {% if order.assigned_courier == courier %}selected{% endif %}>{{ courier.username }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+                <select name="courier" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-1" onchange="this.form.submit()">
+                  <option value="">-- Pilih Kurir --</option>
+                  {% for courier in couriers %}
+                    <option value="{{ courier.id }}" {% if order.assigned_courier == courier %}selected{% endif %}>{{ courier.username }}</option>
+                  {% endfor %}
+                </select>
               </form>
               
-              <!-- Tombol Hapus dengan Modal Modern -->
-              <button type="button" 
-                      @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
-                      class="w-full admin-action-btn bg-red-600 hover:bg-red-700" 
-                      style="width: auto; padding: 0.5rem 1rem;">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
+                      class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
                 </svg>
                 Hapus Pesanan
@@ -705,6 +769,7 @@
                 <th class="table-th">ID</th>
                 <th class="table-th">Pelanggan</th>
                 <th class="table-th">Layanan</th>
+                <th class="table-th">Berat (kg)</th>
                 <th class="table-th">Total</th>
                 <th class="table-th">Status</th>
                 <th class="table-th">Pembayaran</th>
@@ -716,9 +781,7 @@
             <tbody class="divide-y divide-gray-200">
               {% for order in recent_orders %}
               <tr class="hover:bg-blue-50 transition-colors">
-                <td class="table-td">
-                  <div class="font-mono font-bold text-gray-900">#{{ order.id }}</div>
-                </td>
+                <td class="table-td"><div class="font-mono font-bold text-gray-900">#{{ order.id }}</div></td>
                 <td class="table-td">
                   <div class="font-medium text-gray-900">{{ order.customer.username }}</div>
                   <div class="text-xs text-gray-500">{{ order.customer.email|default:"-" }}</div>
@@ -728,8 +791,24 @@
                   <div class="text-xs text-gray-500">{{ order.service.get_type_display }}</div>
                 </td>
                 <td class="table-td">
-                  <div class="font-bold text-gray-900">Rp {{ order.price_total|floatformat:0|intcomma }}</div>
+                  {% for item in order.order_items.all %}
+                    {% if item.service and item.service.type == 'per_kilo' %}
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="font-bold text-yellow-600 text-sm">{{ item.weight|default:0 }} kg</span>
+                      <button @click="weightOrderId = {{ order.id }}; weightItemId = {{ item.id }}; weightOrderNumber = '#{{ order.id }}'; currentWeight = {{ item.weight|default:0 }}; newWeight = currentWeight; showWeightModal = true"
+                              class="weight-edit-btn" title="Edit Berat">
+                        <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit
+                      </button>
+                    </div>
+                    {% endif %}
+                  {% empty %}
+                    <span class="text-gray-400">-</span>
+                  {% endfor %}
                 </td>
+                <td class="table-td"><div class="font-bold text-gray-900">Rp {{ order.price_total|floatformat:0|intcomma }}</div></td>
                 <td class="table-td">
                   <form action="{% url 'orders:update_order_status' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                     {% csrf_token %}
@@ -767,20 +846,13 @@
                 </td>
                 <td class="table-td">
                   <div class="flex justify-center gap-2">
-                    <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}"
-                            class="admin-action-btn bg-gray-600 hover:bg-gray-700"
-                            title="Detail Pesanan">
+                    <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}" class="admin-action-btn bg-gray-600 hover:bg-gray-700" title="Detail Pesanan">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                       </svg>
                     </button>
-                    
-                    <!-- Tombol Hapus dengan Modal Modern -->
-                    <button type="button" 
-                            @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
-                            class="admin-action-btn bg-red-600 hover:bg-red-700" 
-                            title="Hapus Pesanan">
+                    <button type="button" @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true" class="admin-action-btn bg-red-600 hover:bg-red-700" title="Hapus Pesanan">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
                       </svg>
@@ -789,60 +861,20 @@
                 </td>
               </tr>
               {% empty %}
-              <tr>
-                <td colspan="9" class="table-td text-center py-12">
-                  <div class="flex flex-col items-center justify-center">
-                    <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
-                    <p class="text-gray-900 font-medium mb-2">Belum ada pesanan</p>
-                    <p class="text-gray-600 text-sm">Pelanggan belum melakukan pemesanan</p>
-                  </div>
-                </td>
-              </tr>
+              <tr><td colspan="10" class="table-td text-center py-12"><div class="flex flex-col items-center justify-center">...</div></td></tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
 
-        <!-- Pagination dengan parameter tab -->
+        <!-- Pagination -->
         {% if recent_orders.paginator.num_pages > 1 %}
         <div class="p-4 sm:p-6 border-t border-gray-200">
-          <!-- Mobile Pagination -->
-          <div class="block sm:hidden">
-            <div class="flex items-center justify-between">
-              {% if recent_orders.has_previous %}
-              <a href="?orders_page={{ recent_orders.previous_page_number }}&tab=orders" 
-                 class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
-              </a>
-              {% endif %}
-              
-              <div class="text-center">
-                <div class="text-sm text-gray-900 font-medium">Halaman {{ recent_orders.number }}</div>
-                <div class="text-xs text-gray-500">dari {{ recent_orders.paginator.num_pages }}</div>
-              </div>
-              
-              {% if recent_orders.has_next %}
-              <a href="?orders_page={{ recent_orders.next_page_number }}&tab=orders" 
-                 class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-              </a>
-              {% endif %}
-            </div>
-          </div>
-          
-          <!-- Desktop Pagination -->
           <div class="hidden sm:flex items-center justify-center gap-2">
             {% if recent_orders.has_previous %}
               <a href="?orders_page=1&tab=orders" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">Pertama</a>
               <a href="?orders_page={{ recent_orders.previous_page_number }}&tab=orders" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">« Sebelumnya</a>
             {% endif %}
-
             <div class="flex gap-1">
               {% for page_num in recent_orders.paginator.page_range %}
                 {% if recent_orders.number == page_num %}
@@ -852,7 +884,6 @@
                 {% endif %}
               {% endfor %}
             </div>
-
             {% if recent_orders.has_next %}
               <a href="?orders_page={{ recent_orders.next_page_number }}&tab=orders" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm">Selanjutnya »</a>
               <a href="?orders_page={{ recent_orders.paginator.num_pages }}&tab=orders" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">Terakhir</a>
@@ -864,7 +895,7 @@
     </div>
   </div>
 
-  <!-- Modal Detail Pesanan -->
+   <!-- Modal Detail Pesanan (DIPERBAIKI - Support Per Item dengan benar) -->
   <div x-show="showDetailModal && selectedOrderId" x-cloak class="modal-overlay" @click.self="showDetailModal = false">
     <div class="modal-container">
       <div class="modal-header">
@@ -878,58 +909,86 @@
       <div class="modal-body">
         {% for order in recent_orders %}
         <div x-show="selectedOrderId == {{ order.id }}">
-          <!-- Informasi Order -->
-          <div class="detail-row">
-            <span class="detail-label">No. Order</span>
-            <span class="detail-value">#{{ order.id }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Tanggal Order</span>
-            <span class="detail-value">{{ order.created_at|date:"d M Y, H:i" }}</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Pelanggan</span>
-            <span class="detail-value">{{ order.customer.get_full_name|default:order.customer.username }}</span>
-          </div>
+          <!-- Informasi Dasar -->
+          <div class="detail-row"><span class="detail-label">No. Order</span><span class="detail-value">#{{ order.id }}</span></div>
+          <div class="detail-row"><span class="detail-label">Tanggal Order</span><span class="detail-value">{{ order.created_at|date:"d M Y, H:i" }}</span></div>
+          <div class="detail-row"><span class="detail-label">Pelanggan</span><span class="detail-value">{{ order.customer.get_full_name|default:order.customer.username }}</span></div>
           
           <div class="border-t border-gray-200 my-3"></div>
           
-          <!-- SEMUA LAYANAN DARI ORDER ITEMS -->
+          <!-- ===== LAYANAN ANTAR JEMPUT ===== -->
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 mb-4 border border-blue-200">
+            <div class="flex items-center gap-2 mb-3">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
+              <span class="text-sm font-bold text-blue-800">Layanan Antar Jemput</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-xs text-gray-600 mb-1">🔄 Pengambilan Laundry</div>
+                <div class="font-medium text-gray-900">
+                  {% if order.pickup_method == 'pickup' %}
+                    🚗 Dijemput Kurir
+                  {% else %}
+                    🏪 Antar Sendiri
+                  {% endif %}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-600 mb-1">📦 Pengiriman Hasil</div>
+                <div class="font-medium text-gray-900">
+                  {% if order.delivery_method == 'delivery' %}
+                    🚚 Diantar Kurir
+                  {% else %}
+                    🏪 Ambil Sendiri
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="mt-3 pt-2 border-t border-blue-200">
+              <div class="flex justify-between items-center">
+                <div class="text-xs text-gray-600">💰 Biaya Pengiriman</div>
+                <div class="font-bold text-blue-700">
+                  {% if order.shipping_cost == 0 %}
+                    Gratis
+                  {% else %}
+                    Rp {{ order.shipping_cost|floatformat:0|intcomma }}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- ===== DETAIL LAYANAN ===== -->
           <div class="font-semibold text-gray-900 mb-2">Detail Layanan</div>
           
           {% if order.order_items.all %}
             {% for item in order.order_items.all %}
             <div class="bg-gray-50 rounded-lg p-3 mb-3">
-              {% if item.service %}
+              
+              <!-- Layanan Per Kilo -->
+              {% if item.service and item.service.type == 'per_kilo' %}
               <div class="flex items-center gap-2 mb-2">
-                <span class="text-blue-600 font-bold">📦</span>
+                <span class="text-blue-600 font-bold">⚖️</span>
                 <span class="font-semibold text-gray-900">{{ item.service.name }}</span>
-                <span class="text-xs text-gray-500">({{ item.service.get_type_display }})</span>
+                <span class="text-xs text-gray-500">(Laundry Kiloan)</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Berat</span>
-                <span class="detail-value">{{ item.weight|default:"0" }} kg</span>
+                <span class="detail-value font-semibold">{{ item.weight|default:"0" }} kg</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Harga/kg</span>
+                <span class="detail-label">Harga per kg</span>
                 <span class="detail-value">Rp {{ item.price|floatformat:0|intcomma }}</span>
               </div>
-              <div class="detail-row">
-                <span class="detail-label">Subtotal</span>
+              <div class="detail-row border-b-0">
+                <span class="detail-label font-semibold text-blue-600">Subtotal</span>
                 <span class="detail-value font-semibold text-blue-600">Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Durasi</span>
-                <span class="detail-value">
-                  {% if item.service.duration == 'reguler' %}Reguler (1-2 hari)
-                  {% elif item.service.duration == 'kilat' %}Kilat (12 jam)
-                  {% elif item.service.duration == 'express' %}Express 6 Jam
-                  {% elif item.service.duration == 'express1' %}Express 3 Jam
-                  {% else %}Reguler{% endif %}
-                </span>
               </div>
               {% endif %}
               
+              <!-- Layanan Per Item (LaundryItem) -->
               {% if item.laundry_item %}
               <div class="flex items-center gap-2 mb-2">
                 <span class="text-green-600 font-bold">👕</span>
@@ -938,97 +997,122 @@
               </div>
               <div class="detail-row">
                 <span class="detail-label">Jumlah</span>
-                <span class="detail-value">{{ item.quantity }} pcs</span>
+                <span class="detail-value font-semibold">{{ item.quantity }} pcs</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Harga/pcs</span>
+                <span class="detail-label">Harga per pcs</span>
                 <span class="detail-value">Rp {{ item.price|floatformat:0|intcomma }}</span>
               </div>
-              <div class="detail-row">
-                <span class="detail-label">Subtotal</span>
-                <span class="detail-value font-semibold text-blue-600">Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+              <div class="detail-row border-b-0">
+                <span class="detail-label font-semibold text-green-600">Subtotal</span>
+                <span class="detail-value font-semibold text-green-600">Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
               </div>
               {% endif %}
+              
+              <!-- Layanan Per Item (Service Type Per Item) -->
+              {% if item.service and item.service.type == 'per_item' and not item.laundry_item %}
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-purple-600 font-bold">📋</span>
+                <span class="font-semibold text-gray-900">{{ item.service.name }}</span>
+                <span class="text-xs text-gray-500">(Layanan Satuan)</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Jumlah</span>
+                <span class="detail-value font-semibold">{{ item.quantity|default:1 }} paket</span>
+              </div>
+              <div class="detail-row border-b-0">
+                <span class="detail-label font-semibold text-purple-600">Subtotal</span>
+                <span class="detail-value font-semibold text-purple-600">Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+              </div>
+              {% endif %}
+              
             </div>
             {% endfor %}
-            
-            <div class="border-t border-gray-200 my-3"></div>
-            <div class="detail-row font-bold">
-              <span class="detail-label">Total Semua Layanan</span>
-              <span class="detail-value text-blue-600">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
-            </div>
-            
           {% else %}
+            <!-- Fallback jika tidak ada OrderItems -->
             <div class="bg-gray-50 rounded-lg p-3 mb-3">
               <div class="flex items-center gap-2 mb-2">
                 <span class="text-blue-600 font-bold">📦</span>
                 <span class="font-semibold text-gray-900">{{ order.service.name }}</span>
                 <span class="text-xs text-gray-500">({{ order.service.get_type_display }})</span>
               </div>
-              {% if order.service.type == 'per_kilo' and order.weight %}
+              {% if order.service.type == 'per_kilo' %}
               <div class="detail-row">
                 <span class="detail-label">Berat</span>
-                <span class="detail-value">{{ order.weight }} kg</span>
+                <span class="detail-value font-semibold">{{ order.weight|default:"0" }} kg</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Harga/kg</span>
+                <span class="detail-label">Harga per kg</span>
                 <span class="detail-value">Rp {{ order.service.price|floatformat:0|intcomma }}</span>
               </div>
               {% endif %}
+              {% if order.service.type == 'per_item' %}
               <div class="detail-row">
-                <span class="detail-label">Subtotal</span>
-                <span class="detail-value font-semibold text-blue-600">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+                <span class="detail-label">Paket</span>
+                <span class="detail-value font-semibold">1 x Laundry</span>
               </div>
-              <div class="detail-row">
-                <span class="detail-label">Durasi</span>
-                <span class="detail-value">
-                  {% if order.service.duration == 'reguler' %}Reguler (1-2 hari)
-                  {% elif order.service.duration == 'kilat' %}Kilat (12 jam)
-                  {% elif order.service.duration == 'express' %}Express 6 Jam
-                  {% elif order.service.duration == 'express1' %}Express 3 Jam
-                  {% else %}Reguler{% endif %}
-                </span>
+              {% endif %}
+              <div class="detail-row border-b-0">
+                <span class="detail-label font-semibold text-blue-600">Subtotal</span>
+                <span class="detail-value font-semibold text-blue-600">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
               </div>
             </div>
           {% endif %}
           
+          <!-- Total Keseluruhan -->
           <div class="border-t border-gray-200 my-3"></div>
+          <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-3">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-gray-900">💰 TOTAL PEMBAYARAN</span>
+              <span class="font-bold text-xl text-blue-700">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+            </div>
+            {% if order.shipping_cost and order.shipping_cost > 0 %}
+            <div class="flex justify-between items-center mt-2 text-sm">
+              <span class="text-gray-600">Sudah termasuk ongkir</span>
+              <span class="text-gray-600">+ Rp {{ order.shipping_cost|floatformat:0|intcomma }}</span>
+            </div>
+            {% endif %}
+          </div>
           
-          {% if order.discount_percent %}
-          <div class="detail-row">
-            <span class="detail-label">Diskon</span>
-            <span class="detail-value text-green-600">{{ order.discount_percent }}%</span>
+          <!-- Diskon jika ada -->
+          {% if order.discount_amount and order.discount_amount > 0 %}
+          <div class="bg-green-50 rounded-lg p-3 mt-3 border border-green-200">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-gray-600">🎉 Diskon</span>
+              <span class="font-bold text-green-600">- Rp {{ order.discount_amount|floatformat:0|intcomma }}</span>
+            </div>
+          </div>
+          {% elif order.discount_percent and order.discount_percent > 0 %}
+          <div class="bg-green-50 rounded-lg p-3 mt-3 border border-green-200">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-gray-600">🎉 Diskon</span>
+              <span class="font-bold text-green-600">{{ order.discount_percent }}%</span>
+            </div>
           </div>
           {% endif %}
           
+          <!-- Status -->
           <div class="border-t border-gray-200 my-3"></div>
-          
-          <div class="detail-row">
-            <span class="detail-label">Status Pesanan</span>
-            <span class="detail-value">
-              <span class="order-status-badge {{ order.order_status }}">
-                {{ order.get_order_status_display }}
-              </span>
-            </span>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs text-gray-500 mb-1">Status Pesanan</div>
+              <div><span class="order-status-badge {{ order.order_status }}">{{ order.get_order_status_display }}</span></div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 mb-1">Status Pembayaran</div>
+              <div><span class="payment-badge {% if order.payment_status == 'paid' %}paid{% else %}unpaid{% endif %}">{% if order.payment_status == 'paid' %}Dibayar{% else %}Belum Dibayar{% endif %}</span></div>
+            </div>
           </div>
-          <div class="detail-row">
-            <span class="detail-label">Status Pembayaran</span>
-            <span class="detail-value">
-              <span class="payment-badge {% if order.payment_status == 'paid' %}paid{% else %}unpaid{% endif %}">
-                {% if order.payment_status == 'paid' %}Dibayar{% else %}Belum Dibayar{% endif %}
-              </span>
-            </span>
-          </div>
-          <div class="detail-row">
+          <div class="detail-row mt-2">
             <span class="detail-label">Metode Pembayaran</span>
             <span class="detail-value">{{ order.get_payment_method_display }}</span>
           </div>
           
+          <!-- Alamat & Jadwal -->
           <div class="border-t border-gray-200 my-3"></div>
-          
           <div class="detail-row">
             <span class="detail-label">Alamat Pickup</span>
-            <span class="detail-value text-right">{{ order.pickup_address|default:"-"|truncatechars:30 }}</span>
+            <span class="detail-value text-right">{{ order.pickup_address|default:"-"|truncatechars:40 }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Jadwal Pickup</span>
@@ -1044,6 +1128,42 @@
     </div>
   </div>
 
+  <!-- Modal Ubah Berat Laundry (Update ke OrderItem) -->
+  <div x-show="showWeightModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]" style="animation: fadeIn 0.2s ease-out;" @click.self="showWeightModal = false">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden" style="animation: scaleIn 0.2s ease-out;">
+      <div class="p-6">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full flex items-center justify-center">
+            <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">Ubah Berat Laundry</h3>
+          <p class="text-gray-600 text-sm mt-1">Pesanan <span class="font-semibold" x-text="weightOrderNumber"></span></p>
+        </div>
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Berat Saat Ini</label>
+          <div class="text-2xl font-bold text-yellow-600 text-center mb-4" x-text="currentWeight + ' kg'"></div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Berat Baru (kg)</label>
+          <input type="number" x-model="newWeight" step="0.1" min="0.1" max="50" class="w-full px-4 py-3 text-center text-xl font-bold border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition">
+          <p class="text-xs text-gray-500 mt-2 text-center">* Masukkan berat dalam kilogram (kg), maksimal 50 kg</p>
+        </div>
+        <div class="flex gap-3">
+          <button @click="showWeightModal = false" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Batal</button>
+          <form :action="'{% url 'orders:update_order_item_weight' 0 %}'.replace('0', weightItemId) + '?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders'" method="post" class="flex-1" @submit="isUpdatingWeight = true">
+            {% csrf_token %}
+            <input type="hidden" name="new_weight" :value="newWeight">
+            <input type="hidden" name="order_id" :value="weightOrderId">
+            <button type="submit" class="w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition font-medium" :disabled="isUpdatingWeight">
+              <span x-show="!isUpdatingWeight"><svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Simpan</span>
+              <span x-show="isUpdatingWeight"><svg class="w-4 h-4 inline mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Menyimpan...</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Konfirmasi Hapus Pesanan -->
   <div x-show="showDeleteModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]" style="animation: fadeIn 0.2s ease-out;" @click.self="showDeleteModal = false">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden" style="animation: scaleIn 0.2s ease-out;">
@@ -1054,27 +1174,12 @@
           </svg>
         </div>
         <h3 class="text-lg font-bold text-gray-900 mb-2">Hapus Pesanan?</h3>
-        <p class="text-gray-600 mb-6">
-          Apakah Anda yakin ingin menghapus pesanan <span class="font-semibold" x-text="deleteOrderNumber"></span>?<br>
-          Tindakan ini tidak dapat dibatalkan.
-        </p>
+        <p class="text-gray-600 mb-6">Apakah Anda yakin ingin menghapus pesanan <span class="font-semibold" x-text="deleteOrderNumber"></span>?<br>Tindakan ini tidak dapat dibatalkan.</p>
         <div class="flex gap-3">
-          <button @click="showDeleteModal = false" 
-                  class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
-            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-            Batal
-          </button>
+          <button @click="showDeleteModal = false" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">Batal</button>
           <form :action="'{% url 'orders:delete_order' 0 %}'.replace('0', deleteOrderId) + '?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders'" method="post" class="flex-1">
             {% csrf_token %}
-            <button type="submit" 
-                    class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
-              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
-              </svg>
-              Ya, Hapus
-            </button>
+            <button type="submit" class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">Ya, Hapus</button>
           </form>
         </div>
       </div>
@@ -1091,7 +1196,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
     gradient.addColorStop(0, 'rgba(37, 99, 235, 0.3)');
     gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-    
     new Chart(ctx, {
       type: 'line',
       data: {
@@ -1115,39 +1219,10 @@ document.addEventListener('DOMContentLoaded', function() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(17, 24, 39, 0.9)',
-            cornerRadius: 8,
-            padding: 10,
-            callbacks: {
-              label: function(ctx) {
-                let value = ctx.parsed.y;
-                if(!value) return '';
-                return 'Rp ' + value.toLocaleString('id-ID');
-              }
-            }
-          }
-        },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(17, 24, 39, 0.9)', cornerRadius: 8, padding: 10, callbacks: { label: function(ctx) { let value = ctx.parsed.y; if(!value) return ''; return 'Rp ' + value.toLocaleString('id-ID'); } } } },
         scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: '#6B7280', font: { weight: '500' } }
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: '#E5E7EB', borderDash: [5,5] },
-            ticks: {
-              color: '#6B7280',
-              font: { weight: '500' },
-              callback: function(value) { 
-                if (value >= 1000000) return 'Rp ' + (value/1000000).toFixed(1) + 'M';
-                if (value >= 1000) return 'Rp ' + (value/1000).toFixed(0) + 'K';
-                return 'Rp ' + value; 
-              }
-            }
-          }
+          x: { grid: { display: false }, ticks: { color: '#6B7280', font: { weight: '500' } } },
+          y: { beginAtZero: true, grid: { color: '#E5E7EB', borderDash: [5,5] }, ticks: { color: '#6B7280', font: { weight: '500' }, callback: function(value) { if (value >= 1000000) return 'Rp ' + (value/1000000).toFixed(1) + 'M'; if (value >= 1000) return 'Rp ' + (value/1000).toFixed(0) + 'K'; return 'Rp ' + value; } } }
         },
         animation: { duration: 1500, easing: 'easeOutQuart' }
       }

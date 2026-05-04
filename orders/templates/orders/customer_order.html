@@ -1,0 +1,193 @@
+<!-- customer_order.html - SEDERHANA tanpa input berat -->
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8 px-4">
+  <div class="max-w-2xl mx-auto">
+    
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-slate-900">Buat Pesanan Laundry</h1>
+      <p class="text-slate-600 mt-2">Pilih layanan dan metode pengambilan</p>
+    </div>
+    
+    <form method="POST" action="{% url 'orders:customer_order' %}" id="orderForm">
+      {% csrf_token %}
+      
+      <!-- Step 1: Pilih Layanan -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3">
+          <h2 class="font-bold text-white">1. Pilih Layanan Laundry</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for service in services %}
+            <label class="service-option border-2 rounded-xl p-4 cursor-pointer transition-all hover:border-blue-500">
+              <input type="radio" name="service_id" value="{{ service.id }}" class="hidden service-radio" required>
+              <div class="text-center">
+                {% if service.type == 'per_kilo' %}
+                  <div class="text-4xl mb-2">⚖️</div>
+                {% else %}
+                  <div class="text-4xl mb-2">👕</div>
+                {% endif %}
+                <div class="font-bold text-slate-900">{{ service.name }}</div>
+                <div class="text-blue-600 font-bold mt-1">Rp {{ service.price }}/kg</div>
+                <div class="text-xs text-slate-500 mt-2">
+                  {% if service.duration == 'reguler' %}⏱️ 1-2 hari
+                  {% elif service.duration == 'kilat' %}⚡ 12 jam
+                  {% elif service.duration == 'express' %}🚀 6 jam
+                  {% else %}📅 Reguler{% endif %}
+                </div>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 2: Metode Pengambilan -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3">
+          <h2 class="font-bold text-white">2. Cara Pengambilan Laundry</h2>
+        </div>
+        <div class="p-6">
+          <div class="space-y-4">
+            <!-- Opsi Kurir -->
+            <label class="delivery-option flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-blue-500">
+              <input type="radio" name="delivery_method" value="pickup" class="mt-1 mr-4 delivery-radio" checked required>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">🚗</span>
+                  <span class="font-semibold text-slate-900">Diambil Kurir</span>
+                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Recommended</span>
+                </div>
+                <p class="text-sm text-slate-600 mt-1">Kurir akan datang menjemput laundry Anda</p>
+                <div class="text-xs text-blue-600 mt-2">💰 Ongkir dihitung berdasarkan jarak</div>
+              </div>
+            </label>
+            
+            <!-- Opsi Antar Sendiri -->
+            <label class="delivery-option flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-blue-500">
+              <input type="radio" name="delivery_method" value="self" class="mt-1 mr-4 delivery-radio" required>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xl">🏪</span>
+                  <span class="font-semibold text-slate-900">Antar Sendiri ke Outlet</span>
+                </div>
+                <p class="text-sm text-slate-600 mt-1">Gratis ongkir, Anda antar ke toko kami</p>
+                <div class="text-xs text-green-600 mt-2">📍 Jl. Contoh No. 123, Kota Anda</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Step 3: Alamat (hanya jika pilih kurir) -->
+      <div id="addressSection" class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden hidden">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3">
+          <h2 class="font-bold text-white">3. Alamat Penjemputan</h2>
+        </div>
+        <div class="p-6">
+          <div class="mb-4">
+            <label class="block text-sm font-semibold text-slate-900 mb-2">Pilih lokasi di peta</label>
+            <div id="simpleMap" style="height: 300px;" class="rounded-lg border border-slate-200 mb-3"></div>
+            <input type="text" id="addressInput" name="address" 
+                   placeholder="Atau ketik alamat lengkap"
+                   class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500" required>
+            <input type="hidden" name="latitude" id="latitude">
+            <input type="hidden" name="longitude" id="longitude">
+            <p class="text-xs text-slate-500 mt-2">
+              📍 <strong>Catatan:</strong> Kurir akan menjemput laundry di alamat ini
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Info Penting -->
+      <div class="bg-amber-50 rounded-xl p-4 mb-6 border border-amber-200">
+        <div class="flex gap-3">
+          <div class="text-amber-600 text-xl">💰</div>
+          <div>
+            <p class="font-semibold text-amber-800 text-sm">Informasi Pembayaran</p>
+            <p class="text-xs text-amber-700 mt-1">
+              Laundry akan <strong>ditimbang di toko</strong> setelah sampai. 
+              Harga final akan dihitung berdasarkan berat aktual × harga layanan + ongkir (jika pakai kurir).
+            </p>
+            <p class="text-xs text-amber-700 mt-2">
+              ✅ Anda akan mendapat notifikasi tagihan via WhatsApp setelah laundry ditimbang.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Tombol Pesan -->
+      <button type="submit" 
+              class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.02]">
+        Buat Pesanan
+      </button>
+      
+      <p class="text-center text-xs text-slate-500 mt-4">
+        Dengan membuat pesanan, Anda menyetujui syarat dan ketentuan yang berlaku
+      </p>
+      
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Toggle alamat berdasarkan pilihan kurir/self
+  const deliveryRadios = document.querySelectorAll('.delivery-radio');
+  const addressSection = document.getElementById('addressSection');
+  const addressInput = document.getElementById('addressInput');
+  
+  deliveryRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.value === 'pickup') {
+        addressSection.classList.remove('hidden');
+        addressInput.required = true;
+      } else {
+        addressSection.classList.add('hidden');
+        addressInput.required = false;
+      }
+    });
+  });
+  
+  // Inisialisasi map sederhana (copy dari kode map sebelumnya)
+  // ... kode map dengan marker draggable
+  
+  // Highlight service yang dipilih
+  document.querySelectorAll('.service-option').forEach(option => {
+    option.addEventListener('click', function() {
+      document.querySelectorAll('.service-option').forEach(opt => {
+        opt.classList.remove('border-blue-500', 'bg-blue-50');
+      });
+      this.classList.add('border-blue-500', 'bg-blue-50');
+      this.querySelector('.service-radio').checked = true;
+    });
+  });
+  
+  // Highlight delivery yang dipilih
+  document.querySelectorAll('.delivery-option').forEach(option => {
+    option.addEventListener('click', function() {
+      document.querySelectorAll('.delivery-option').forEach(opt => {
+        opt.classList.remove('border-blue-500', 'bg-blue-50');
+      });
+      this.classList.add('border-blue-500', 'bg-blue-50');
+      this.querySelector('.delivery-radio').checked = true;
+      
+      // Trigger change event
+      const event = new Event('change');
+      this.querySelector('.delivery-radio').dispatchEvent(event);
+    });
+  });
+});
+</script>
+
+<style>
+.service-option.active, .delivery-option.active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+</style>
+
+{% endblock %}

@@ -19,6 +19,7 @@ from django.http import HttpResponse
 import random
 import time
 
+# from laundry_project.orders import models
 from orders.models import Order, Promo
 from services.models import Service
 from .forms import CustomPasswordChangeForm, ProfileForm, CustomUserCreationForm
@@ -47,6 +48,7 @@ def register(request):
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
         username = request.POST.get('username', '').strip()
+        address = request.POST.get('address', '').strip()
         phone = request.POST.get('phone', '').strip()
         password1 = request.POST.get('password1', '')
         password2 = request.POST.get('password2', '')
@@ -99,6 +101,7 @@ def register(request):
             'first_name': first_name,
             'last_name': last_name,
             'username': username,
+            'address': address,
             'phone': phone_raw,
             'password': password1,
             'otp': otp_code,
@@ -185,7 +188,7 @@ def verify_registration_otp(request):
                 password=reg_data['password'],
                 first_name=reg_data['first_name'],
                 last_name=reg_data['last_name'],
-                email=None
+                address=reg_data['address'],
             )
             
             # Simpan nomor HP
@@ -242,12 +245,29 @@ def user_login(request):
 
     return render(request, 'accounts/login.html')
 
-from orders.models import Promo
 
 def home(request):
+    from orders.models import Order
+    from orders.models import Promo
+    
+    # Ambil promo
     promos = Promo.objects.filter(is_active=True).order_by('-created_at')
+    
+    # Hitung customer dari tabel User (yang sudah pasti ada datanya 4)
+    total_customers = User.objects.count()
+    
+    # Hitung order dari tabel Order (yang sudah pasti ada datanya 3)
+    total_orders = Order.objects.count()
+    
+    # DEBUG - cek di terminal
+    print(f"CUSTOMERS: {total_customers}")  # Harusnya 4
+    print(f"ORDERS: {total_orders}")        # Harusnya 3
+    print(f"PROMOS: {promos.count()}")      # Harusnya 1
+    
     return render(request, 'home.html', {
-        'promos': promos
+        'promos': promos,
+        'total_customers': total_customers,
+        'total_orders': total_orders,
     })
 
 # ===============================
@@ -830,3 +850,271 @@ Menara Laundry"""
     
     # Fallback
     return render(request, "accounts/password_reset_otp.html", {"step": "email"})
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from django.utils import timezone
+from datetime import datetime
+from calendar import monthrange
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Count, Sum, Q
+
+@login_required
+@user_passes_test(lambda u: u.is_staff)
+def export_orders_excel(request, year=None, month=None):
+    """
+    Export data pesanan ke Excel untuk rekap bulanan (hanya status pembayaran PAID/LUNAS)
+    """
+    # Jika tidak ada parameter, gunakan bulan dan tahun saat ini
+    now = timezone.now()
+    target_year = year if year else now.year
+    target_month = month if month else now.month
+    
+    # Tentukan rentang tanggal
+    first_day = datetime(target_year, target_month, 1)
+    last_day = datetime(target_year, target_month, monthrange(target_year, target_month)[1])
+    
+    # Filter pesanan berdasarkan bulan, tahun, dan status PEMBAYARAN PAID/LUNAS
+    orders = Order.objects.filter(
+        created_at__date__gte=first_day,
+        created_at__date__lte=last_day,
+        payment_status='paid'  # HANYA YANG SUDAH LUNAS
+    ).order_by('-created_at')
+    
+    # Nama bulan dalam Bahasa Indonesia
+    bulan_names = {
+        1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April',
+        5: 'Mei', 6: 'Juni', 7: 'Juli', 8: 'Agustus',
+        9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'
+    }
+    
+    # Buat workbook Excel
+    wb = openpyxl.Workbook()
+    
+    # ========== SHEET 1: REKAP BULANAN ==========
+    ws_rekap = wb.active
+    ws_rekap.title = f"Rekap {bulan_names[target_month]} {target_year}"
+    
+    # Style untuk header
+    header_font = Font(name='Arial', size=12, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='1E40AF', end_color='1E40AF', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    
+    # Border style
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # ===== TITLE =====
+    ws_rekap.merge_cells('A1:K1')
+    ws_rekap['A1'] = f"LAPORAN REKAP TRANSAKSI LUNAS {bulan_names[target_month].upper()} {target_year}"
+    ws_rekap['A1'].font = Font(name='Arial', size=16, bold=True)
+    ws_rekap['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws_rekap.row_dimensions[1].height = 30
+    
+    # ===== PERIODE =====
+    ws_rekap.merge_cells('A2:K2')
+    ws_rekap['A2'] = f"Periode: {first_day.strftime('%d %B %Y')} - {last_day.strftime('%d %B %Y')}"
+    ws_rekap['A2'].font = Font(name='Arial', size=11, italic=True)
+    ws_rekap['A2'].alignment = Alignment(horizontal='center', vertical='center')
+    
+    # ===== INFO STATUS =====
+    ws_rekap.merge_cells('A3:K3')
+    ws_rekap['A3'] = "Status Pembayaran: LUNAS (Paid)"
+    ws_rekap['A3'].font = Font(name='Arial', size=11, bold=True, color='065f46')
+    ws_rekap['A3'].fill = PatternFill(start_color='D1FAE5', end_color='D1FAE5', fill_type='solid')
+    ws_rekap['A3'].alignment = Alignment(horizontal='center', vertical='center')
+    
+    # ===== HEADER TABLE =====
+    headers = ['NO', 'ID ORDER', 'TANGGAL', 'PELANGGAN', 'LAYANAN', 
+               'BERAT (kg)', 'SUB TOTAL', 'ONGKIR', 'DISKON', 'TOTAL', 'TANGGAL LUNAS']
+    columns_width = [5, 12, 15, 20, 25, 10, 15, 12, 12, 15, 15]
+    
+    for col, (header, width) in enumerate(zip(headers, columns_width), start=1):
+        cell = ws_rekap.cell(row=4, column=col)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+        ws_rekap.column_dimensions[get_column_letter(col)].width = width
+    
+    # ===== DATA =====
+    total_keseluruhan = 0
+    total_ongkir = 0
+    total_diskon = 0
+    total_subtotal = 0
+    total_berat = 0
+    
+    for idx, order in enumerate(orders, start=1):
+        row = idx + 4
+        
+        # Hitung subtotal (total sebelum ongkir dan diskon)
+        subtotal = order.price_total + (order.discount_amount or 0) - (order.shipping_cost or 0)
+        
+        total_berat += float(order.weight or 0)
+        
+        ws_rekap.cell(row=row, column=1, value=idx).border = thin_border
+        ws_rekap.cell(row=row, column=2, value=f"#{order.id}").border = thin_border
+        ws_rekap.cell(row=row, column=3, value=order.created_at.strftime('%d/%m/%Y %H:%M')).border = thin_border
+        ws_rekap.cell(row=row, column=4, value=order.customer.username).border = thin_border
+        ws_rekap.cell(row=row, column=5, value=order.service.name).border = thin_border
+        ws_rekap.cell(row=row, column=6, value=float(order.weight or 0)).border = thin_border
+        ws_rekap.cell(row=row, column=7, value=float(subtotal)).border = thin_border
+        ws_rekap.cell(row=row, column=8, value=float(order.shipping_cost or 0)).border = thin_border
+        ws_rekap.cell(row=row, column=9, value=float(order.discount_amount or 0)).border = thin_border
+        ws_rekap.cell(row=row, column=10, value=float(order.price_total)).border = thin_border
+        ws_rekap.cell(row=row, column=11, value=order.updated_at.strftime('%d/%m/%Y %H:%M')).border = thin_border
+        
+        # Akumulasi total
+        total_keseluruhan += float(order.price_total)
+        total_ongkir += float(order.shipping_cost or 0)
+        total_diskon += float(order.discount_amount or 0)
+        total_subtotal += float(subtotal)
+    
+    # ===== FOOTER TOTAL =====
+    footer_row = len(orders) + 6
+    
+    # Label TOTAL
+    ws_rekap.cell(row=footer_row, column=1, value="TOTAL").font = Font(bold=True, size=12)
+    ws_rekap.cell(row=footer_row, column=1).alignment = Alignment(horizontal='right')
+    ws_rekap.cell(row=footer_row, column=1).border = thin_border
+    
+    # Total Berat
+    ws_rekap.cell(row=footer_row, column=6, value=round(total_berat, 2)).font = Font(bold=True)
+    ws_rekap.cell(row=footer_row, column=6).border = thin_border
+    
+    # Total Subtotal
+    ws_rekap.cell(row=footer_row, column=7, value=round(total_subtotal, 2)).font = Font(bold=True)
+    ws_rekap.cell(row=footer_row, column=7).border = thin_border
+    
+    # Total Ongkir
+    ws_rekap.cell(row=footer_row, column=8, value=round(total_ongkir, 2)).font = Font(bold=True)
+    ws_rekap.cell(row=footer_row, column=8).border = thin_border
+    
+    # Total Diskon
+    ws_rekap.cell(row=footer_row, column=9, value=round(total_diskon, 2)).font = Font(bold=True)
+    ws_rekap.cell(row=footer_row, column=9).border = thin_border
+    
+    # Total Keseluruhan
+    ws_rekap.cell(row=footer_row, column=10, value=round(total_keseluruhan, 2)).font = Font(bold=True)
+    ws_rekap.cell(row=footer_row, column=10).border = thin_border
+    
+    # Format angka Rupiah
+    for row in range(5, footer_row + 1):
+        for col in [7, 8, 9, 10]:
+            cell_val = ws_rekap.cell(row=row, column=col).value
+            if cell_val and isinstance(cell_val, (int, float)):
+                ws_rekap.cell(row=row, column=col).number_format = '#,##0'
+    
+    # ========== SHEET 2: REKAP PER LAYANAN ==========
+    ws_service = wb.create_sheet("Rekap per Layanan")
+    
+    ws_service.merge_cells('A1:E1')
+    ws_service['A1'] = f"REKAP PER LAYANAN (LUNAS) - {bulan_names[target_month]} {target_year}"
+    ws_service['A1'].font = Font(size=14, bold=True)
+    ws_service['A1'].alignment = Alignment(horizontal='center')
+    
+    service_headers = ['No', 'Nama Layanan', 'Jenis', 'Jumlah Pesanan', 'Total Pendapatan']
+    service_widths = [5, 30, 15, 15, 20]
+    
+    for col, (header, width) in enumerate(zip(service_headers, service_widths), start=1):
+        cell = ws_service.cell(row=3, column=col)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        ws_service.column_dimensions[get_column_letter(col)].width = width
+    
+    # Data per layanan (hanya yang lunas)
+    service_stats = orders.values('service__name', 'service__type').annotate(
+        count=Count('id'),
+        total=Sum('price_total')
+    ).order_by('-total')
+    
+    for idx, stat in enumerate(service_stats, start=1):
+        row = idx + 3
+        ws_service.cell(row=row, column=1, value=idx)
+        ws_service.cell(row=row, column=2, value=stat['service__name'] or '-')
+        ws_service.cell(row=row, column=3, value='Kiloan' if stat['service__type'] == 'per_kilo' else 'Satuan')
+        ws_service.cell(row=row, column=4, value=stat['count'])
+        ws_service.cell(row=row, column=5, value=float(stat['total'])).number_format = '#,##0'
+    
+    # Total footer
+    footer_service_row = len(service_stats) + 4
+    if len(service_stats) > 0:
+        ws_service.merge_cells(f'A{footer_service_row}:D{footer_service_row}')
+        ws_service.cell(row=footer_service_row, column=1, value="TOTAL").font = Font(bold=True)
+        ws_service.cell(row=footer_service_row, column=5, value=round(total_keseluruhan, 2)).font = Font(bold=True)
+        ws_service.cell(row=footer_service_row, column=5).number_format = '#,##0'
+    
+    # ========== SHEET 3: REKAP PER PELANGGAN ==========
+    ws_customer = wb.create_sheet("Rekap per Pelanggan")
+    
+    ws_customer.merge_cells('A1:E1')
+    ws_customer['A1'] = f"REKAP PER PELANGGAN (LUNAS) - {bulan_names[target_month]} {target_year}"
+    ws_customer['A1'].font = Font(size=14, bold=True)
+    ws_customer['A1'].alignment = Alignment(horizontal='center')
+    
+    customer_headers = ['No', 'Nama Pelanggan', 'Jumlah Pesanan', 'Total Transaksi', 'Rata-rata']
+    customer_widths = [5, 25, 15, 20, 15]
+    
+    for col, (header, width) in enumerate(zip(customer_headers, customer_widths), start=1):
+        cell = ws_customer.cell(row=3, column=col)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        ws_customer.column_dimensions[get_column_letter(col)].width = width
+    
+    # Data per pelanggan (hanya yang lunas)
+    customer_stats = orders.values('customer__username').annotate(
+        count=Count('id'),
+        total=Sum('price_total')
+    ).order_by('-total')
+    
+    for idx, stat in enumerate(customer_stats, start=1):
+        row = idx + 3
+        avg = stat['total'] / stat['count'] if stat['count'] > 0 else 0
+        ws_customer.cell(row=row, column=1, value=idx)
+        ws_customer.cell(row=row, column=2, value=stat['customer__username'] or '-')
+        ws_customer.cell(row=row, column=3, value=stat['count'])
+        ws_customer.cell(row=row, column=4, value=float(stat['total'])).number_format = '#,##0'
+        ws_customer.cell(row=row, column=5, value=float(avg)).number_format = '#,##0'
+    
+    # ========== SHEET 4: STATISTIK BULANAN ==========
+    ws_stats = wb.create_sheet("Statistik Bulanan")
+    
+    ws_stats.merge_cells('A1:B1')
+    ws_stats['A1'] = f"STATISTIK TRANSAKSI LUNAS - {bulan_names[target_month]} {target_year}"
+    ws_stats['A1'].font = Font(size=14, bold=True)
+    ws_stats['A1'].alignment = Alignment(horizontal='center')
+    
+    stats_data = [
+        ('Total Pesanan Lunas', f"{len(orders)}"),
+        ('Total Berat Laundry', f"{total_berat:,.1f} kg".replace(',', '.')),
+        ('Total Pendapatan', f"Rp {total_keseluruhan:,.0f}".replace(',', '.')),
+        ('Total Ongkir', f"Rp {total_ongkir:,.0f}".replace(',', '.')),
+        ('Total Diskon', f"Rp {total_diskon:,.0f}".replace(',', '.')),
+        ('Rata-rata per Pesanan', f"Rp {(total_keseluruhan/len(orders) if len(orders) > 0 else 0):,.0f}".replace(',', '.')),
+        ('Rata-rata Berat per Pesanan', f"{(total_berat/len(orders) if len(orders) > 0 else 0):,.1f} kg".replace(',', '.')),
+    ]
+    
+    for idx, (label, value) in enumerate(stats_data, start=3):
+        ws_stats.cell(row=idx, column=1, value=label).font = Font(bold=True)
+        ws_stats.cell(row=idx, column=2, value=value)
+    
+    # Set response
+    filename = f"Laporan_Transaksi_Lunas_{bulan_names[target_month]}_{target_year}.xlsx"
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    wb.save(response)
+    return response

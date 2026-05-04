@@ -18,4 +18,8 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('add-courier/', views.add_courier, name='add_courier'),
+
+    path('export-excel/<int:year>/<int:month>/', views.export_orders_excel, name='export_orders_excel'),
+    path('export-excel/', views.export_orders_excel, name='export_orders_excel_current'),
+        
 ]
