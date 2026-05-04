@@ -9,110 +9,140 @@
 <meta charset="UTF-8">
 <title>Struk Laundry - MENARA LAUNDRY</title>
 <style>
+    /* Reset untuk print */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
     body {
         font-family: "Courier New", monospace;
         background: #f4f4f4;
-        color: #333;
+        color: #000;
     }
 
+    /* Desain untuk layar */
     .receipt-card {
         width: 300px;
-        margin: 30px auto;
+        margin: 20px auto;
         background: #fff;
-        border: 1.5px solid #333;
+        border: 1px solid #ddd;
         border-radius: 8px;
-        padding: 16px 14px;
-        font-size: 11px;
-        line-height: 1.4;
+        padding: 12px 10px;
+        font-size: 10px;
+        line-height: 1.3;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
+    /* Desain untuk cetak thermal */
+    @media print {
+        body {
+            background: white;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .receipt-card {
+            width: 100%;
+            max-width: 80mm;  /* Untuk printer thermal 80mm */
+            margin: 0;
+            padding: 5px 8px;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            font-size: 10px;
+        }
+        
+        .no-print {
+            display: none !important;
+        }
+        
+        /* Pastikan tidak ada page break di dalam struk */
+        .receipt-card {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        /* Warna hitam putih untuk thermal */
+        * {
+            color: black !important;
+            background: white !important;
+        }
+    }
+
+    /* Gaya umum struk */
     .center { text-align: center; }
     .bold { font-weight: bold; }
-    .space { margin-top: 10px; }
-    .mb-1 { margin-bottom: 6px; }
-
+    .space { margin-top: 8px; }
+    .mb-1 { margin-bottom: 4px; }
+    
     .row {
         display: flex;
         justify-content: space-between;
-        margin: 4px 0;
-    }
-
-    .divider {
-        border-top: 1px dashed #555;
-        margin: 10px 0;
-    }
-
-    .divider-double {
-        border-top: 2px solid #333;
-        margin: 10px 0;
-    }
-
-    .item-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 10px;
         margin: 3px 0;
     }
-    .item-name {
-        width: 55%;
+    
+    .divider {
+        border-top: 1px dashed #000;
+        margin: 6px 0;
     }
-    .item-qty {
-        width: 20%;
-        text-align: center;
+    
+    .divider-double {
+        border-top: 2px solid #000;
+        margin: 6px 0;
     }
-    .item-price {
-        width: 25%;
-        text-align: right;
-    }
-
+    
     .total-row {
         display: flex;
         justify-content: space-between;
         font-weight: bold;
-        font-size: 13px;
-        margin: 6px 0;
+        font-size: 12px;
+        margin: 5px 0;
     }
-
-    @media print {
-        body { background: #fff; }
-        .receipt-card {
-            box-shadow: none;
-            margin: 0 auto;
-        }
-        .no-print {
-            display: none;
-        }
-    }
-
+    
+    /* Tombol cetak */
     .print-btn {
         text-align: center;
         margin-top: 20px;
+        margin-bottom: 30px;
     }
+    
     .print-btn button {
         background: #007bff;
         color: white;
         border: none;
-        padding: 8px 16px;
-        border-radius: 5px;
+        padding: 10px 20px;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 14px;
+        margin: 0 5px;
     }
+    
     .print-btn button:hover {
         background: #0056b3;
+        transform: scale(1.02);
+    }
+    
+    /* QR Code placeholder (opsional) */
+    .qrcode {
+        text-align: center;
+        margin: 5px 0;
+        font-size: 9px;
     }
 </style>
 </head>
 <body>
 
 <div class="receipt-card" id="receipt">
-    <!-- Header -->
-    <div class="center bold" style="font-size: 14px;">MENARA LAUNDRY</div>
-    <div class="center" style="font-size: 9px;">Jl. Laundry No. 123, Kota Laundry</div>
-    <div class="center" style="font-size: 9px;">Telp: 0812-3456-7890</div>
-    <div class="center" style="font-size: 9px;" id="datetime"></div>
+    <!-- Header Toko -->
+    <div class="center bold" style="font-size: 14px;">MENARA 011 LAUNDRY</div>
+    <div class="center" style="font-size: 8px;">Jl. Orinunggu, Kambu, Kendari</div>
+    <div class="center" style="font-size: 8px;">Telp: 0821-8977-0388</div>
+    <div class="center" style="font-size: 8px;" id="datetime"></div>
 
-    <div class="space center bold" style="font-size: 12px;">
-        STRUK PESANAN
+    <div class="space center bold" style="font-size: 11px;">
+        = STRUK PESANAN =
     </div>
 
     <div class="divider"></div>
@@ -128,22 +158,27 @@
     </div>
     <div class="row">
         <span>Pelanggan</span>
-        <span>{{ order.customer.get_full_name|default:order.customer.username }}</span>
+        <span>{{ order.customer.get_full_name|default:order.customer.username|truncatechars:20 }}</span>
     </div>
 
     <div class="divider"></div>
 
     <!-- SEMUA LAYANAN DARI ORDER ITEMS -->
+    <div class="bold mb-1">Detail Pesanan:</div>
+    
     {% for item in order.order_items.all %}
         <!-- Service Kiloan -->
-        {% if item.service %}
-        <div class="bold mb-1">{{ item.service.name }}</div>
+        {% if item.service and item.service.type == 'per_kilo' %}
         <div class="row">
-            <span>Berat</span>
-            <span>{{ item.weight }} kg x Rp {{ item.price|floatformat:0|intcomma }}</span>
+            <span>{{ item.service.name }}</span>
+            <span></span>
         </div>
         <div class="row">
-            <span>Durasi</span>
+            <span>  {{ item.weight|floatformat:1 }} kg x Rp {{ item.price|floatformat:0|intcomma }}</span>
+            <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+        </div>
+        <div class="row">
+            <span>  Durasi:</span>
             <span>
                 {% if item.service.duration == 'reguler' %}Reguler
                 {% elif item.service.duration == 'kilat' %}Kilat
@@ -152,87 +187,162 @@
                 {% endif %}
             </span>
         </div>
-        <div class="row">
-            <span>Subtotal</span>
-            <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
-        </div>
-        <div class="divider"></div>
         {% endif %}
         
         <!-- Service Satuan (Item Laundry) -->
         {% if item.laundry_item %}
-        <div class="bold mb-1">{{ item.laundry_item.name }}</div>
         <div class="row">
-            <span>{{ item.quantity }} pcs x Rp {{ item.price|floatformat:0|intcomma }}</span>
-            <span>= Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+            <span>{{ item.laundry_item.name }}</span>
+            <span></span>
         </div>
-        <div class="divider"></div>
+        <div class="row">
+            <span>  {{ item.quantity }} pcs x Rp {{ item.price|floatformat:0|intcomma }}</span>
+            <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+        </div>
         {% endif %}
     {% endfor %}
 
     <!-- Jika tidak ada OrderItems, tampilkan dari service utama -->
     {% if order.order_items.count == 0 %}
-        <div class="bold mb-1">{{ order.service.name }}</div>
+        <div class="row">
+            <span>{{ order.service.name }}</span>
+            <span></span>
+        </div>
         {% if order.service.type == 'per_kilo' and order.weight %}
         <div class="row">
-            <span>{{ order.weight }} kg x Rp {{ order.service.price|floatformat:0|intcomma }}</span>
-            <span>= Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+            <span>  {{ order.weight|floatformat:1 }} kg x Rp {{ order.service.price|floatformat:0|intcomma }}</span>
+            <span>Rp {{ order.price_total|floatformat:0|intcomma }}</span>
         </div>
         {% endif %}
-        <div class="divider"></div>
+    {% endif %}
+
+    <div class="divider"></div>
+
+    <!-- SUBTOTAL, ONGKIR, DISKON (jika ada) -->
+    {% if order.shipping_cost > 0 %}
+    <div class="row">
+        <span>Ongkir</span>
+        <span>Rp {{ order.shipping_cost|floatformat:0|intcomma }}</span>
+    </div>
+    {% endif %}
+    
+    {% if order.discount_amount > 0 %}
+    <div class="row">
+        <span>Diskon</span>
+        <span class="bold">- Rp {{ order.discount_amount|floatformat:0|intcomma }}</span>
+    </div>
     {% endif %}
 
     <!-- TOTAL -->
-    <div class="total-row">
-        <span>TOTAL</span>
-        <span>Rp {{ order.price_total|floatformat:0|intcomma }}</span>
-    </div>
-
     <div class="divider-double"></div>
-
-    <!-- Jadwal Pickup -->
-    <div class="row">
-        <span>Pickup</span>
-        <span>{{ order.scheduled_pickup|date:"d/m/Y H:i" }}</span>
+    <div class="total-row">
+        <span class="bold">TOTAL</span>
+        <span class="bold">Rp {{ order.price_total|floatformat:0|intcomma }}</span>
     </div>
 
-    <!-- Metode Pembayaran -->
+    <!-- Metode & Status Pembayaran -->
     <div class="row">
-        <span>Bayar</span>
+        <span>Metode Bayar</span>
         <span>{{ order.get_payment_method_display }}</span>
+    </div>
+    <div class="row">
+        <span>Status Bayar</span>
+        <span class="bold">{% if order.payment_status == 'paid' %}✅ LUNAS{% else %}⏳ BELUM{% endif %}</span>
     </div>
 
     <div class="divider"></div>
 
-    <!-- Kode Pesanan -->
-    <div class="center bold">KODE PESANAN</div>
-    <div class="center space" style="font-size: 16px; letter-spacing: 2px; font-weight: bold;">ORD-{{ order.id }}</div>
+    <!-- Jadwal Pickup -->
+    <div class="row">
+        <span>Jemput</span>
+        <span>{{ order.scheduled_pickup|date:"d/m/Y H:i" }}</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Kode Pesanan (Barcode sederhana) -->
+    <div class="center bold" style="font-size: 9px;">KODE PESANAN</div>
+    <div class="center space" style="font-size: 16px; letter-spacing: 3px; font-weight: bold; font-family: monospace;">
+        {{ order.id|stringformat:"06d" }}
+    </div>
 
     <div class="divider"></div>
 
     <!-- Footer -->
-    <div class="center space" style="font-size: 9px;">
-        Terima Kasih<br>
-        MENARA LAUNDRY
+    <div class="center space" style="font-size: 8px;">
+        Terima Kasih 😊<br>
+        Cuci Cepat - Bersih - Wangi<br>
+        MENARA 011 LAUNDRY KENDARI
     </div>
 </div>
 
 <div class="print-btn no-print">
-    <button onclick="window.print()">🖨️ Cetak Struk</button>
-    <button onclick="window.history.back()" style="background: #6c757d; margin-left: 10px;">◀ Kembali</button>
+    <button onclick="printReceipt()">🖨️ Cetak Struk Thermal</button>
+    <button onclick="window.history.back()" style="background: #6c757d;">◀ Kembali</button>
 </div>
 
 <script>
+    function printReceipt() {
+        // Opsi cetak untuk thermal printer
+        const printWindow = window.open('', '_blank');
+        const receiptContent = document.getElementById('receipt').innerHTML;
+        
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Cetak Struk Laundry</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: "Courier New", monospace; 
+                        margin: 0; 
+                        padding: 5px;
+                        background: white;
+                    }
+                    .receipt-card {
+                        width: 80mm;
+                        margin: 0 auto;
+                        padding: 5px 8px;
+                        font-size: 10px;
+                        line-height: 1.3;
+                    }
+                    .center { text-align: center; }
+                    .bold { font-weight: bold; }
+                    .row { display: flex; justify-content: space-between; margin: 3px 0; }
+                    .divider { border-top: 1px dashed #000; margin: 5px 0; }
+                    .divider-double { border-top: 2px solid #000; margin: 5px 0; }
+                    .total-row { display: flex; justify-content: space-between; font-weight: bold; margin: 5px 0; }
+                    .space { margin-top: 5px; }
+                    .mb-1 { margin-bottom: 3px; }
+                    @page { size: 80mm auto; margin: 0; }
+                    @media print { 
+                        body { margin: 0; padding: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="receipt-card">
+                    ${receiptContent}
+                </div>
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(function() { window.close(); }, 500);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+    
     // Set datetime saat ini
     document.addEventListener('DOMContentLoaded', function() {
         const now = new Date();
-        const datetimeStr = now.toLocaleString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const datetimeStr = now.toLocaleDateString('id-ID', options).replace(/\//g, '/');
         const datetimeElem = document.getElementById('datetime');
         if (datetimeElem) {
             datetimeElem.innerHTML = datetimeStr;

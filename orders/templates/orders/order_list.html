@@ -62,7 +62,7 @@
            payment_method: '{{ order.payment_method }}',
            created_at: '{{ order.created_at|date:"d M Y" }}',
            pickup_address: '{{ order.pickup_address|escapejs }}',
-           scheduled_pickup: '{{ order.scheduled_pickup|date:"d M Y, H:i" }}',
+           scheduled_pickup: '{{ order.scheduled_pickup|date:"Y-m-d H:i:s" }}',
            assigned_courier: '{{ order.assigned_courier.username|default:"Belum ditugaskan"|escapejs }}',
            payment_url: '{% url "orders:payment" order.id %}',
            invoice_url: '{% url "orders:order_invoice" order.id %}',
@@ -71,6 +71,8 @@
            delivery_method: '{{ order.delivery_method|default:"delivery" }}',
            shipping_cost: {{ order.shipping_cost|default:0 }},
            discount_amount: {{ order.discount_amount|default:0 }},
+           duration: '{{ order.service.duration }}',
+           estimated_completion: '{{ order.estimated_completion|date:"Y-m-d H:i:s" }}',
            order_items: [
              {% for item in order.order_items.all %}
              {
@@ -163,7 +165,47 @@
            getShippingText() {
              if (this.shipping_cost === 0) return 'Gratis';
              return 'Rp ' + parseFloat(this.shipping_cost).toLocaleString();
-           }
+           },
+           getEstimatedCompletion() {
+             if (this.estimated_completion && this.estimated_completion !== 'None' && this.estimated_completion !== '') {
+               const date = new Date(this.estimated_completion);
+               const options = { 
+                 weekday: 'long', 
+                 day: '2-digit', 
+                 month: 'long', 
+                 year: 'numeric',
+                 hour: '2-digit',
+                 minute: '2-digit'
+               };
+               return date.toLocaleDateString('id-ID', options);
+             }
+             return 'Menunggu konfirmasi';
+           },
+           getEstimatedText() {
+             const duration = this.duration;
+             switch(duration) {
+               case 'reguler': return 'Reguler (2-3 hari)';
+               case 'kilat': return 'Kilat (1 hari)';
+               case 'express': return 'Express (6 Jam)';
+               case 'express1': return 'Express (3 Jam)';
+               default: return 'Reguler (2-3 hari)';
+             }
+           },
+            getFormattedScheduledPickup() {
+              if (this.scheduled_pickup) {
+                const date = new Date(this.scheduled_pickup);
+                const options = { 
+                  weekday: 'long', 
+                  day: '2-digit', 
+                  month: 'long', 
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                };
+                return date.toLocaleDateString('id-ID', options);
+              }
+              return '-';
+            },
          }{% if not forloop.last %},{% endif %}
          {% endfor %}
        ],
@@ -666,7 +708,15 @@
         
         <div>
           <div class="text-xs text-slate-500 mb-1">Jadwal Pickup</div>
-          <div class="font-medium text-slate-900" x-text="selectedOrder.scheduled_pickup"></div>
+          <div class="font-medium text-slate-900" x-text="selectedOrder.getFormattedScheduledPickup()"></div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-500 mb-1">Estimasi Selesai</div>
+          <div class="font-medium text-slate-900" x-text="selectedOrder.getEstimatedCompletion()"></div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-500 mb-1">Metode Pembayaran</div>
+          <div class="font-medium text-slate-900" x-text="selectedOrder.payment_method"></div>
         </div>
         
         <div>

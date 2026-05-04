@@ -784,7 +784,7 @@
                 <td class="table-td"><div class="font-mono font-bold text-gray-900">#{{ order.id }}</div></td>
                 <td class="table-td">
                   <div class="font-medium text-gray-900">{{ order.customer.username }}</div>
-                  <div class="text-xs text-gray-500">{{ order.customer.email|default:"-" }}</div>
+                  <div class="text-xs text-gray-500">{{ order.customer.phone|default:"-" }}</div>
                 </td>
                 <td class="table-td">
                   <div class="text-sm font-medium text-gray-900">{{ order.service.name }}</div>
@@ -1117,6 +1117,10 @@
           <div class="detail-row">
             <span class="detail-label">Jadwal Pickup</span>
             <span class="detail-value">{{ order.scheduled_pickup|date:"d M Y, H:i" }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Jadwal Estimasi</span>
+            <span class="detail-value">{{ order.estimated_completion|date:"d M Y, H:i" }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Kurir</span>

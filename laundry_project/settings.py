@@ -33,11 +33,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['menaralaundry.site',
     'www.menaralaundry.site',
-    'laundry-server', "103.55.37.191", "https://www.menaralaundry.site", ]
+    'laundry-server', "103.55.37.191", "https://www.menaralaundry.site", '127.0.0.1', ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://www.menaralaundry.site/",
-    'https://menaralaundry.site', "https://www.menaralaundry.site",
+    'https://menaralaundry.site', "https://www.menaralaundry.site", 'http://127.0.0.1',
 ]
 
 # Application definition

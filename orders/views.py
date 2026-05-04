@@ -69,289 +69,6 @@ def get_address(lat, lng):
         return f"Lat: {lat}, Lng: {lng}"
 
 
-# from decimal import Decimal
-# from .models import Promo, Order, OrderItem, LaundryItem
-# import json
-
-# @login_required
-# def create_order(request):
-#     services = Service.objects.all()
-#     laundry_items = LaundryItem.objects.all()
-#     customers = User.objects.all() if request.user.is_staff else None
-
-#     if request.method == "POST":
-#         print("=" * 50)
-#         print("POST DATA RECEIVED:")
-#         for key, value in request.POST.items():
-#             print(f"{key}: {value}")
-#         print("=" * 50)
-        
-#         # ===== Pilih customer =====
-#         if request.user.is_staff:
-#             customer_id = request.POST.get("customer")
-#             if not customer_id:
-#                 messages.error(request, "Pilih pelanggan terlebih dahulu.")
-#                 return redirect("orders:order")
-#             customer = get_object_or_404(User, id=customer_id)
-#         else:
-#             customer = request.user
-
-#         # ===== Pilih service =====
-#         service_id = request.POST.get("service")
-#         if not service_id:
-#             messages.error(request, "Pilih layanan terlebih dahulu.")
-#             return redirect("orders:order")
-#         service = get_object_or_404(Service, id=service_id)
-
-#         # ===== Ambil data form =====
-#         payment_method = request.POST.get("payment_method")
-#         scheduled_pickup = request.POST.get("scheduled_pickup")
-#         weight = request.POST.get("weight", None)
-        
-#         # ===== AMBIL DATA PICKUP DAN DELIVERY METHOD =====
-#         pickup_method = request.POST.get("pickup_method", "pickup")
-#         delivery_method = request.POST.get("delivery_method", "delivery")
-#         total_shipping_cost = Decimal(request.POST.get("total_shipping_cost", 0) or 0)
-        
-#         # ===== Ambil shipping_cost dari input hidden (base ongkir) =====
-#         base_shipping_cost = Decimal(request.POST.get("shipping_cost", 0) or 0)
-
-#         # ===== Ambil lokasi pickup =====
-#         latitude = request.POST.get("latitude")
-#         longitude = request.POST.get("longitude")
-#         pickup_address_input = request.POST.get("address")
-
-#         if not latitude or not longitude:
-#             messages.error(request, "Pilih lokasi pickup di peta terlebih dahulu!")
-#             return redirect("orders:order")
-
-#         lat = float(latitude)
-#         lng = float(longitude)
-
-#         # Prioritas: input user → fallback ke map
-#         if pickup_address_input:
-#             pickup_address = pickup_address_input
-#         else:
-#             pickup_address = get_address(lat, lng)
-
-#         # ===== Ambil items jika per-item =====
-#         service_ids = request.POST.getlist("service_id[]")
-#         weights = request.POST.getlist("weight[]")
-#         item_names = request.POST.getlist("item_name[]")
-#         item_qtys = request.POST.getlist("item_qty[]")
-        
-#         # Process items data
-#         items_data = []
-#         for name, qty in zip(item_names, item_qtys):
-#             if name and qty:
-#                 items_data.append({
-#                     "name": name,
-#                     "quantity": int(qty)
-#                 })
-        
-#         print(f"[DEBUG] Service type: {service.type}")
-#         print(f"[DEBUG] Pickup Method: {pickup_method}")
-#         print(f"[DEBUG] Delivery Method: {delivery_method}")
-#         print(f"[DEBUG] Total Shipping Cost: {total_shipping_cost}")
-#         print(f"[DEBUG] Service IDs: {service_ids}")
-#         print(f"[DEBUG] Weights: {weights}")
-#         print(f"[DEBUG] Item names: {item_names}")
-#         print(f"[DEBUG] Item qtys: {item_qtys}")
-#         print(f"[DEBUG] Items data: {items_data}")
-
-#         # ===== Hitung total =====
-#         total_price = Decimal(0)
-        
-#         # Data untuk disimpan ke OrderItem
-#         order_items_to_create = []
-        
-#         # Hitung dari service_ids dan weights (untuk per_kilo)
-#         for i, s_id in enumerate(service_ids):
-#             try:
-#                 srv = Service.objects.get(id=s_id)
-#                 if srv.type == "per_kilo" and i < len(weights) and weights[i]:
-#                     weight_val = Decimal(weights[i])
-#                     item_subtotal = weight_val * srv.price
-#                     total_price += item_subtotal
-#                     print(f"[DEBUG] Added per_kilo: {weight_val} kg x {srv.price} = {item_subtotal}")
-                    
-#                     # Simpan ke OrderItem nanti
-#                     order_items_to_create.append({
-#                         'service': srv,
-#                         'laundry_item': None,
-#                         'quantity': None,
-#                         'weight': weight_val,
-#                         'price': srv.price,
-#                         'subtotal': item_subtotal
-#                     })
-#             except Service.DoesNotExist:
-#                 pass
-        
-#         # Hitung dari items (untuk per_item)
-#         for item_data in items_data:
-#             item_obj = LaundryItem.objects.filter(name=item_data["name"]).first()
-#             if item_obj:
-#                 item_price = Decimal(item_obj.price) * Decimal(item_data["quantity"])
-#                 total_price += item_price
-#                 print(f"[DEBUG] Item '{item_data['name']}' qty {item_data['quantity']}: +{item_price}")
-                
-#                 # Simpan ke OrderItem nanti
-#                 order_items_to_create.append({
-#                     'service': None,
-#                     'laundry_item': item_obj,
-#                     'quantity': item_data["quantity"],
-#                     'weight': None,
-#                     'price': item_obj.price,
-#                     'subtotal': item_price
-#                 })
-        
-#         # Tambahkan harga service itu sendiri jika per_item
-#         if service.type == "per_item":
-#             total_price += service.price
-#             print(f"[DEBUG] Service price added: {service.price}")
-            
-#             # Simpan service sebagai OrderItem juga
-#             order_items_to_create.append({
-#                 'service': service,
-#                 'laundry_item': None,
-#                 'quantity': 1,
-#                 'weight': None,
-#                 'price': service.price,
-#                 'subtotal': service.price
-#             })
-        
-#         # ===== TAMBAHKAN TOTAL SHIPPING COST (sudah termasuk 1x atau 2x ongkir) =====
-#         total_price += total_shipping_cost
-        
-#         print(f"[DEBUG] Total price before discount: {total_price}")
-#         print(f"[DEBUG] Breakdown: Subtotal items: {total_price - total_shipping_cost}, Shipping: {total_shipping_cost}")
-        
-#         # Validasi total_price
-#         if total_price <= 0:
-#             messages.error(request, "Total harga harus lebih dari 0. Pastikan sudah memilih layanan dan item.")
-#             return redirect("orders:order")
-
-#         # ================= PROMO (USER PROMO) =================
-#         selected_promo_id = request.POST.get("selected_promo")
-        
-#         discount_percent = None
-#         discount_amount_value = Decimal(0)
-#         total_price_after_discount = total_price
-#         applied_promo = None
-
-#         if selected_promo_id:
-#             user_promo = UserPromo.objects.filter(
-#                 user=customer,
-#                 promo_id=selected_promo_id,
-#                 is_used=False,
-#                 promo__is_active=True,
-#                 promo__min_transaction__lte=total_price
-#             ).select_related("promo").first()
-
-#             if user_promo:
-#                 discount_amount_value = Decimal(user_promo.promo.discount_amount)
-#                 total_price_after_discount = total_price - discount_amount_value
-
-#                 applied_promo = user_promo
-
-#                 # tandai promo sudah dipakai
-#                 user_promo.is_used = True
-#                 user_promo.save()
-                
-#                 print(f"[DEBUG] Promo applied: {user_promo.promo.title}, discount: {discount_amount_value}")
-        
-#         # ===== Simpan order dengan field baru =====
-#         order = Order.objects.create(
-#             customer=customer,
-#             service=service,
-#             weight=weight if weight else None,
-#             price_total=total_price_after_discount,
-#             discount_percent=discount_percent,
-#             discount_amount=discount_amount_value,  # Simpan nominal diskon jika ada field
-#             scheduled_pickup=scheduled_pickup,
-#             payment_method=payment_method,
-#             order_status="pending",
-#             payment_status="unpaid",
-#             latitude=latitude,
-#             longitude=longitude,
-#             pickup_address=pickup_address,
-#             # Field baru untuk layanan antar-jemput
-#             pickup_method=pickup_method,      # Simpan metode pengambilan (pickup/dropoff)
-#             delivery_method=delivery_method,   # Simpan metode pengiriman (delivery/pickup)
-#             shipping_cost=total_shipping_cost  # Simpan total ongkir (bisa 1x atau 2x)
-#         )
-        
-#         # ===== Simpan OrderItems =====
-#         for item_data in order_items_to_create:
-#             OrderItem.objects.create(
-#                 order=order,
-#                 service=item_data['service'],
-#                 laundry_item=item_data['laundry_item'],
-#                 quantity=item_data['quantity'],
-#                 weight=item_data['weight'],
-#                 price=item_data['price'],
-#                 subtotal=item_data['subtotal']
-#             )
-        
-#         print(f"[DEBUG] Order created with ID: {order.id}")
-#         print(f"[DEBUG] Total OrderItems created: {len(order_items_to_create)}")
-#         print(f"[DEBUG] Final price: {total_price_after_discount}")
-#         print(f"[DEBUG] Pickup method: {pickup_method}, Delivery method: {delivery_method}")
-
-#         # ===== Midtrans jika QRIS =====
-#         if payment_method == "qris":
-#             import midtransclient
-#             from django.conf import settings
-#             import time
-
-#             snap = midtransclient.Snap(
-#                 is_production=settings.MIDTRANS["IS_PRODUCTION"],
-#                 server_key=settings.MIDTRANS["SERVER_KEY"]
-#             )
-#             unique_order_id = f"ORDER-{order.id}-{int(time.time())}"
-#             finish_url = request.build_absolute_uri(reverse("orders:payment_success"))
-
-#             transaction_params = {
-#                 "transaction_details": {
-#                     "order_id": unique_order_id,
-#                     "gross_amount": int(total_price_after_discount),
-#                 },
-#                 "customer_details": {
-#                     "first_name": customer.username,
-#                     "phone": customer.phone,
-#                 },
-#                 "enabled_payments": ["gopay", "qris", "bank_transfer"],
-#                 "callbacks": {"finish": finish_url},
-#             }
-
-#             try:
-#                 transaction = snap.create_transaction(transaction_params)
-#                 snap_token = transaction.get("token")
-#                 order.snap_token = snap_token
-#                 order.transaction_id = unique_order_id
-#                 order.save()
-#                 return redirect("orders:payment", order_id=order.id)
-#             except Exception as e:
-#                 messages.error(request, f"Gagal membuat transaksi Midtrans: {e}")
-#                 return redirect("orders:order")
-
-#         messages.success(request, f"Pesanan #{order.id} berhasil dibuat.")
-#         return redirect("orders:order_list")
-
-#     # ===== Ambil promo yang tersedia untuk user =====
-#     available_promos = UserPromo.objects.filter(
-#         user=request.user,
-#         is_used=False,
-#         promo__is_active=True
-#     ).select_related("promo")
-
-#     return render(request, "orders/order.html", {
-#         "services": services,
-#         "laundry_items": laundry_items,
-#         "customers": customers,
-#         "available_promos": available_promos
-#     })
-
 from decimal import Decimal
 from .models import Promo, Order, OrderItem, LaundryItem
 import json
@@ -516,6 +233,22 @@ def create_order(request):
             messages.error(request, "Total harga harus lebih dari 0.")
             return redirect("orders:order")
 
+        # views.py - di fungsi create_order, sebelum order.save()
+
+        from datetime import timedelta
+
+        # Hitung estimasi selesai berdasarkan durasi layanan
+        if service.duration == 'reguler':
+            estimated_completion = timezone.now() + timedelta(days=3)
+        elif service.duration == 'kilat':
+            estimated_completion = timezone.now() + timedelta(days=1)
+        elif service.duration == 'express':
+            estimated_completion = timezone.now() + timedelta(hours=6)
+        elif service.duration == 'express1':
+            estimated_completion = timezone.now() + timedelta(hours=3)
+        else:
+            estimated_completion = timezone.now() + timedelta(days=2)
+
         # ===== PROMO =====
         selected_promo_id = request.POST.get("selected_promo")
         discount_percent = None
@@ -546,6 +279,7 @@ def create_order(request):
             discount_percent=discount_percent,
             discount_amount=discount_amount_value,
             scheduled_pickup=scheduled_pickup,
+            estimated_completion=estimated_completion,
             payment_method=payment_method,
             order_status="pending",
             payment_status="unpaid",
@@ -564,7 +298,7 @@ def create_order(request):
                 service=item_data['service'],
                 laundry_item=item_data['laundry_item'],
                 quantity=item_data['quantity'],
-                weight=item_data['weight'],  # ← PASTIKAN WEIGHT TERSIMPAN
+                weight=item_data['weight'],
                 price=item_data['price'],
                 subtotal=item_data['subtotal']
             )
@@ -634,9 +368,9 @@ def payment(request, order_id):
     else:
         order = get_object_or_404(Order, id=order_id, customer=request.user)
     
-    # Pastikan order status masih pending
-    if order.order_status != 'pending':
-        messages.error(request, "Order ini sudah diproses atau dibayar.")
+    # Pastikan order status masih picked_up (belum diproses atau dibayar)
+    if order.order_status != 'picked_up':
+        messages.success(request, "Pesanan berhasil di buat. Tunggu status di ambil untuk melakukan pembayaran.")
         return redirect('orders:order_list')
     
     # Pastikan snap_token ada

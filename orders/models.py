@@ -66,6 +66,11 @@ class Order(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     scheduled_pickup = models.DateTimeField()
+    estimated_completion = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        verbose_name="Estimasi Selesai"
+    )
 
     # ===== FIELD UNTUK LAYANAN ANTAR-JEMPUT =====
     pickup_method = models.CharField(
