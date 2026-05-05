@@ -958,17 +958,7 @@ def get_order_status(request):
             # =========================
             if match:
                 order_id = int(match.group())
-
-                if not user:
-                    return JsonResponse({
-                        "reply": "Nomor kamu belum terdaftar kak 🥺",
-                        "status": "unauthorized"
-                    })
-
-                order = Order.objects.filter(
-                    id=order_id,
-                    customer=user
-                ).select_related("customer", "service").first()
+                order = Order.objects.filter(id=order_id).select_related("customer", "service").first()
 
                 if order:
                     return JsonResponse({
@@ -985,7 +975,7 @@ def get_order_status(request):
                     })
                 else:
                     return JsonResponse({
-                        "reply": "Maaf kak, order tidak ditemukan atau bukan milik kamu 🥺",
+                        "reply": f"Maaf kak, order #{order_id} tidak ditemukan 🥺",
                         "status": "not_found"
                     })
 
