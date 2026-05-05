@@ -958,7 +958,17 @@ def get_order_status(request):
             # =========================
             if match:
                 order_id = int(match.group())
-                order = Order.objects.filter(id=order_id).select_related("customer", "service").first()
+
+                if not user:
+                    return JsonResponse({
+                        "reply": "Nomor kamu belum terdaftar kak 🥺",
+                        "status": "unauthorized"
+                    })
+
+                order = Order.objects.filter(
+                    id=order_id,
+                    customer=user
+                ).select_related("customer", "service").first()
 
                 if order:
                     return JsonResponse({
@@ -975,7 +985,7 @@ def get_order_status(request):
                     })
                 else:
                     return JsonResponse({
-                        "reply": f"Maaf kak, order #{order_id} tidak ditemukan 🥺",
+                        "reply": "Maaf kak, order tidak ditemukan atau bukan milik kamu 🥺",
                         "status": "not_found"
                     })
 
@@ -997,49 +1007,6 @@ def get_order_status(request):
 
     return JsonResponse({"error": "Gunakan POST method"}, status=405)
 
-    
-# import requests
-
-# def trigger_n8n_webhook(order, event_type):
-#     webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
-
-#     # =========================
-#     # DATA CUSTOMER
-#     # =========================
-#     customer_payload = {
-#         "event": event_type,
-#         "target": "customer",
-#         "order_id": order.id,
-#         "user": order.customer.username if order.customer else None,
-#         "phone": order.customer.username if order.customer else None,
-#         "order_status": order.get_order_status_display(),
-#         "payment_status": order.get_payment_status_display(),
-#         "courier": order.assigned_courier.username if order.assigned_courier else None,
-#     }
-
-#     try:
-#         requests.post(webhook_url, json=customer_payload, timeout=5)
-#     except:
-#         pass
-
-#     # =========================
-#     # DATA COURIER (JIKA ADA)
-#     # =========================
-#     if order.assigned_courier:
-#         courier_payload = {
-#             "event": event_type,
-#             "target": "courier",
-#             "order_id": order.id,
-#             "user": order.assigned_courier.username,
-#             "phone": order.assigned_courier.username,
-#             "customer_name": order.customer.username if order.customer else None,
-#             "order_status": order.get_order_status_display(),
-#         }
-
-#         try:
-#             requests.post(webhook_url, json=courier_payload, timeout=5)
-#         except:
-#             pass
 
 import requests
 
