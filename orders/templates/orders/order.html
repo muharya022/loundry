@@ -742,25 +742,27 @@ window.calculateTotalShipping = function() {
     const shippingDetailText = document.getElementById('shippingDetailText');
     const shippingInfoBox = document.getElementById('shippingInfoBox');
     
-    if (pickupMethod === 'pickup' && deliveryMethod === 'delivery') {
-        totalOngkir = baseOngkir * 2;
-        description = '🏠 Layanan lengkap (jemput + antar) = 2x ongkir';
-        if (pickupInfoText) pickupInfoText.innerHTML = '* 🚗 Kurir akan menjemput laundry Anda (+ ongkir jemput)';
-        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🚚 Hasil laundry akan diantar ke rumah Anda (+ ongkir antar)';
-    } 
-    else if (pickupMethod === 'pickup' && deliveryMethod === 'pickup') {
+    // LOGIKA BARU: Ongkir hanya 1x jika ada layanan antar ATAU jemput
+    // Tidak peduli pilih keduanya atau salah satu, tetap 1x ongkir
+    if (pickupMethod === 'pickup' || deliveryMethod === 'delivery') {
         totalOngkir = baseOngkir;
-        description = '📦 Layanan jemput saja, ambil hasil sendiri = 1x ongkir';
-        if (pickupInfoText) pickupInfoText.innerHTML = '* 🚗 Kurir akan menjemput laundry Anda (+ ongkir jemput)';
-        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🏪 Ambil hasil laundry sendiri di toko (Gratis)';
-    }
-    else if (pickupMethod === 'dropoff' && deliveryMethod === 'delivery') {
-        totalOngkir = baseOngkir;
-        description = '📦 Antar sendiri, diantar kurir = 1x ongkir';
-        if (pickupInfoText) pickupInfoText.innerHTML = '* 🏪 Antar sendiri laundry ke toko (Gratis)';
-        if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🚚 Hasil laundry akan diantar ke rumah Anda (+ ongkir antar)';
-    }
-    else {
+        
+        if (pickupMethod === 'pickup' && deliveryMethod === 'delivery') {
+            description = '🚗 Layanan lengkap (jemput + antar) - Ongkir 1x';
+            if (pickupInfoText) pickupInfoText.innerHTML = '* 🚗 Kurir akan menjemput laundry Anda';
+            if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🚚 Hasil laundry akan diantar ke rumah Anda';
+        } 
+        else if (pickupMethod === 'pickup' && deliveryMethod === 'pickup') {
+            description = '📦 Layanan jemput saja - Ongkir 1x';
+            if (pickupInfoText) pickupInfoText.innerHTML = '* 🚗 Kurir akan menjemput laundry Anda';
+            if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🏪 Ambil hasil laundry sendiri di toko (Gratis)';
+        }
+        else if (pickupMethod === 'dropoff' && deliveryMethod === 'delivery') {
+            description = '📦 Antar sendiri, diantar kurir - Ongkir 1x';
+            if (pickupInfoText) pickupInfoText.innerHTML = '* 🏪 Antar sendiri laundry ke toko (Gratis)';
+            if (deliveryInfoText) deliveryInfoText.innerHTML = '* 🚚 Hasil laundry akan diantar ke rumah Anda';
+        }
+    } else {
         totalOngkir = 0;
         description = '✅ Layanan mandiri (antar sendiri + ambil sendiri) = GRATIS ongkir';
         if (pickupInfoText) pickupInfoText.innerHTML = '* 🏪 Antar sendiri laundry ke toko (Gratis)';

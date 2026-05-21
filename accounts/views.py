@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -15,7 +17,7 @@ from django.core.paginator import Paginator
 from django.db.models import Sum
 from django.utils.timezone import now
 from datetime import timedelta
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 import random
 import time
 
@@ -150,6 +152,65 @@ Menara Laundry - Solusi Laundry Praktis & Terpercaya"""
     # Handle GET request
     print("Showing registration form (GET request)")
     return render(request, 'accounts/register.html')
+
+import re
+
+def clean_wa_id(wa_id):
+    return re.sub(r"[^0-9]", "", wa_id)
+
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def link_whatsapp(request):
+    try:
+        data = json.loads(request.body)
+
+        payload = data.get("payload", {})
+        message = payload.get("body", "").strip()
+        wa_id = payload.get("from", "")
+
+        wa_id_clean = re.sub(r"[^0-9]", "", wa_id)
+
+        parts = message.split()
+
+        if len(parts) != 2:
+            return JsonResponse({
+                "reply": "Format:\nLINK 628xxxxxxxx"
+            })
+
+        command = parts[0].upper()
+        phone = re.sub(r"[^0-9]", "", parts[1])
+
+        if command != "LINK":
+            return JsonResponse({
+                "reply": "Perintah tidak dikenali"
+            })
+
+        # pastikan format sama
+        if phone.startswith("0"):
+            phone = "62" + phone[1:]
+
+        user = User.objects.filter(phone=phone).first()
+
+        if not user:
+            return JsonResponse({
+                "reply": "Nomor tidak ditemukan"
+            })
+
+        # simpan wa_id
+        user.wa_id = wa_id_clean
+        user.save()
+
+        return JsonResponse({
+            "reply": "WhatsApp berhasil terhubung",
+            "status": "linked"
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            "reply": str(e),
+            "status": "error"
+        })
 
 
 def verify_registration_otp(request):

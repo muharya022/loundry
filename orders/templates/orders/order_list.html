@@ -87,19 +87,22 @@
              {% endfor %}
            ],
            getTotalWeight() {
-             let total = 0;
-             if (this.order_items) {
-               this.order_items.forEach(item => {
-                 if (item.weight && item.weight > 0) {
-                   total += parseFloat(item.weight);
-                 }
-               });
-             }
-             if (this.weight && this.weight > 0) {
-               total += parseFloat(this.weight);
-             }
-             return total;
-           },
+                if (this.weight && this.weight > 0) {
+                    return parseFloat(this.weight);
+                }
+
+                let total = 0;
+
+                if (this.order_items) {
+                    this.order_items.forEach(item => {
+                        if (item.weight && item.weight > 0) {
+                            total += parseFloat(item.weight);
+                        }
+                    });
+                }
+
+                return total;
+            },
            getTotalItems() {
              let total = 0;
              if (this.order_items) {

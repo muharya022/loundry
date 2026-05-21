@@ -24,7 +24,13 @@ class User(AbstractUser):
         ],
         verbose_name="Nomor WhatsApp"
     )
-    
+    wa_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        unique=True
+    )
+        
     # Alamat dan verifikasi
     address = models.TextField(blank=True, null=True, verbose_name="Alamat")
     is_verified = models.BooleanField(default=False, verbose_name="Terverifikasi")

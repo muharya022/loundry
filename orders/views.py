@@ -938,64 +938,176 @@ import re
 
 User = get_user_model()
 
+
 @csrf_exempt
 def get_order_status(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
 
-            message = data.get("message", "").lower().strip()
-            phone = data.get("phone", "")
+    if request.method != "POST":
+        return JsonResponse(
+            {
+                "error": "Gunakan POST"
+            },
+            status=405
+        )
 
-            phone = phone.replace("@c.us", "").replace("@lid", "")
+    try:
 
-            user = User.objects.filter(username=phone).first()
+        data = json.loads(request.body)
 
-            match = re.search(r"\d+", message)
+        payload = data.get(
+            "payload",
+            {}
+        )
 
-            # =========================
-            # CASE 1: ADA ORDER ID
-            # =========================
-            if match:
-                order_id = int(match.group())
-                order = Order.objects.filter(id=order_id).select_related("customer", "service").first()
+        message = payload.get(
+            "body",
+            ""
+        ).strip().lower()
 
-                if order:
+        wa_id = payload.get(
+            "from",
+            ""
+        )
+
+        print("="*50)
+        print("WA ID:", wa_id)
+        print("MESSAGE:", message)
+
+        # Cari user berdasarkan wa_id
+        user = User.objects.filter(
+            wa_id=wa_id
+        ).first()
+
+        # jika belum terhubung
+        if not user:
+
+            # LINK 628123456789
+            if message.startswith("link"):
+
+                parts = message.split()
+
+                if len(parts) != 2:
                     return JsonResponse({
-                        "reply": (
-                            f"📦 *Status Order #{order.id}*\n"
-                            f"Halo Kak {order.customer.username} 😊\n"
-                            f"🧺 Layanan: {order.service.name if order.service else '-'}\n"
-                            f"💰 Total: Rp{order.price_total:,.0f}\n"
-                            f"🚚 Status: {order.get_order_status_display()}\n"
-                            f"💵 Pembayaran: {order.get_payment_status_display()}\n"
-                            f"📅 Tanggal: {order.created_at.strftime('%d-%m-%Y %H:%M')}"
-                        ),
-                        "status": "success"
-                    })
-                else:
-                    return JsonResponse({
-                        "reply": f"Maaf kak, order #{order_id} tidak ditemukan 🥺",
-                        "status": "not_found"
+                        "reply":
+                        "Format salah\n\nLINK 628xxxxxxxx",
+                        "status":
+                        "invalid_format"
                     })
 
-            # =========================
-            # CASE 2: CHAT BIASA
-            # =========================
-            name = user.username if user else "kak"
+                phone = re.sub(
+                    r"[^0-9]",
+                    "",
+                    parts[1]
+                )
+
+                user = User.objects.filter(
+                    phone=phone
+                ).first()
+
+                if not user:
+                    return JsonResponse({
+                        "reply":
+                        "Nomor tidak ditemukan",
+                        "status":
+                        "not_found"
+                    })
+
+                user.wa_id = wa_id
+                user.save()
+
+                return JsonResponse({
+                    "reply":
+                    "✅ WhatsApp berhasil terhubung",
+                    "status":
+                    "linked"
+                })
 
             return JsonResponse({
-                "reply": f"Halo {name} 😊 Ada yang bisa dibantu?",
-                "status": "greeting"
+                "reply":
+                (
+                    "Nomor WhatsApp belum terhubung.\n\n"
+                    "Ketik:\n"
+                    "LINK 628xxxxxxxx"
+                ),
+                "status":
+                "not_registered"
             })
 
-        except Exception as e:
-            return JsonResponse({
-                "reply": f"Terjadi error: {str(e)}",
-                "status": "error"
-            }, status=500)
+        print("USER:", user.username)
 
-    return JsonResponse({"error": "Gunakan POST method"}, status=405)
+        match = re.search(
+            r"\d+",
+            message
+        )
+
+        if match:
+
+            order_id = int(
+                match.group()
+            )
+
+            order = (
+                Order.objects
+                .filter(
+                    id=order_id,
+                    customer=user
+                )
+                .select_related(
+                    "customer",
+                    "service"
+                )
+                .first()
+            )
+
+            if not order:
+
+                return JsonResponse({
+                    "reply":
+                    f"Order #{order_id} bukan milik Anda 🥺",
+                    "status":
+                    "not_found"
+                })
+
+            return JsonResponse({
+
+                "reply":
+                (
+                    f"📦 Status Order #{order.id}\n\n"
+                    f"🧺 Layanan : {order.service.name}\n"
+                    f"🚚 Status : {order.get_order_status_display()}\n"
+                    f"💳 Pembayaran : {order.get_payment_status_display()}"
+                ),
+
+                "status":
+                "success"
+            })
+
+        return JsonResponse({
+            "reply":
+            (
+                f"Halo {user.username} 😊\n\n"
+                f"Ketik:\n"
+                f"Nomor 65\n\n"
+                f"untuk cek pesanan"
+            ),
+
+            "status":
+            "greeting"
+        })
+
+    except Exception as e:
+
+        print("ERROR:", str(e))
+
+        return JsonResponse({
+
+            "reply":
+            "Terjadi kesalahan sistem",
+
+            "status":
+            "error"
+
+        })
 
 
 import requests
