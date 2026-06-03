@@ -265,7 +265,7 @@ def link_whatsapp(request):
         # SIMPAN WA ID
         # =========================
         try:
-            user.wa_id = wa_id_clean or wa_id
+            user.wa_id = wa_id  # SIMPAN RAW
             user.save()
         except Exception as e:
             return JsonResponse({

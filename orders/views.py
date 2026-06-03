@@ -941,7 +941,7 @@ User = get_user_model()
 
 @csrf_exempt
 def get_order_status(request):
-    # Allow GET for quick health-check or manual testing
+
     if request.method == "GET":
         return JsonResponse({"status": "ok", "message": "Use POST with JSON payload."})
 
@@ -949,179 +949,151 @@ def get_order_status(request):
         return JsonResponse({"error": "Gunakan POST"}, status=405)
 
     try:
+        import json
+        import re
 
-        # Parse JSON body safely; support cases where payload is nested or data sent as form-data
+        # =========================
+        # PARSE REQUEST
+        # =========================
         if request.body:
             try:
                 data = json.loads(request.body.decode('utf-8'))
             except Exception:
                 data = {}
         else:
-            # Fallback to POST params
             data = request.POST.dict()
 
-        # payload may be the whole body or nested under 'payload'
         payload = data.get('payload') if isinstance(data, dict) and data.get('payload') else data
 
-        # Support different field names for message and sender
         raw_message = (payload.get('body') or payload.get('message') or '')
         message = raw_message.strip().lower()
 
-        # Accept 'from', 'wa_id' or 'phone' from payload (n8n may send 'phone')
+        # =========================
+        # WA ID (RAW - JANGAN DI CLEAN)
+        # =========================
         wa_id = payload.get('from') or payload.get('wa_id') or payload.get('phone') or ''
-
-        # Normalize to digits for matching (remove +, -, spaces)
-        wa_id_clean = re.sub(r'[^0-9]', '', str(wa_id))
+        wa_id = str(wa_id).strip()
 
         print("="*50)
         print("RAW WA ID:", wa_id)
-        print("WA ID (clean):", wa_id_clean)
         print("MESSAGE:", message)
 
-        # Cari user berdasarkan wa_id (cocokkan digit), fallback ke phone jika tersedia
+        # =========================
+        # FIND USER BY WA ID RAW
+        # =========================
         user = None
-        if wa_id_clean:
-            # match contains to tolerate session keys or prefixes
-            user = User.objects.filter(wa_id__contains=wa_id_clean).first()
 
+        if wa_id:
+            user = User.objects.filter(wa_id=wa_id).first()
+
+        # fallback phone
         if not user:
-            # try find by phone field if provided
             phone_val = payload.get('phone') or ''
             phone_clean = re.sub(r'[^0-9]', '', str(phone_val))
+
             if phone_clean:
                 if phone_clean.startswith('0'):
                     phone_clean = '62' + phone_clean[1:]
+
                 user = User.objects.filter(phone=phone_clean).first()
 
-        # jika belum terhubung
+        # =========================
+        # NOT REGISTERED FLOW
+        # =========================
         if not user:
 
-            # LINK 628123456789
             if message.startswith("link"):
 
                 parts = message.split()
 
                 if len(parts) != 2:
                     return JsonResponse({
-                        "reply":
-                        "Format salah\n\nLINK 628xxxxxxxx",
-                        "status":
-                        "invalid_format"
+                        "reply": "Format salah\n\nLINK 628xxxxxxxx",
+                        "status": "invalid_format"
                     })
 
-                phone = re.sub(
-                    r"[^0-9]",
-                    "",
-                    parts[1]
-                )
+                phone = re.sub(r"[^0-9]", "", parts[1])
 
-                user = User.objects.filter(
-                    phone=phone
-                ).first()
+                if phone.startswith("0"):
+                    phone = "62" + phone[1:]
+
+                user = User.objects.filter(phone=phone).first()
 
                 if not user:
                     return JsonResponse({
-                        "reply":
-                        "Nomor tidak ditemukan",
-                        "status":
-                        "not_found"
+                        "reply": "Nomor tidak ditemukan",
+                        "status": "not_found"
                     })
 
+                # SIMPAN RAW WA ID (PENTING)
                 user.wa_id = wa_id
                 user.save()
 
                 return JsonResponse({
-                    "reply":
-                    "✅ WhatsApp berhasil terhubung",
-                    "status":
-                    "linked"
+                    "reply": "✅ WhatsApp berhasil terhubung",
+                    "status": "linked"
                 })
 
             return JsonResponse({
-                "reply":
-                (
+                "reply": (
                     "Nomor WhatsApp belum terhubung.\n\n"
                     "Ketik:\n"
                     "LINK 628xxxxxxxx"
                 ),
-                "status":
-                "not_registered"
+                "status": "not_registered"
             })
 
         print("USER:", user.username)
 
-        match = re.search(
-            r"\d+",
-            message
-        )
+        # =========================
+        # CEK ORDER ID
+        # =========================
+        match = re.search(r"\d+", message)
 
         if match:
 
-            order_id = int(
-                match.group()
-            )
+            order_id = int(match.group())
 
-            order = (
-                Order.objects
-                .filter(
-                    id=order_id,
-                    customer=user
-                )
-                .select_related(
-                    "customer",
-                    "service"
-                )
-                .first()
-            )
+            order = Order.objects.filter(
+                id=order_id,
+                customer=user
+            ).select_related("customer", "service").first()
 
             if not order:
-
                 return JsonResponse({
-                    "reply":
-                    f"Order #{order_id} bukan milik Anda 🥺",
-                    "status":
-                    "not_found"
+                    "reply": f"Order #{order_id} bukan milik Anda 🥺",
+                    "status": "not_found"
                 })
 
             return JsonResponse({
-
-                "reply":
-                (
+                "reply": (
                     f"📦 Status Order #{order.id}\n\n"
                     f"🧺 Layanan : {order.service.name}\n"
                     f"🚚 Status : {order.get_order_status_display()}\n"
                     f"💳 Pembayaran : {order.get_payment_status_display()}"
                 ),
-
-                "status":
-                "success"
+                "status": "success"
             })
 
+        # =========================
+        # DEFAULT RESPONSE
+        # =========================
         return JsonResponse({
-            "reply":
-            (
+            "reply": (
                 f"Halo {user.username} 😊\n\n"
                 f"Ketik:\n"
                 f"Nomor 65\n\n"
                 f"untuk cek pesanan"
             ),
-
-            "status":
-            "greeting"
+            "status": "greeting"
         })
 
     except Exception as e:
-
         print("ERROR:", str(e))
 
         return JsonResponse({
-
-            "reply":
-            "Terjadi kesalahan sistem",
-
-            "status":
-            "error"
-
+            "reply": "Terjadi kesalahan sistem",
+            "status": "error"
         })
 
 
