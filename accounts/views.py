@@ -166,7 +166,14 @@ def link_whatsapp(request):
         return JsonResponse({"error": "Gunakan POST"}, status=405)
 
     try:
-        # Parse JSON body safely; support fallback to POST params
+        import json
+        import re
+
+        # =========================
+        # PARSE REQUEST BODY
+        # =========================
+        data = {}
+
         if request.body:
             try:
                 data = json.loads(request.body.decode('utf-8'))
@@ -175,54 +182,112 @@ def link_whatsapp(request):
         else:
             data = request.POST.dict()
 
-        payload = data.get('payload') if isinstance(data, dict) and data.get('payload') else data
+        # =========================
+        # NORMALISASI PAYLOAD
+        # =========================
+        payload = data.get('payload', data)
+        if not isinstance(payload, dict):
+            return JsonResponse({
+                "reply": "Format request tidak valid",
+                "status": "invalid_payload"
+            }, status=400)
 
+        # =========================
+        # AMBIL MESSAGE & WA ID
+        # =========================
         message = (payload.get('body') or payload.get('message') or '').strip()
-        wa_id = payload.get('from') or payload.get('wa_id') or ''
+        message = re.sub(r"\s+", " ", message)  # normalize whitespace
 
+        wa_id = payload.get('from') or payload.get('wa_id') or ''
         wa_id_clean = re.sub(r"[^0-9]", "", wa_id)
 
-        parts = message.split()
+        # =========================
+        # VALIDASI FORMAT COMMAND
+        # =========================
+        parts = message.split(" ", 1)
+
         if len(parts) != 2:
-            return JsonResponse({"reply": "Format:\nLINK 628xxxxxxxx", "status": "invalid_format"}, status=400)
+            return JsonResponse({
+                "reply": "Format:\nLINK 628xxxxxxxx",
+                "status": "invalid_format"
+            }, status=400)
 
-        command = parts[0].upper()
-        phone = re.sub(r"[^0-9]", "", parts[1])
+        command = parts[0].strip().upper()
+        phone_raw = parts[1].strip()
 
+        phone = re.sub(r"[^0-9]", "", phone_raw)
+
+        # =========================
+        # VALIDASI COMMAND
+        # =========================
         if command != "LINK":
-            return JsonResponse({"reply": "Perintah tidak dikenali", "status": "invalid_command"}, status=400)
+            return JsonResponse({
+                "reply": "Perintah tidak dikenali",
+                "status": "invalid_command"
+            }, status=400)
 
-        # normalisasi nomor
+        # =========================
+        # NORMALISASI NOMOR
+        # =========================
         if phone.startswith("0"):
             phone = "62" + phone[1:]
 
-        # basic validation
-        if not phone.isdigit() or len(phone) < 10 or not phone.startswith('62'):
-            return JsonResponse({"reply": "Nomor HP tidak valid. Gunakan format 628xxxxxxxx", "status": "invalid_phone"}, status=400)
+        # validasi ketat nomor Indonesia
+        if not re.match(r"^62[0-9]{8,13}$", phone):
+            return JsonResponse({
+                "reply": "Nomor HP tidak valid. Gunakan format 628xxxxxxxx",
+                "status": "invalid_phone"
+            }, status=400)
 
+        # =========================
+        # CEK USER
+        # =========================
         user = User.objects.filter(phone=phone).first()
 
         if not user:
-            return JsonResponse({"reply": "Nomor tidak ditemukan", "status": "not_found"}, status=404)
+            return JsonResponse({
+                "reply": "Nomor tidak ditemukan",
+                "status": "not_found"
+            }, status=404)
 
-        # Cek konflik wa_id
+        # =========================
+        # CEK KONFLIK WA ID
+        # =========================
         if wa_id_clean:
             conflict = User.objects.filter(wa_id=wa_id_clean).exclude(pk=user.pk).first()
             if conflict:
-                return JsonResponse({"reply": "WhatsApp sudah terhubung ke akun lain.", "status": "conflict"}, status=409)
+                return JsonResponse({
+                    "reply": "WhatsApp sudah terhubung ke akun lain.",
+                    "status": "conflict"
+                }, status=409)
 
-        # Simpan wa_id (simpan bentuk numerik untuk konsistensi)
-        user.wa_id = wa_id_clean or wa_id
+        # =========================
+        # SIMPAN WA ID
+        # =========================
         try:
+            user.wa_id = wa_id_clean or wa_id
             user.save()
         except Exception as e:
-            return JsonResponse({"reply": "Gagal menyimpan data pengguna.", "status": "error", "detail": str(e)}, status=500)
+            return JsonResponse({
+                "reply": "Gagal menyimpan data pengguna.",
+                "status": "error",
+                "detail": str(e)
+            }, status=500)
 
-        return JsonResponse({"reply": "✅ WhatsApp berhasil terhubung", "status": "linked"}, status=200)
+        # =========================
+        # SUCCESS RESPONSE
+        # =========================
+        return JsonResponse({
+            "reply": "✅ WhatsApp berhasil terhubung",
+            "status": "linked"
+        }, status=200)
 
     except Exception as e:
-        return JsonResponse({"reply": "Terjadi kesalahan internal", "status": "error", "detail": str(e)}, status=500)
-
+        return JsonResponse({
+            "reply": "Terjadi kesalahan internal",
+            "status": "error",
+            "detail": str(e)
+        }, status=500)
 
 def verify_registration_otp(request):
     """Verifikasi OTP untuk registrasi"""
