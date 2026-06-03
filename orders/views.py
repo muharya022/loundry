@@ -964,17 +964,34 @@ def get_order_status(request):
         payload = data.get('payload') if isinstance(data, dict) and data.get('payload') else data
 
         # Support different field names for message and sender
-        message = (payload.get('body') or payload.get('message') or '').strip().lower()
-        wa_id = payload.get('from') or payload.get('wa_id') or ''
+        raw_message = (payload.get('body') or payload.get('message') or '')
+        message = raw_message.strip().lower()
+
+        # Accept 'from', 'wa_id' or 'phone' from payload (n8n may send 'phone')
+        wa_id = payload.get('from') or payload.get('wa_id') or payload.get('phone') or ''
+
+        # Normalize to digits for matching (remove +, -, spaces)
+        wa_id_clean = re.sub(r'[^0-9]', '', str(wa_id))
 
         print("="*50)
-        print("WA ID:", wa_id)
+        print("RAW WA ID:", wa_id)
+        print("WA ID (clean):", wa_id_clean)
         print("MESSAGE:", message)
 
-        # Cari user berdasarkan wa_id
-        user = User.objects.filter(
-            wa_id=wa_id
-        ).first()
+        # Cari user berdasarkan wa_id (cocokkan digit), fallback ke phone jika tersedia
+        user = None
+        if wa_id_clean:
+            # match contains to tolerate session keys or prefixes
+            user = User.objects.filter(wa_id__contains=wa_id_clean).first()
+
+        if not user:
+            # try find by phone field if provided
+            phone_val = payload.get('phone') or ''
+            phone_clean = re.sub(r'[^0-9]', '', str(phone_val))
+            if phone_clean:
+                if phone_clean.startswith('0'):
+                    phone_clean = '62' + phone_clean[1:]
+                user = User.objects.filter(phone=phone_clean).first()
 
         # jika belum terhubung
         if not user:
