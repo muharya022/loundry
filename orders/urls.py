@@ -6,7 +6,7 @@ app_name = 'orders'
 urlpatterns = [
 
     # Endpoint API
-    path('get-order-status', views.get_order_status, name='get_order_status'),
+    path('get-order-status/', views.get_order_status, name='get_order_status'),
     path('notifications/', views.get_order_notifications, name='get_order_notifications'),
     path('notifications/read/', views.mark_notifications_as_read, name='mark_notifications_as_read'),
 

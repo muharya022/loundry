@@ -162,55 +162,66 @@ from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def link_whatsapp(request):
-    try:
-        data = json.loads(request.body)
+    if request.method != 'POST':
+        return JsonResponse({"error": "Gunakan POST"}, status=405)
 
-        payload = data.get("payload", {})
-        message = payload.get("body", "").strip()
-        wa_id = payload.get("from", "")
+    try:
+        # Parse JSON body safely; support fallback to POST params
+        if request.body:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                data = {}
+        else:
+            data = request.POST.dict()
+
+        payload = data.get('payload') if isinstance(data, dict) and data.get('payload') else data
+
+        message = (payload.get('body') or payload.get('message') or '').strip()
+        wa_id = payload.get('from') or payload.get('wa_id') or ''
 
         wa_id_clean = re.sub(r"[^0-9]", "", wa_id)
 
         parts = message.split()
-
         if len(parts) != 2:
-            return JsonResponse({
-                "reply": "Format:\nLINK 628xxxxxxxx"
-            })
+            return JsonResponse({"reply": "Format:\nLINK 628xxxxxxxx", "status": "invalid_format"}, status=400)
 
         command = parts[0].upper()
         phone = re.sub(r"[^0-9]", "", parts[1])
 
         if command != "LINK":
-            return JsonResponse({
-                "reply": "Perintah tidak dikenali"
-            })
+            return JsonResponse({"reply": "Perintah tidak dikenali", "status": "invalid_command"}, status=400)
 
-        # pastikan format sama
+        # normalisasi nomor
         if phone.startswith("0"):
             phone = "62" + phone[1:]
+
+        # basic validation
+        if not phone.isdigit() or len(phone) < 10 or not phone.startswith('62'):
+            return JsonResponse({"reply": "Nomor HP tidak valid. Gunakan format 628xxxxxxxx", "status": "invalid_phone"}, status=400)
 
         user = User.objects.filter(phone=phone).first()
 
         if not user:
-            return JsonResponse({
-                "reply": "Nomor tidak ditemukan"
-            })
+            return JsonResponse({"reply": "Nomor tidak ditemukan", "status": "not_found"}, status=404)
 
-        # simpan wa_id
-        user.wa_id = wa_id_clean
-        user.save()
+        # Cek konflik wa_id
+        if wa_id_clean:
+            conflict = User.objects.filter(wa_id=wa_id_clean).exclude(pk=user.pk).first()
+            if conflict:
+                return JsonResponse({"reply": "WhatsApp sudah terhubung ke akun lain.", "status": "conflict"}, status=409)
 
-        return JsonResponse({
-            "reply": "WhatsApp berhasil terhubung",
-            "status": "linked"
-        })
+        # Simpan wa_id (simpan bentuk numerik untuk konsistensi)
+        user.wa_id = wa_id_clean or wa_id
+        try:
+            user.save()
+        except Exception as e:
+            return JsonResponse({"reply": "Gagal menyimpan data pengguna.", "status": "error", "detail": str(e)}, status=500)
+
+        return JsonResponse({"reply": "✅ WhatsApp berhasil terhubung", "status": "linked"}, status=200)
 
     except Exception as e:
-        return JsonResponse({
-            "reply": str(e),
-            "status": "error"
-        })
+        return JsonResponse({"reply": "Terjadi kesalahan internal", "status": "error", "detail": str(e)}, status=500)
 
 
 def verify_registration_otp(request):

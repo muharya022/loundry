@@ -941,33 +941,31 @@ User = get_user_model()
 
 @csrf_exempt
 def get_order_status(request):
+    # Allow GET for quick health-check or manual testing
+    if request.method == "GET":
+        return JsonResponse({"status": "ok", "message": "Use POST with JSON payload."})
 
     if request.method != "POST":
-        return JsonResponse(
-            {
-                "error": "Gunakan POST"
-            },
-            status=405
-        )
+        return JsonResponse({"error": "Gunakan POST"}, status=405)
 
     try:
 
-        data = json.loads(request.body)
+        # Parse JSON body safely; support cases where payload is nested or data sent as form-data
+        if request.body:
+            try:
+                data = json.loads(request.body.decode('utf-8'))
+            except Exception:
+                data = {}
+        else:
+            # Fallback to POST params
+            data = request.POST.dict()
 
-        payload = data.get(
-            "payload",
-            {}
-        )
+        # payload may be the whole body or nested under 'payload'
+        payload = data.get('payload') if isinstance(data, dict) and data.get('payload') else data
 
-        message = payload.get(
-            "body",
-            ""
-        ).strip().lower()
-
-        wa_id = payload.get(
-            "from",
-            ""
-        )
+        # Support different field names for message and sender
+        message = (payload.get('body') or payload.get('message') or '').strip().lower()
+        wa_id = payload.get('from') or payload.get('wa_id') or ''
 
         print("="*50)
         print("WA ID:", wa_id)
