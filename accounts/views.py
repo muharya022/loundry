@@ -250,6 +250,7 @@ def verify_registration_otp(request):
                 first_name=reg_data['first_name'],
                 last_name=reg_data['last_name'],
                 address=reg_data['address'],
+                phone=reg_data['phone'], 
             )
             
             # Simpan nomor HP
