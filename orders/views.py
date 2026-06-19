@@ -361,7 +361,7 @@ def payment(request, order_id):
 
 
     # Buat Snap Token jika belum ada
-    if not order.snap_token or order.payment_status == "expired":
+    if not order.snap_token or order.payment_status in ["unpaid", "pending"]:
 
         snap = midtransclient.Snap(
             is_production=settings.MIDTRANS["IS_PRODUCTION"],
@@ -489,6 +489,8 @@ def callback_midtrans(request):
 
         elif transaction_status in ["cancel", "deny", "expire"]:
             order.payment_status = "unpaid"
+            order.snap_token = None
+            order.transaction_id = None
 
         elif transaction_status == "pending":
             order.payment_status = "pending"
