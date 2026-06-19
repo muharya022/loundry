@@ -361,7 +361,7 @@ def payment(request, order_id):
 
 
     # Buat Snap Token jika belum ada
-    if not order.snap_token or order.payment_status in ["unpaid", "pending"]:
+    if not order.snap_token:
 
         snap = midtransclient.Snap(
             is_production=settings.MIDTRANS["IS_PRODUCTION"],
