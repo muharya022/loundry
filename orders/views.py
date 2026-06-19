@@ -267,8 +267,9 @@ def create_order(request):
             if user_promo:
                 discount_amount_value = Decimal(user_promo.promo.discount_amount)
                 total_price_after_discount = total_price - discount_amount_value
-                user_promo.is_used = True
-                user_promo.save()
+                # user_promo.is_used = True
+                # order.user_promo = user_promo
+                # user_promo.save()
 
         # ===== PERBAIKAN: Simpan order dengan total_weight =====
         order = Order.objects.create(
@@ -328,11 +329,13 @@ def create_order(request):
                     "phone": customer.phone,
                 },
                 "enabled_payments": ["gopay", "qris", "bank_transfer"],
-                "callbacks": {"finish": finish_url},
+                "finish_redirect_url": finish_url,
             }
 
             try:
                 transaction = snap.create_transaction(transaction_params)
+                print("MIDTRANS RESPONSE:")
+                print(transaction) 
                 snap_token = transaction.get("token")
                 order.snap_token = snap_token
                 order.transaction_id = unique_order_id
@@ -386,60 +389,89 @@ def payment(request, order_id):
     
     return render(request, 'orders/payment.html', context)
 
+
 @login_required
 def payment_success(request):
-    """Redirect setelah pembayaran Midtrans selesai"""
-    midtrans_order_id = request.GET.get("order_id")
-    transaction_status = request.GET.get("transaction_status")
-
-    if midtrans_order_id and transaction_status:
-        try:
-            real_id = int(midtrans_order_id.split("-")[1])
-            order = Order.objects.get(id=real_id)
-            if transaction_status in ["capture", "settlement"]:
-                order.payment_status = "paid"
-                order.save()
-                messages.success(request, f"✅ Pembayaran untuk pesanan #{order.id} berhasil!")
-            elif transaction_status in ["cancel", "deny", "expire"]:
-                order.payment_status = "unpaid"
-                messages.warning(request, f"⚠️ Pembayaran untuk pesanan #{order.id} gagal/dibatalkan.")
-            else:
-                order.payment_status = transaction_status
-                order.save()
-        except Exception as e:
-            print("Payment success update error:", e)
-            messages.error(request, "Terjadi kesalahan saat memproses pembayaran.")
-    else:
-        messages.info(request, "Menunggu konfirmasi pembayaran.")
-
+    messages.success(
+        request,
+        "Pembayaran sedang diproses. Status akan diperbarui otomatis."
+    )
     return redirect("orders:order_list")
+
+
+import json
+import hashlib
+from django.conf import settings
+from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 @csrf_exempt
 def callback_midtrans(request):
     """Webhook Midtrans untuk update status pembayaran"""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            order_id = data.get("order_id")
-            transaction_status = data.get("transaction_status")
-            if order_id:
-                real_id = int(order_id.split("-")[1])
-                order = Order.objects.get(id=real_id)
-                if transaction_status in ["capture", "settlement"]:
-                    order.payment_status = "paid"
-                    order.save()
+    print("🔥 CALLBACK MASUK")   # 👈 TARUH DI SINI (PALING ATAS)
+    print("METHOD:", request.method)
+    print("BODY RAW:", request.body)
 
-                elif transaction_status in ["cancel", "deny", "expire"]:
-                    order.payment_status = "unpaid"
-                else:
-                    order.payment_status = transaction_status
-                order.save()
-            return HttpResponse("OK")
-        except Exception as e:
-            print("Callback error:", e)
-            return HttpResponse("Error", status=500)
-    return HttpResponse("Invalid method", status=405)
 
+    if request.method != "POST":
+        return HttpResponse("Invalid method", status=405)
+
+    try:
+        data = json.loads(request.body)
+
+        order_id = data.get("order_id")
+        transaction_status = data.get("transaction_status")
+        status_code = data.get("status_code")
+        gross_amount = data.get("gross_amount")
+        signature_key = data.get("signature_key")
+
+        # Verifikasi signature Midtrans
+        server_key = settings.MIDTRANS["SERVER_KEY"]
+
+        my_signature = hashlib.sha512(
+            f"{order_id}{status_code}{gross_amount}{server_key}".encode()
+        ).hexdigest()
+
+        if my_signature != signature_key:
+            print("Invalid signature!")
+            return HttpResponse("Invalid signature", status=403)
+
+        if not order_id:
+            return HttpResponse("Order ID not found", status=400)
+
+        # Ambil ID order asli
+        real_id = int(order_id.split("-")[1])
+
+        order = Order.objects.get(id=real_id)
+
+        # Update status pembayaran
+        if transaction_status in ["capture", "settlement"]:
+            order.payment_status = "paid"
+
+        elif transaction_status in ["cancel", "deny", "expire"]:
+            order.payment_status = "unpaid"
+
+        elif transaction_status == "pending":
+            order.payment_status = "pending"
+
+        else:
+            order.payment_status = transaction_status
+
+        order.save()
+
+        print(
+            f"Payment updated: Order #{order.id} -> {order.payment_status}"
+        )
+
+        return HttpResponse("OK")
+
+    except Order.DoesNotExist:
+        print("Order tidak ditemukan")
+        return HttpResponse("Order not found", status=404)
+
+    except Exception as e:
+        print("Callback error:", e)
+        return HttpResponse("Error", status=500)
 
 @login_required
 def order_list(request):
@@ -949,58 +981,84 @@ def get_order_status(request):
         return JsonResponse({"error": "Gunakan POST"}, status=405)
 
     try:
-        import json
-        import re
 
         # =========================
-        # PARSE REQUEST
+        # PARSE REQUEST SAFELY
         # =========================
-        if request.body:
-            try:
-                data = json.loads(request.body.decode('utf-8'))
-            except Exception:
-                data = {}
-        else:
-            data = request.POST.dict()
+        try:
+            if request.body:
+                data = json.loads(request.body.decode("utf-8"))
+            else:
+                data = request.POST.dict()
+        except Exception:
+            data = {}
 
-        payload = data.get('payload') if isinstance(data, dict) and data.get('payload') else data
+        if not isinstance(data, dict):
+            data = {}
 
-        raw_message = (payload.get('body') or payload.get('message') or '')
+        # =========================
+        # NORMALIZE PAYLOAD (FIX UTAMA)
+        # =========================
+        payload = data.get("payload") or data
+
+        if not isinstance(payload, dict):
+            payload = {}
+
+        raw_message = (
+            payload.get("body")
+            or payload.get("message")
+            or data.get("message")
+            or ""
+        )
+
         message = raw_message.strip().lower()
 
         # =========================
-        # WA ID (RAW - JANGAN DI CLEAN)
+        # WA ID SAFE
         # =========================
-        wa_id = payload.get('from') or payload.get('wa_id') or payload.get('phone') or ''
+        wa_id = (
+            payload.get("from")
+            or payload.get("wa_id")
+            or payload.get("phone")
+            or data.get("from")
+            or ""
+        )
+
         wa_id = str(wa_id).strip()
 
-        print("="*50)
+        print("=" * 50)
+        print("DATA:", data)
+        print("PAYLOAD:", payload)
         print("RAW WA ID:", wa_id)
         print("MESSAGE:", message)
 
         # =========================
-        # FIND USER BY WA ID RAW
+        # FIND USER
         # =========================
         user = None
 
         if wa_id:
             user = User.objects.filter(wa_id=wa_id).first()
 
-        # fallback phone
         if not user:
-            phone_val = payload.get('phone') or ''
-            phone_clean = re.sub(r'[^0-9]', '', str(phone_val))
+            phone_val = payload.get("phone") or ""
+            phone_clean = re.sub(r"[^0-9]", "", str(phone_val))
 
             if phone_clean:
-                if phone_clean.startswith('0'):
-                    phone_clean = '62' + phone_clean[1:]
+                if phone_clean.startswith("0"):
+                    phone_clean = "62" + phone_clean[1:]
 
                 user = User.objects.filter(phone=phone_clean).first()
+
+        # DEBUG USER
+        print("USER =", user)
 
         # =========================
         # NOT REGISTERED FLOW
         # =========================
         if not user:
+
+            print("STATUS = not_registered")
 
             if message.startswith("link"):
 
@@ -1025,7 +1083,6 @@ def get_order_status(request):
                         "status": "not_found"
                     })
 
-                # SIMPAN RAW WA ID (PENTING)
                 user.wa_id = wa_id
                 user.save()
 
@@ -1043,10 +1100,10 @@ def get_order_status(request):
                 "status": "not_registered"
             })
 
-        print("USER:", user.username)
+        print("USER FOUND:", user.username)
 
         # =========================
-        # CEK ORDER ID
+        # CEK ORDER
         # =========================
         match = re.search(r"\d+", message)
 
@@ -1095,7 +1152,6 @@ def get_order_status(request):
             "reply": "Terjadi kesalahan sistem",
             "status": "error"
         })
-
 
 import requests
 
