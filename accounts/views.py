@@ -470,9 +470,13 @@ def admin_dashboard(request):
     total_couriers = couriers.count()
 
     # 🔹 Pendapatan (hanya yang sudah dibayar)
-    paid_orders = Order.objects.filter(payment_status="paid")
+    paid_orders = Order.objects.filter(
+        payment_status__in=[
+            "paid",
+            "settlement"
+        ]
+    )
     total_income = paid_orders.aggregate(total=Sum("price_total"))["total"] or 0
-
     today = now().date()
     today_income = paid_orders.filter(created_at__date=today).aggregate(total=Sum("price_total"))["total"] or 0
     total_transactions = paid_orders.count()
