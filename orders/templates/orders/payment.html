@@ -46,27 +46,53 @@
 <!-- 🔹 Jalankan pembayaran -->
 <script>
 document.getElementById('pay-button').onclick = function () {
+
     snap.pay('{{ snap_token }}', {
-        // Jangan redirect otomatis, gunakan callback JS
+
         onSuccess: function(result){
             console.log("Pembayaran berhasil:", result);
+
             alert("✅ Pembayaran berhasil!");
-            // Redirect ke daftar pesanan bersih tanpa query string
+
+            // Kembali ke halaman daftar pesanan
             window.location.href = "{% url 'orders:order_list' %}";
         },
+
+
         onPending: function(result){
             console.log("Pembayaran pending:", result);
-            alert("⏳ Pembayaran menunggu, silakan selesaikan di aplikasi e-wallet Anda.");
+
+            alert("⏳ Pembayaran masih pending.");
+
             window.location.href = "{% url 'orders:order_list' %}";
         },
+
+
         onError: function(result){
-            console.error("Terjadi kesalahan:", result);
-            alert("❌ Terjadi kesalahan: " + (result.status_message || "Unknown error"));
+            console.error("Pembayaran gagal:", result);
+
+            alert(
+                "❌ Pembayaran gagal.\n" +
+                (result.status_message || "Silakan coba lagi.")
+            );
+
+            // Kembali ke halaman sebelumnya
+            window.history.back();
         },
+
+
         onClose: function(){
-            alert("⚠️ Kamu menutup halaman pembayaran sebelum menyelesaikan transaksi.");
+
+            alert(
+                "⚠️ Pembayaran dibatalkan.\nAnda akan kembali ke halaman sebelumnya."
+            );
+
+            // Kembali ke halaman sebelumnya
+            window.history.back();
         }
+
     });
+
 };
 </script>
 

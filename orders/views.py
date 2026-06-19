@@ -3,6 +3,7 @@ import json
 import time
 from decimal import Decimal
 from datetime import timedelta
+from django.conf import settings
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
@@ -17,6 +18,8 @@ from django.conf import settings
 from django.db.models import Sum, Count
 
 import midtransclient
+import time
+from django.urls import reverse
 from xhtml2pdf import pisa
 
 from services.models import Service
@@ -306,45 +309,6 @@ def create_order(request):
         
         print(f"[DEBUG] Order created: #{order.id}, Total weight: {order.weight}")
 
-        # ===== Midtrans jika QRIS =====
-        if payment_method == "qris":
-            import midtransclient
-            from django.conf import settings
-            import time
-
-            snap = midtransclient.Snap(
-                is_production=settings.MIDTRANS["IS_PRODUCTION"],
-                server_key=settings.MIDTRANS["SERVER_KEY"]
-            )
-            unique_order_id = f"ORDER-{order.id}-{int(time.time())}"
-            finish_url = request.build_absolute_uri(reverse("orders:payment_success"))
-
-            transaction_params = {
-                "transaction_details": {
-                    "order_id": unique_order_id,
-                    "gross_amount": int(total_price_after_discount),
-                },
-                "customer_details": {
-                    "first_name": customer.username,
-                    "phone": customer.phone,
-                },
-                "enabled_payments": ["gopay", "qris", "bank_transfer"],
-                "finish_redirect_url": finish_url,
-            }
-
-            try:
-                transaction = snap.create_transaction(transaction_params)
-                print("MIDTRANS RESPONSE:")
-                print(transaction) 
-                snap_token = transaction.get("token")
-                order.snap_token = snap_token
-                order.transaction_id = unique_order_id
-                order.save()
-                return redirect("orders:payment", order_id=order.id)
-            except Exception as e:
-                messages.error(request, f"Gagal membuat transaksi Midtrans: {e}")
-                return redirect("orders:order")
-
         messages.success(request, f"Pesanan #{order.id} berhasil dibuat.")
         return redirect("orders:order_list")
 
@@ -365,30 +329,104 @@ def create_order(request):
 @login_required
 def payment(request, order_id):
     """Halaman pembayaran untuk order"""
-    # Admin bisa melihat semua pesanan, customer hanya pesanannya sendiri
+
+    # Admin bisa melihat semua order, customer hanya miliknya
     if request.user.is_staff:
         order = get_object_or_404(Order, id=order_id)
     else:
-        order = get_object_or_404(Order, id=order_id, customer=request.user)
-    
-    # Pastikan order status masih picked_up (belum diproses atau dibayar)
-    if order.order_status != 'picked_up':
-        messages.success(request, "Pesanan berhasil di buat. Tunggu status di ambil untuk melakukan pembayaran.")
-        return redirect('orders:order_list')
-    
-    # Pastikan snap_token ada
-    if not order.snap_token:
-        messages.error(request, "Token pembayaran tidak ditemukan.")
-        return redirect('orders:order_list')
-    
-    context = {
-        'order': order,
-        'snap_token': order.snap_token,
-        'client_key': settings.MIDTRANS.get('CLIENT_KEY', ''),
-    }
-    
-    return render(request, 'orders/payment.html', context)
+        order = get_object_or_404(
+            Order,
+            id=order_id,
+            customer=request.user
+        )
 
+    # Pastikan status sudah diambil oleh admin
+    if order.order_status != 'picked_up':
+        messages.warning(
+            request,
+            "Pesanan belum siap dibayar. Tunggu admin mengubah status menjadi diambil."
+        )
+        return redirect('orders:order_list')
+
+
+    # Buat Snap Token jika belum ada
+    if not order.snap_token:
+
+        snap = midtransclient.Snap(
+            is_production=settings.MIDTRANS["IS_PRODUCTION"],
+            server_key=settings.MIDTRANS["SERVER_KEY"]
+        )
+
+
+        unique_order_id = (
+            f"ORDER-{order.id}-{int(time.time())}"
+        )
+
+
+        transaction_params = {
+
+            "transaction_details": {
+                "order_id": unique_order_id,
+                "gross_amount": int(order.price_total),
+            },
+
+
+            "customer_details": {
+                "first_name": order.customer.username,
+                "phone": getattr(order.customer, "phone", ""),
+            },
+
+
+            "enabled_payments": [
+                "qris",
+                "gopay",
+                "bank_transfer"
+            ],
+
+
+            "callbacks": {
+                "finish": request.build_absolute_uri(
+                    reverse("orders:order_list")
+                )
+            }
+        }
+
+
+        try:
+            transaction = snap.create_transaction(
+                transaction_params
+            )
+
+            order.snap_token = transaction.get("token")
+            order.transaction_id = unique_order_id
+            order.save()
+
+
+        except Exception as e:
+            messages.error(
+                request,
+                f"Gagal membuat pembayaran Midtrans: {e}"
+            )
+            return redirect(
+                'orders:order_list'
+            )
+
+
+    context = {
+        "order": order,
+        "snap_token": order.snap_token,
+        "client_key": settings.MIDTRANS.get(
+            "CLIENT_KEY",
+            ""
+        ),
+    }
+
+
+    return render(
+        request,
+        "orders/payment.html",
+        context
+    )
 
 @login_required
 def payment_success(request):
