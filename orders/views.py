@@ -451,10 +451,6 @@ def payment_success(request):
 @csrf_exempt
 def callback_midtrans(request):
     """Webhook Midtrans untuk update status pembayaran"""
-    print("🔥 CALLBACK MASUK")   # 👈 TARUH DI SINI (PALING ATAS)
-    print("METHOD:", request.method)
-    print("BODY RAW:", request.body)
-
 
     if request.method != "POST":
         return HttpResponse("Invalid method", status=405)
@@ -482,9 +478,10 @@ def callback_midtrans(request):
         if not order_id:
             return HttpResponse("Order ID not found", status=400)
 
-        order = Order.objects.get(
-            transaction_id=order_id
-        )
+        # Ambil ID order asli
+        real_id = int(order_id.split("-")[1])
+
+        order = Order.objects.get(id=real_id)
 
         # Update status pembayaran
         if transaction_status in ["capture", "settlement"]:
@@ -492,10 +489,6 @@ def callback_midtrans(request):
 
         elif transaction_status in ["cancel", "deny", "expire"]:
             order.payment_status = "unpaid"
-
-            # Hapus token lama supaya bisa bayar ulang
-            order.snap_token = None
-            order.transaction_id = None
 
         elif transaction_status == "pending":
             order.payment_status = "pending"

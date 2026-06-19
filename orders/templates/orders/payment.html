@@ -46,36 +46,7 @@
 <script>
 document.getElementById('pay-button').onclick = function () {
 
-    snap.pay('{{ snap_token }}', {
-
-        onSuccess: function(result){
-            console.log("Pembayaran berhasil:", result);
-
-            window.location.href = "{% url 'orders:order_list' %}";
-        },
-
-
-        onPending: function(result){
-            console.log("Pembayaran pending:", result);
-
-            window.location.href = "{% url 'orders:order_list' %}";
-        },
-
-
-        onError: function(result){
-            console.error("Pembayaran gagal:", result);
-
-            window.history.back();
-        },
-
-
-        onClose: function(){
-            console.log("Pembayaran ditutup oleh pengguna.");
-
-            window.history.back();
-        }
-
-    });
+    snap.pay('{{ snap_token }}');
 
 };
 </script>
