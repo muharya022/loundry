@@ -43,7 +43,6 @@
   data-client-key="{{ client_key }}">
 </script>
 
-<!-- 🔹 Jalankan pembayaran -->
 <script>
 document.getElementById('pay-button').onclick = function () {
 
@@ -52,17 +51,12 @@ document.getElementById('pay-button').onclick = function () {
         onSuccess: function(result){
             console.log("Pembayaran berhasil:", result);
 
-            alert("✅ Pembayaran berhasil!");
-
-            // Kembali ke halaman daftar pesanan
             window.location.href = "{% url 'orders:order_list' %}";
         },
 
 
         onPending: function(result){
             console.log("Pembayaran pending:", result);
-
-            alert("⏳ Pembayaran masih pending.");
 
             window.location.href = "{% url 'orders:order_list' %}";
         },
@@ -71,23 +65,13 @@ document.getElementById('pay-button').onclick = function () {
         onError: function(result){
             console.error("Pembayaran gagal:", result);
 
-            alert(
-                "❌ Pembayaran gagal.\n" +
-                (result.status_message || "Silakan coba lagi.")
-            );
-
-            // Kembali ke halaman sebelumnya
             window.history.back();
         },
 
 
         onClose: function(){
+            console.log("Pembayaran ditutup oleh pengguna.");
 
-            alert(
-                "⚠️ Pembayaran dibatalkan.\nAnda akan kembali ke halaman sebelumnya."
-            );
-
-            // Kembali ke halaman sebelumnya
             window.history.back();
         }
 
