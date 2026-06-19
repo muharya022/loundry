@@ -397,7 +397,7 @@ def payment(request, order_id):
 
             "callbacks": {
                 "finish": request.build_absolute_uri(
-                    reverse("orders:order_list")
+                    reverse("orders:payment_finish")
                 )
             }
         }
@@ -445,6 +445,9 @@ def payment_success(request):
         request,
         "Pembayaran sedang diproses. Status akan diperbarui otomatis."
     )
+    return redirect("orders:order_list")
+
+def payment_finish(request):
     return redirect("orders:order_list")
 
 

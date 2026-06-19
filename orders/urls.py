@@ -16,6 +16,7 @@ urlpatterns = [
     path('order/', views.create_order, name='order'),
     path("payment/<int:order_id>/", views.payment, name="payment"),
     path("payment-success/", views.payment_success, name="payment_success"),
+    path("payment-finish/", views.payment_finish, name="payment_finish"),
     path("invoice/<int:order_id>/", views.order_invoice, name="order_invoice"),
     path('order/download/<int:order_id>/', views.download_invoice, name='download_invoice'),
     path("midtrans-callback/", views.callback_midtrans, name="midtrans_callback"),
