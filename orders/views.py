@@ -471,23 +471,22 @@ def callback_midtrans(request):
             return HttpResponse("Invalid signature", status=403)
 
 
-        real_id = int(order_id.split("-")[1])
+        order_id = data.get("order_id")
 
-        order = Order.objects.get(id=real_id)
+        order = Order.objects.filter(transaction_id=order_id).first()
 
+        if not order:
+            print("Order tidak ditemukan:", order_id)
+            return HttpResponse("OK", status=200)
 
-        if transaction_status in ["capture","settlement"]:
+        if transaction_status in ["capture", "settlement"]:
             order.payment_status = "paid"
+
+        elif transaction_status in ["cancel", "deny", "expire"]:
+            order.payment_status = "unpaid"
 
         elif transaction_status == "pending":
             order.payment_status = "pending"
-
-        elif transaction_status == "expire":
-            order.payment_status = "expired"
-
-        elif transaction_status in ["cancel","deny"]:
-            order.payment_status = "failed"
-
 
         order.save()
 
