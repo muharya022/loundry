@@ -361,7 +361,7 @@ def payment(request, order_id):
 
 
     # Buat Snap Token jika belum ada
-    if not order.snap_token:
+    if not order.snap_token or order.payment_status == "expired":
 
         snap = midtransclient.Snap(
             is_production=settings.MIDTRANS["IS_PRODUCTION"],
