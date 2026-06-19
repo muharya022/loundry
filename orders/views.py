@@ -1,31 +1,45 @@
+"""Order views and helpers
+
+Menangani pembuatan pesanan, pembayaran, webhook Midtrans,
+manajemen promo, dan utilitas terkait order.
+"""
+
+"""Order views and helpers
+
+Menangani pembuatan pesanan, pembayaran, webhook Midtrans,
+manajemen promo, dan utilitas terkait order.
+"""
+
+# Standard library
 import re
 import json
 import time
+import hashlib
 from decimal import Decimal
-from datetime import timedelta
-from django.conf import settings
+from datetime import datetime, timedelta
 
-from django.shortcuts import render, redirect, get_object_or_404
+# Third-party
+import requests
+import midtransclient
+from xhtml2pdf import pisa
+
+# Django
+from django.conf import settings
 from django.core.paginator import Paginator
-from django.views.decorators.csrf import csrf_exempt
-from django.urls import reverse
-from django.http import HttpResponse
+from django.db.models import Sum, Count, Avg
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import get_template
+from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils import timezone
-from django.conf import settings
-from django.db.models import Sum, Count
 
-import midtransclient
-import time
-from django.urls import reverse
-from xhtml2pdf import pisa
-
+# Local apps
 from services.models import Service
-from .models import Order, LaundryItem, Promo
+from .models import Order, LaundryItem, Promo, OrderItem, UserPromo
 from django.contrib.auth import get_user_model
-from django.db.models import Avg
 
 User = get_user_model()
 
@@ -43,23 +57,25 @@ def admin_required(user):
     return user.is_staff
 
 
+def format_phone(phone):
+    """Normalisasi nomor telepon ke format '62...'."""
+    if not phone:
+        return None
+    s = str(phone).strip()
+    # Hapus semua karakter non-digit, kecuali leading +
+    s = re.sub(r"[^0-9+]", "", s)
+    if s.startswith("08"):
+        return "628" + s[2:]
+    if s.startswith("+62"):
+        return s[1:]
+    if s.startswith("62"):
+        return s
+    return s
+
+
 # ===============================
 # 🔹 Views Pelanggan
 # ===============================
-from decimal import Decimal
-from .models import Promo, Order
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
-import time
-from .models import Order, LaundryItem
-from services.models import Service
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-import requests
 
 def get_address(lat, lng):
     url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lng}&format=json"
@@ -70,11 +86,6 @@ def get_address(lat, lng):
     except Exception as e:
         print("Geocoding error:", e)
         return f"Lat: {lat}, Lng: {lng}"
-
-
-from decimal import Decimal
-from .models import Promo, Order, OrderItem, LaundryItem
-import json
 
 @login_required
 def create_order(request):
@@ -437,12 +448,6 @@ def payment_success(request):
     return redirect("orders:order_list")
 
 
-import json
-import hashlib
-from django.conf import settings
-from django.http import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-
 @csrf_exempt
 def callback_midtrans(request):
     """Webhook Midtrans untuk update status pembayaran"""
@@ -626,7 +631,6 @@ def update_payment_status(request, order_id):
 
     return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
-from decimal import Decimal
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -712,7 +716,6 @@ def update_order_weight(request, order_id):
 @user_passes_test(lambda u: u.is_staff)
 def update_order_item_weight(request, item_id):
     """Admin mengubah berat laundry pada OrderItem"""
-    from decimal import Decimal
     from django.shortcuts import get_object_or_404, redirect
     from django.contrib import messages
     from django.urls import reverse
@@ -999,16 +1002,6 @@ def mark_notifications_as_read(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.contrib.auth import get_user_model
-from .models import Order
-import json
-import re
-
-User = get_user_model()
-
-
 @csrf_exempt
 def get_order_status(request):
 
@@ -1190,17 +1183,6 @@ def get_order_status(request):
             "reply": "Terjadi kesalahan sistem",
             "status": "error"
         })
-
-import requests
-
-def format_phone(phone):
-    if not phone:
-        return None
-    if phone.startswith("08"):
-        return "628" + phone[2:]
-    if phone.startswith("+62"):
-        return phone[1:]
-    return phone
 
 def trigger_n8n_webhook(order, event_type):
     webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"

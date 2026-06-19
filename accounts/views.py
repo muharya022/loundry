@@ -1,27 +1,44 @@
-import json
+"""Accounts views
 
-from django.shortcuts import get_object_or_404, render, redirect
+Berisi view untuk registrasi, login, profile, manajemen user,
+reset password via OTP, dan export laporan untuk admin.
+"""
+
+# Standard library
+import json
+import re
+import random
+import time
+from datetime import datetime, timedelta
+from calendar import monthrange
+
+# Third-party
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+
+# Django
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth import (
+    authenticate, login, logout, update_session_auth_hash, get_user_model
+)
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth import get_user_model
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
-from django.template.loader import render_to_string
-from django.contrib.auth.forms import PasswordChangeForm 
-from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Sum
-from django.utils.timezone import now
-from datetime import timedelta
+from django.db.models import Sum, Count, Q
 from django.http import HttpResponse, JsonResponse
-import random
-import time
+from django.shortcuts import get_object_or_404, render, redirect
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils import timezone
+from django.utils.timezone import now
 
-# from laundry_project.orders import models
+# Local apps
 from orders.models import Order, Promo
 from services.models import Service
 from .forms import CustomPasswordChangeForm, ProfileForm, CustomUserCreationForm
@@ -153,8 +170,6 @@ Menara Laundry - Solusi Laundry Praktis & Terpercaya"""
     print("Showing registration form (GET request)")
     return render(request, 'accounts/register.html')
 
-import re
-
 def clean_wa_id(wa_id):
     return re.sub(r"[^0-9]", "", wa_id)
 
@@ -166,9 +181,6 @@ def link_whatsapp(request):
         return JsonResponse({"error": "Gunakan POST"}, status=405)
 
     try:
-        import json
-        import re
-
         # =========================
         # PARSE REQUEST BODY
         # =========================
@@ -785,16 +797,6 @@ def delete_user(request, user_id):
         messages.success(request, f"Pengguna {user.username} berhasil dihapus.")
     return redirect('accounts:manage_users')
 
-import random
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from .models import PasswordResetOTP
-from .waha_service import WAHAHandler
-
-User = get_user_model()
-
 def password_reset_otp(request):
     """
     Reset password menggunakan OTP via WhatsApp
@@ -988,16 +990,6 @@ Menara Laundry"""
     
     # Fallback
     return render(request, "accounts/password_reset_otp.html", {"step": "email"})
-
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils import get_column_letter
-from django.http import HttpResponse
-from django.utils import timezone
-from datetime import datetime
-from calendar import monthrange
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Count, Sum, Q
 
 @login_required
 @user_passes_test(lambda u: u.is_staff)

@@ -1,11 +1,16 @@
-from django.shortcuts import render, redirect, get_object_or_404
+"""Service views
+
+Daftar layanan, CRUD layanan untuk admin, pencarian dan filter.
+"""
+
 from django.core.paginator import Paginator
-from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
-from django.db.models import ProtectedError
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import user_passes_test
+from django.db.models import ProtectedError, Q
+
 from .forms import ServiceForm
 from .models import Service
-from django.db.models import Q
 
 def service_list(request):
     services = Service.objects.all()
