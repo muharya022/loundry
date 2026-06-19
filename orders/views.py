@@ -493,7 +493,7 @@ def callback_midtrans(request):
             order.transaction_id = None
 
         elif transaction_status == "pending":
-            order.payment_status = "pending"
+            pass
 
         order.save()
 
