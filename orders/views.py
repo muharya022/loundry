@@ -482,10 +482,9 @@ def callback_midtrans(request):
         if not order_id:
             return HttpResponse("Order ID not found", status=400)
 
-        # Ambil ID order asli
-        real_id = int(order_id.split("-")[1])
-
-        order = Order.objects.get(id=real_id)
+        order = Order.objects.get(
+            transaction_id=order_id
+        )
 
         # Update status pembayaran
         if transaction_status in ["capture", "settlement"]:
@@ -493,6 +492,10 @@ def callback_midtrans(request):
 
         elif transaction_status in ["cancel", "deny", "expire"]:
             order.payment_status = "unpaid"
+
+            # Hapus token lama supaya bisa bayar ulang
+            order.snap_token = None
+            order.transaction_id = None
 
         elif transaction_status == "pending":
             order.payment_status = "pending"
