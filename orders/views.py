@@ -395,11 +395,9 @@ def payment(request, order_id):
             ],
 
 
-            "callbacks": {
-                "finish": request.build_absolute_uri(
-                    reverse("orders:payment_finish")
-                )
-            }
+            "finish_redirect_url": request.build_absolute_uri(
+                reverse("orders:payment_finish")
+            )
         }
 
 
