@@ -440,81 +440,64 @@ def payment(request, order_id):
     )
 
 @login_required
-def payment_success(request):
-    messages.success(
-        request,
-        "Pembayaran sedang diproses. Status akan diperbarui otomatis."
-    )
-    return redirect("orders:order_list")
-
 def payment_finish(request):
     return redirect("orders:order_list")
 
-
 @csrf_exempt
 def callback_midtrans(request):
-    """Webhook Midtrans untuk update status pembayaran"""
 
     if request.method != "POST":
-        return HttpResponse("Invalid method", status=405)
+        return HttpResponse(status=405)
 
     try:
         data = json.loads(request.body)
 
-        order_id = data.get("order_id")
-        transaction_status = data.get("transaction_status")
-        status_code = data.get("status_code")
-        gross_amount = data.get("gross_amount")
-        signature_key = data.get("signature_key")
+        print("MIDTRANS:", data)
 
-        # Verifikasi signature Midtrans
+        order_id = data["order_id"]
+        transaction_status = data["transaction_status"]
+        status_code = data["status_code"]
+        gross_amount = data["gross_amount"]
+        signature_key = data["signature_key"]
+
         server_key = settings.MIDTRANS["SERVER_KEY"]
 
-        my_signature = hashlib.sha512(
+        signature = hashlib.sha512(
             f"{order_id}{status_code}{gross_amount}{server_key}".encode()
         ).hexdigest()
 
-        if my_signature != signature_key:
-            print("Invalid signature!")
+
+        if signature != signature_key:
             return HttpResponse("Invalid signature", status=403)
 
-        if not order_id:
-            return HttpResponse("Order ID not found", status=400)
 
-        # Ambil ID order asli
         real_id = int(order_id.split("-")[1])
 
         order = Order.objects.get(id=real_id)
 
-        # Update status pembayaran
-        if transaction_status in ["capture", "settlement"]:
-            order.payment_status = "paid"
 
-        elif transaction_status in ["cancel", "deny", "expire"]:
-            order.payment_status = "unpaid"
+        if transaction_status in ["capture","settlement"]:
+            order.payment_status = "paid"
 
         elif transaction_status == "pending":
             order.payment_status = "pending"
 
-        else:
-            order.payment_status = transaction_status
+        elif transaction_status == "expire":
+            order.payment_status = "expired"
+
+        elif transaction_status in ["cancel","deny"]:
+            order.payment_status = "failed"
+
 
         order.save()
 
-        print(
-            f"Payment updated: Order #{order.id} -> {order.payment_status}"
-        )
-
         return HttpResponse("OK")
 
-    except Order.DoesNotExist:
-        print("Order tidak ditemukan")
-        return HttpResponse("Order not found", status=404)
 
     except Exception as e:
-        print("Callback error:", e)
-        return HttpResponse("Error", status=500)
-
+        print(e)
+        return HttpResponse("ERROR", status=500)
+    
 @login_required
 def order_list(request):
     """Menampilkan daftar pesanan user dengan pagination."""
