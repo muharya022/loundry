@@ -477,6 +477,8 @@ def callback_midtrans(request):
             print("Order tidak ditemukan:", order_id)
             return HttpResponse("OK", status=200)
 
+        old_status = order.payment_status
+
         if transaction_status in ["capture", "settlement"]:
             order.payment_status = "paid"
 
@@ -488,8 +490,15 @@ def callback_midtrans(request):
 
         order.save()
 
-        return HttpResponse("OK")
+        # kirim pesan jika status berubah
+        if old_status != order.payment_status:
 
+            trigger_n8n_webhook(
+                order,
+                "midtrans_payment_updated"
+            )
+
+        return HttpResponse("OK")
 
     except Exception as e:
         print(e)
