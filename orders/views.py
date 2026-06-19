@@ -439,6 +439,11 @@ def payment(request, order_id):
 
 @login_required
 def payment_finish(request):
+    order_id = request.GET.get("order_id")
+    status = request.GET.get("transaction_status")
+
+    print("MIDTRANS FINISH:", order_id, status)
+
     return redirect("orders:order_list")
 
 @csrf_exempt
