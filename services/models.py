@@ -33,11 +33,11 @@ class Service(models.Model):
         }
         return duration_map.get(self.duration, self.duration)
 
-class ItemType(models.Model):
-    """Jenis item untuk layanan per item"""
-    name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='item_images/', blank=True, null=True)  # tambah ini
+# class ItemType(models.Model):
+#     """Jenis item untuk layanan per item"""
+#     name = models.CharField(max_length=100)
+#     price = models.DecimalField(max_digits=10, decimal_places=2)
+#     image = models.ImageField(upload_to='item_images/', blank=True, null=True)  # tambah ini
 
-    def __str__(self):
-        return f"{self.name} (Rp {self.price})"
+#     def __str__(self):
+#         return f"{self.name} (Rp {self.price})"
