@@ -1218,6 +1218,7 @@ def trigger_n8n_webhook(order, event_type):
             "customer_name": order.customer.username if order.customer else None,
             "customer_phone": order.customer.phone if order.customer else None,
             "order_status": order.get_order_status_display(),
+            "payment_status": order.get_payment_status_display(),
             "pickup_address": order.pickup_address if order.pickup_address else None,
             "customer_address": order.customer.address if order.customer and order.customer.address else None,
             "latitude": order.latitude,
