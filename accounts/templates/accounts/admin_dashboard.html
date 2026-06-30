@@ -846,6 +846,19 @@
                 </td>
                 <td class="table-td">
                   <div class="flex justify-center gap-2">
+                    <button
+                        type="button"
+                        onclick="window.location.href='{% url "orders:order_invoice" order.id %}'"
+                        class="admin-action-btn bg-emerald-600 hover:bg-emerald-700"
+                        title="Invoice">
+
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+
+                    </button>
+                    
                     <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}" class="admin-action-btn bg-gray-600 hover:bg-gray-700" title="Detail Pesanan">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>

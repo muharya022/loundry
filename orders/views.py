@@ -946,34 +946,61 @@ def delete_laundry_item(request, item_id):
 # ===============================
 @login_required
 def order_invoice(request, order_id):
-    """Tampilkan invoice setelah pembayaran"""
-    order = get_object_or_404(Order, id=order_id)
-    if not request.user.is_staff:
-        order = get_object_or_404(Order, id=order_id, customer=request.user)
+    """Tampilkan invoice"""
 
-    if order.payment_status not in ["paid", "settlement"]:
-        messages.error(request, "Pesanan belum dibayar, nota belum tersedia.")
-        return redirect("orders:order_list")
+    if request.user.is_staff:
+        # Admin dapat melihat invoice semua pesanan
+        order = get_object_or_404(Order, id=order_id)
 
-    return render(request, "orders/order_invoice.html", {"order": order})
+    else:
+        # Customer hanya dapat melihat invoice miliknya
+        order = get_object_or_404(
+            Order,
+            id=order_id,
+            customer=request.user
+        )
+
+        # Customer hanya boleh melihat invoice jika sudah dibayar
+        if order.payment_status not in ["paid", "settlement"]:
+            messages.error(request, "Pesanan belum dibayar, nota belum tersedia.")
+            return redirect("orders:order_list")
+
+    return render(request, "orders/order_invoice.html", {
+        "order": order
+    })
 
 
 @login_required
 def download_invoice(request, order_id):
     """Download invoice sebagai PDF"""
-    order = get_object_or_404(Order, id=order_id, customer=request.user)
-    template_path = 'orders/order_invoice.html'
-    context = {'order': order}
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="invoice_{order.id}.pdf"'
+    if request.user.is_staff:
+        order = get_object_or_404(Order, id=order_id)
+    else:
+        order = get_object_or_404(
+            Order,
+            id=order_id,
+            customer=request.user
+        )
 
-    template = get_template(template_path)
-    html = template.render(context)
+        if order.payment_status not in ["paid", "settlement"]:
+            messages.error(request, "Pesanan belum dibayar, nota belum tersedia.")
+            return redirect("orders:order_list")
+
+    template = get_template("orders/order_invoice.html")
+    html = template.render({"order": order})
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="invoice_{order.id}.pdf"'
+    )
 
     pisa_status = pisa.CreatePDF(html, dest=response)
+
     if pisa_status.err:
-        return HttpResponse('Terjadi kesalahan saat membuat PDF <pre>' + html + '</pre>')
+        return HttpResponse(
+            "Terjadi kesalahan saat membuat PDF"
+        )
 
     return response
 
