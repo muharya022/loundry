@@ -73,6 +73,30 @@ def format_phone(phone):
     return s
 
 
+def send_waha_message(phone, message):
+    """Kirim pesan WAHA dengan fallback aman saat layanan sedang down."""
+    if not phone:
+        return False
+
+    try:
+        from accounts.waha_service import WAHAHandler
+
+        handler = WAHAHandler()
+        return bool(handler.send_message(str(phone), message))
+    except Exception as exc:
+        print(f"WAHA fallback error: {exc}")
+        return False
+
+
+def build_maintenance_message(order, event_type):
+    """Pesan fallback saat n8n/WAHA sedang maintenance."""
+    return (
+        "⚠️ Menara Laundry sedang melakukan pemeliharaan.\n\n"
+        f"Pembaruan pesanan #{order.id} belum dapat diproses saat ini.\n"
+        "Silakan tunggu beberapa saat atau hubungi admin jika ada kebutuhan mendesak."
+    )
+
+
 # ===============================
 # 🔹 Views Pelanggan
 # ===============================
@@ -1040,7 +1064,11 @@ def get_order_status(request):
         # =========================
         try:
             if request.body:
-                data = json.loads(request.body.decode("utf-8"))
+                raw_body = request.body.decode("utf-8") if isinstance(request.body, bytes) else str(request.body)
+                if not raw_body.strip():
+                    data = {}
+                else:
+                    data = json.loads(raw_body)
             else:
                 data = request.POST.dict()
         except Exception:
@@ -1054,6 +1082,12 @@ def get_order_status(request):
         # =========================
         payload = data.get("payload") or data
 
+        if isinstance(payload, (str, bytes)):
+            try:
+                payload = json.loads(payload.decode("utf-8") if isinstance(payload, bytes) else payload)
+            except Exception:
+                payload = {}
+
         if not isinstance(payload, dict):
             payload = {}
 
@@ -1064,7 +1098,7 @@ def get_order_status(request):
             or ""
         )
 
-        message = raw_message.strip().lower()
+        message = str(raw_message).strip().lower()
 
         # =========================
         # WA ID SAFE
@@ -1202,57 +1236,152 @@ def get_order_status(request):
         print("ERROR:", str(e))
 
         return JsonResponse({
-            "reply": "Terjadi kesalahan sistem",
-            "status": "error"
-        })
+            "reply": "Server sedang maintenance. Silakan coba beberapa saat lagi.",
+            "status": "maintenance"
+        }, status=503)
+
+# def trigger_n8n_webhook(order, event_type):
+#     webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
+#     maintenance_message = build_maintenance_message(order, event_type)
+#     fallback_used = False
+
+#     # =========================
+#     # CUSTOMER
+#     # =========================
+#     customer_phone = format_phone(order.customer.phone) if order.customer else None
+
+#     customer_payload = {
+#         "event": event_type,
+#         "target": "customer",
+#         "order_id": order.id,
+#         "user": order.customer.username if order.customer else None,
+#         "phone": customer_phone,
+#         "order_status": order.get_order_status_display(),
+#         "payment_status": order.get_payment_status_display(),
+#         "courier": order.assigned_courier.username if order.assigned_courier else None,
+#     }
+
+#     try:
+#         response = requests.post(webhook_url, json=customer_payload, timeout=5)
+#         if response.status_code not in {200, 201, 202}:
+#             raise requests.exceptions.HTTPError(f"status={response.status_code}")
+#     except requests.exceptions.RequestException as exc:
+#         print("N8N customer webhook failed:", exc)
+#         if send_waha_message(customer_phone, maintenance_message):
+#             fallback_used = True
+
+#     # =========================
+#     # COURIER
+#     # =========================
+#     if order.assigned_courier:
+#         courier_phone = format_phone(order.assigned_courier.phone)
+
+#         courier_payload = {
+#             "event": event_type,
+#             "target": "courier",
+#             "order_id": order.id,
+#             "user": order.assigned_courier.username,
+#             "phone": courier_phone,
+#             "customer_name": order.customer.username if order.customer else None,
+#             "customer_phone": order.customer.phone if order.customer else None,
+#             "order_status": order.get_order_status_display(),
+#             "payment_status": order.get_payment_status_display(),
+#             "pickup_address": order.pickup_address if order.pickup_address else None,
+#             "customer_address": order.customer.address if order.customer and order.customer.address else None,
+#             "latitude": order.latitude,
+#             "longitude": order.longitude,
+#         }
+
+#         try:
+#             response = requests.post(webhook_url, json=courier_payload, timeout=5)
+#             if response.status_code not in {200, 201, 202}:
+#                 raise requests.exceptions.HTTPError(f"status={response.status_code}")
+#         except requests.exceptions.RequestException as exc:
+#             print("N8N courier webhook failed:", exc)
+#             if send_waha_message(courier_phone, maintenance_message):
+#                 fallback_used = True
+
+#     return {"status": "maintenance" if fallback_used else "ok", "delivered": fallback_used}
 
 def trigger_n8n_webhook(order, event_type):
     webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
 
+    maintenance_message = build_maintenance_message(order, event_type)
+    fallback_used = False
+
+    customer_phone = format_phone(order.customer.phone) if order.customer else None
+    courier_phone = (
+        format_phone(order.assigned_courier.phone)
+        if order.assigned_courier
+        else None
+    )
+
+    # =========================
+    # DATA LENGKAP ORDER
+    # =========================
+    base_payload = {
+        "event": event_type,
+        "order_id": order.id,
+
+        "customer_name": order.customer.username if order.customer else None,
+        "customer_phone": customer_phone,
+
+        "courier": order.assigned_courier.username if order.assigned_courier else None,
+        "courier_phone": courier_phone,
+
+        "order_status": order.get_order_status_display(),
+        "payment_status": order.get_payment_status_display(),
+
+        "pickup_address": order.pickup_address,
+
+        "customer_address": (
+            getattr(order.customer, "address", None)
+            if order.customer
+            else None
+        ),
+
+        "latitude": order.latitude,
+        "longitude": order.longitude,
+    }
+
     # =========================
     # CUSTOMER
     # =========================
-    customer_phone = format_phone(order.customer.phone) if order.customer else None
-
     customer_payload = {
-        "event": event_type,
+        **base_payload,
         "target": "customer",
-        "order_id": order.id,
         "user": order.customer.username if order.customer else None,
         "phone": customer_phone,
-        "order_status": order.get_order_status_display(),
-        "payment_status": order.get_payment_status_display(),
-        "courier": order.assigned_courier.username if order.assigned_courier else None,
     }
 
     try:
-        requests.post(webhook_url, json=customer_payload, timeout=5)
-    except:
-        pass
+        response = requests.post(webhook_url, json=customer_payload, timeout=5)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        print("N8N customer webhook failed:", exc)
+        if send_waha_message(customer_phone, maintenance_message):
+            fallback_used = True
 
     # =========================
     # COURIER
     # =========================
     if order.assigned_courier:
-        courier_phone = format_phone(order.assigned_courier.phone)
-
         courier_payload = {
-            "event": event_type,
+            **base_payload,
             "target": "courier",
-            "order_id": order.id,
             "user": order.assigned_courier.username,
             "phone": courier_phone,
-            "customer_name": order.customer.username if order.customer else None,
-            "customer_phone": order.customer.phone if order.customer else None,
-            "order_status": order.get_order_status_display(),
-            "payment_status": order.get_payment_status_display(),
-            "pickup_address": order.pickup_address if order.pickup_address else None,
-            "customer_address": order.customer.address if order.customer and order.customer.address else None,
-            "latitude": order.latitude,
-            "longitude": order.longitude, 
         }
 
         try:
-            requests.post(webhook_url, json=courier_payload, timeout=5)
-        except:
-            pass
+            response = requests.post(webhook_url, json=courier_payload, timeout=5)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as exc:
+            print("N8N courier webhook failed:", exc)
+            if send_waha_message(courier_phone, maintenance_message):
+                fallback_used = True
+
+    return {
+        "status": "maintenance" if fallback_used else "ok",
+        "delivered": fallback_used,
+    }
