@@ -1215,6 +1215,8 @@ def get_order_status(request):
                     f"🧺 Layanan : {order.service.name}\n"
                     f"🚚 Status : {order.get_order_status_display()}\n"
                     f"💳 Pembayaran : {order.get_payment_status_display()}"
+                    f"🚴 Kurir : {order.courier.name if order.courier else 'Belum ditentukan'}\n"
+                    f"📞 No Kurir : {order.courier.phone if order.courier else '-'}"
                 ),
                 "status": "success"
             })
