@@ -1218,7 +1218,10 @@ def get_order_status(request):
                     f"🚴 Kurir : {order.assigned_courier.username if order.assigned_courier else 'Belum ditentukan'}\n"
                     f"📞 No Kurir : {order.assigned_courier.phone if order.assigned_courier else '-'}"
                 ),
-                "status": "success"
+                "status": "success",
+
+                "courier_name": order.assigned_courier.username if order.assigned_courier else None,
+                "courier_phone": order.assigned_courier.phone if order.assigned_courier else None,
             })
 
         # =========================
