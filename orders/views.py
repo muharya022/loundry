@@ -1212,11 +1212,11 @@ def get_order_status(request):
             return JsonResponse({
                 "reply": (
                     f"📦 Status Order #{order.id}\n\n"
-                    f"🧺 Layanan : {order.service.name}\n"
+                    f"🧺 Layanan : {order.service.name if order.service else '-'}\n"
                     f"🚚 Status : {order.get_order_status_display()}\n"
-                    f"💳 Pembayaran : {order.get_payment_status_display()}"
-                    f"🚴 Kurir : {order.courier.name if order.courier else 'Belum ditentukan'}\n"
-                    f"📞 No Kurir : {order.courier.phone if order.courier else '-'}"
+                    f"💳 Pembayaran : {order.get_payment_status_display()}\n"
+                    f"🚴 Kurir : {order.assigned_courier.username if order.assigned_courier else 'Belum ditentukan'}\n"
+                    f"📞 No Kurir : {order.assigned_courier.phone if order.assigned_courier else '-'}"
                 ),
                 "status": "success"
             })
