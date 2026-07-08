@@ -728,6 +728,8 @@
                 </select>
               </form>
               
+              {% if order.pickup_method == 'pickup' or order.delivery_method == 'delivery' %}
+              {% if not (order.pickup_method == 'pickup' and order.delivery_method == 'delivery') %}
               <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                 {% csrf_token %}
                 <label class="text-xs font-medium text-gray-700">Tugas Kurir</label>
@@ -738,6 +740,8 @@
                   {% endfor %}
                 </select>
               </form>
+              {% endif %}
+
               
               <button type="button" @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
                       class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition">
@@ -830,6 +834,7 @@
                   </form>
                 </td>
                 <td class="table-td">
+                  {% if not (order.pickup_method == 'pickup' and order.delivery_method == 'delivery') %}
                   <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                     {% csrf_token %}
                     <select name="courier" class="status-select" onchange="this.form.submit()">
@@ -839,6 +844,9 @@
                       {% endfor %}
                     </select>
                   </form>
+                  {% else %}
+                  <span class="text-xs text-gray-400">-</span>
+                  {% endif %}
                 </td>
                 <td class="table-td">
                   <div class="text-sm text-gray-900">{{ order.created_at|date:"d M Y" }}</div>
