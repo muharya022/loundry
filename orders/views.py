@@ -1192,24 +1192,47 @@ def get_order_status(request):
 
             courier = order.assigned_courier
 
+            courier_name = courier.username if courier else None
+            courier_phone = courier.phone if courier else None
+
+            pickup_method = order.get_pickup_method_display()
+            delivery_method = order.get_delivery_method_display()
+
             reply_text = (
                 f"📦 Status Order #{order.id}\n\n"
                 f"🧺 Layanan : {order.service.name if order.service else '-'}\n"
+                f"📥 Pengambilan : {pickup_method}\n"
+                f"📤 Pengiriman : {delivery_method}\n"
                 f"🚚 Status : {order.get_order_status_display()}\n"
                 f"💳 Pembayaran : {order.get_payment_status_display()}\n"
-                f"🚴 Kurir : {courier.username if courier else 'Belum ditentukan'}\n"
-                f"📞 No Kurir : {courier.phone if courier else '-'}"
+                f"🚴 Kurir : {courier_name if courier_name else '-'}\n"
+                f"📞 No Kurir : {courier_phone if courier_phone else '-'}"
             )
 
             # =========================
             # RETURN SUCCESS
             # =========================
             return JsonResponse({
-                "reply": reply_text,
                 "status": "success",
+                "reply": reply_text,
 
-                "courier_name": courier.username if courier else None,
-                "courier_phone": courier.phone if courier else None,
+                "order_id": order.id,
+                "service": order.service.name if order.service else None,
+
+                "order_status": order.order_status,
+                "order_status_display": order.get_order_status_display(),
+
+                "payment_status": order.payment_status,
+                "payment_status_display": order.get_payment_status_display(),
+
+                "pickup_method": order.pickup_method,
+                "pickup_method_display": pickup_method,
+
+                "delivery_method": order.delivery_method,
+                "delivery_method_display": delivery_method,
+
+                "courier_name": courier_name,
+                "courier_phone": courier_phone,
             })
 
         # =========================
@@ -1241,265 +1264,6 @@ def get_order_status(request):
             "status": "maintenance"
         }, status=503)
     
-# @csrf_exempt
-# def get_order_status(request):
-
-#     if request.method == "GET":
-#         return JsonResponse({"status": "ok", "message": "Use POST with JSON payload."})
-
-#     if request.method != "POST":
-#         return JsonResponse({"error": "Gunakan POST"}, status=405)
-
-#     try:
-
-#         # =========================
-#         # PARSE REQUEST SAFELY
-#         # =========================
-#         try:
-#             if request.body:
-#                 raw_body = request.body.decode("utf-8") if isinstance(request.body, bytes) else str(request.body)
-#                 if not raw_body.strip():
-#                     data = {}
-#                 else:
-#                     data = json.loads(raw_body)
-#             else:
-#                 data = request.POST.dict()
-#         except Exception:
-#             data = {}
-
-#         if not isinstance(data, dict):
-#             data = {}
-
-#         # =========================
-#         # NORMALIZE PAYLOAD (FIX UTAMA)
-#         # =========================
-#         payload = data.get("payload") or data
-
-#         if isinstance(payload, (str, bytes)):
-#             try:
-#                 payload = json.loads(payload.decode("utf-8") if isinstance(payload, bytes) else payload)
-#             except Exception:
-#                 payload = {}
-
-#         if not isinstance(payload, dict):
-#             payload = {}
-
-#         raw_message = (
-#             payload.get("body")
-#             or payload.get("message")
-#             or data.get("message")
-#             or ""
-#         )
-
-#         message = str(raw_message).strip().lower()
-
-#         # =========================
-#         # WA ID SAFE
-#         # =========================
-#         wa_id = (
-#             payload.get("from")
-#             or payload.get("wa_id")
-#             or payload.get("phone")
-#             or data.get("from")
-#             or ""
-#         )
-
-#         wa_id = str(wa_id).strip()
-
-#         print("=" * 50)
-#         print("DATA:", data)
-#         print("PAYLOAD:", payload)
-#         print("RAW WA ID:", wa_id)
-#         print("MESSAGE:", message)
-
-#         # =========================
-#         # FIND USER
-#         # =========================
-#         user = None
-
-#         if wa_id:
-#             user = User.objects.filter(wa_id=wa_id).first()
-
-#         if not user:
-#             phone_val = payload.get("phone") or ""
-#             phone_clean = re.sub(r"[^0-9]", "", str(phone_val))
-
-#             if phone_clean:
-#                 if phone_clean.startswith("0"):
-#                     phone_clean = "62" + phone_clean[1:]
-
-#                 user = User.objects.filter(phone=phone_clean).first()
-
-#         # DEBUG USER
-#         print("USER =", user)
-
-#         # =========================
-#         # NOT REGISTERED FLOW
-#         # =========================
-#         if not user:
-
-#             print("STATUS = not_registered")
-
-#             if message.startswith("link"):
-
-#                 parts = message.split()
-
-#                 if len(parts) != 2:
-#                     return JsonResponse({
-#                         "reply": "Format salah\n\nLINK 628xxxxxxxx",
-#                         "status": "invalid_format"
-#                     })
-
-#                 phone = re.sub(r"[^0-9]", "", parts[1])
-
-#                 if phone.startswith("0"):
-#                     phone = "62" + phone[1:]
-
-#                 user = User.objects.filter(phone=phone).first()
-
-#                 if not user:
-#                     return JsonResponse({
-#                         "reply": "Nomor tidak ditemukan",
-#                         "status": "not_found"
-#                     })
-
-#                 user.wa_id = wa_id
-#                 user.save()
-
-#                 return JsonResponse({
-#                     "reply": "✅ WhatsApp berhasil terhubung",
-#                     "status": "linked"
-#                 })
-
-#             return JsonResponse({
-#                 "reply": (
-#                     "Nomor WhatsApp belum terhubung.\n\n"
-#                     "Ketik:\n"
-#                     "LINK 628xxxxxxxx"
-#                 ),
-#                 "status": "not_registered"
-#             })
-
-#         print("USER FOUND:", user.username)
-
-#         # =========================
-#         # CEK ORDER
-#         # =========================
-#         match = re.search(r"\d+", message)
-
-#         if match:
-
-#             order_id = int(match.group())
-
-#             order = Order.objects.filter(
-#                 id=order_id,
-#                 customer=user
-#             ).select_related("customer", "service").first()
-
-#             if not order:
-#                 return JsonResponse({
-#                     "reply": f"Order #{order_id} bukan milik Anda 🥺",
-#                     "status": "not_found"
-#                 })
-
-#             return JsonResponse({
-#                 "reply": (
-#                     f"📦 Status Order #{order.id}\n\n"
-#                     f"🧺 Layanan : {order.service.name if order.service else '-'}\n"
-#                     f"🚚 Status : {order.get_order_status_display()}\n"
-#                     f"💳 Pembayaran : {order.get_payment_status_display()}\n"
-#                     f"🚴 Kurir : {order.assigned_courier.username if order.assigned_courier else 'Belum ditentukan'}\n"
-#                     f"📞 No Kurir : {order.assigned_courier.phone if order.assigned_courier else '-'}"
-#                 ),
-#                 "status": "success",
-
-#                 "courier_name": order.assigned_courier.username if order.assigned_courier else None,
-#                 "courier_phone": order.assigned_courier.phone if order.assigned_courier else None,
-#             })
-
-#         # =========================
-#         # DEFAULT RESPONSE
-#         # =========================
-#         return JsonResponse({
-#             "reply": (
-#                 f"Halo {user.username} 😊\n\n"
-#                 f"Ketik:\n"
-#                 f"Nomor 65\n\n"
-#                 f"untuk cek pesanan"
-#             ),
-#             "status": "greeting"
-#         })
-
-#     except Exception as e:
-#         print("ERROR:", str(e))
-
-#         return JsonResponse({
-#             "reply": "Server sedang maintenance. Silakan coba beberapa saat lagi.",
-#             "status": "maintenance"
-#         }, status=503)
-
-# def trigger_n8n_webhook(order, event_type):
-#     webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
-#     maintenance_message = build_maintenance_message(order, event_type)
-#     fallback_used = False
-
-#     # =========================
-#     # CUSTOMER
-#     # =========================
-#     customer_phone = format_phone(order.customer.phone) if order.customer else None
-
-#     customer_payload = {
-#         "event": event_type,
-#         "target": "customer",
-#         "order_id": order.id,
-#         "user": order.customer.username if order.customer else None,
-#         "phone": customer_phone,
-#         "order_status": order.get_order_status_display(),
-#         "payment_status": order.get_payment_status_display(),
-#         "courier": order.assigned_courier.username if order.assigned_courier else None,
-#     }
-
-#     try:
-#         response = requests.post(webhook_url, json=customer_payload, timeout=5)
-#         if response.status_code not in {200, 201, 202}:
-#             raise requests.exceptions.HTTPError(f"status={response.status_code}")
-#     except requests.exceptions.RequestException as exc:
-#         print("N8N customer webhook failed:", exc)
-#         if send_waha_message(customer_phone, maintenance_message):
-#             fallback_used = True
-
-#     # =========================
-#     # COURIER
-#     # =========================
-#     if order.assigned_courier:
-#         courier_phone = format_phone(order.assigned_courier.phone)
-
-#         courier_payload = {
-#             "event": event_type,
-#             "target": "courier",
-#             "order_id": order.id,
-#             "user": order.assigned_courier.username,
-#             "phone": courier_phone,
-#             "customer_name": order.customer.username if order.customer else None,
-#             "customer_phone": order.customer.phone if order.customer else None,
-#             "order_status": order.get_order_status_display(),
-#             "payment_status": order.get_payment_status_display(),
-#             "pickup_address": order.pickup_address if order.pickup_address else None,
-#             "customer_address": order.customer.address if order.customer and order.customer.address else None,
-#             "latitude": order.latitude,
-#             "longitude": order.longitude,
-#         }
-
-#         try:
-#             response = requests.post(webhook_url, json=courier_payload, timeout=5)
-#             if response.status_code not in {200, 201, 202}:
-#                 raise requests.exceptions.HTTPError(f"status={response.status_code}")
-#         except requests.exceptions.RequestException as exc:
-#             print("N8N courier webhook failed:", exc)
-#             if send_waha_message(courier_phone, maintenance_message):
-#                 fallback_used = True
-
-#     return {"status": "maintenance" if fallback_used else "ok", "delivered": fallback_used}
 
 def trigger_n8n_webhook(order, event_type):
     webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
