@@ -728,7 +728,6 @@
                 </select>
               </form>
               
-              {% if order.pickup_method == 'pickup' or order.delivery_method == 'delivery' %}
               {% if not (order.pickup_method == 'pickup' and order.delivery_method == 'delivery') %}
               <form action="{% url 'orders:assign_courier' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" method="post">
                 {% csrf_token %}
