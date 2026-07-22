@@ -1,42 +1,566 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="min-h-screen bg-gray-50 flex items-center justify-center py-10 px-4">
-  <div class="bg-white w-full max-w-lg rounded-2xl shadow-lg p-6 border border-gray-200">
-    <h1 class="text-2xl font-bold text-blue-700 mb-6 text-center">
-      Tambah Pengguna Baru
-    </h1>
+{% load static %}
 
-    {% if messages %}
-      <div class="mb-4">
-        {% for message in messages %}
-          <div class="px-4 py-2 rounded-md text-white mb-2 {% if message.tags == 'success' %}bg-green-500{% else %}bg-red-500{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
+{% block content %}
+<style>
+  /* Modern styling */
+  .add-user-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .add-user-card {
+    background: white;
+    width: 100%;
+    max-width: 480px;
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    padding: 2rem;
+    animation: slideUp 0.5s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .card-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-header .icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    margin-bottom: 1rem;
+  }
+
+  .card-header .icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+    color: white;
+  }
+
+  .card-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.25rem;
+  }
+
+  .card-header p {
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+
+  /* Form Fields */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+  }
+
+  .form-group label .required-star {
+    color: #ef4444;
+    margin-left: 2px;
+  }
+
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .input-wrapper input,
+  .input-wrapper select {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    padding-right: 3rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #fafafa;
+    outline: none;
+  }
+
+  .input-wrapper input:focus,
+  .input-wrapper select:focus {
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  }
+
+  .input-wrapper input:hover,
+  .input-wrapper select:hover {
+    border-color: #9ca3af;
+  }
+
+  .input-wrapper input.error {
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+
+  .input-wrapper input.error:focus {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+  }
+
+  /* Password Toggle Button */
+  .password-toggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .password-toggle:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+  }
+
+  .password-toggle:active {
+    transform: scale(0.9);
+  }
+
+  .password-toggle svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Password Strength Indicator */
+  .password-strength {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+  }
+
+  .password-strength .bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 4px;
+    background: #e5e7eb;
+    transition: all 0.3s ease;
+  }
+
+  .password-strength .bar.weak {
+    background: #ef4444;
+  }
+
+  .password-strength .bar.medium {
+    background: #f59e0b;
+  }
+
+  .password-strength .bar.strong {
+    background: #10b981;
+  }
+
+  .password-strength-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .password-strength-text.weak { color: #ef4444; }
+  .password-strength-text.medium { color: #f59e0b; }
+  .password-strength-text.strong { color: #10b981; }
+
+  /* Error Messages */
+  .field-error {
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .field-error svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Messages */
+  .messages-container {
+    margin-bottom: 1rem;
+  }
+
+  .message-item {
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .message-item.success {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+  }
+
+  .message-item.error {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+
+  .message-item svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  /* Actions */
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .form-actions .btn {
+    flex: 1;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-cancel {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 2px solid transparent;
+  }
+
+  .btn-cancel:hover {
+    background: #e5e7eb;
+    color: #374151;
+    transform: translateY(-2px);
+  }
+
+  .btn-submit {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  }
+
+  .btn-submit:active {
+    transform: scale(0.98);
+  }
+
+  .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Help Text */
+  .help-text {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .add-user-card {
+      padding: 1.5rem;
+      border-radius: 1rem;
+    }
+
+    .card-header h1 {
+      font-size: 1.5rem;
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .form-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<div class="add-user-container">
+  <div class="add-user-card">
+    <!-- Header -->
+    <div class="card-header">
+      <div class="icon-wrapper">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+        </svg>
       </div>
+      <h1>Tambah Pengguna Baru</h1>
+      <p>Isi data pengguna untuk mendaftarkan akun baru</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages-container">
+      {% for message in messages %}
+        <div class="message-item {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+          {% if message.tags == 'success' %}
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          {% else %}
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          {% endif %}
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
     {% endif %}
 
-    <form method="POST" class="space-y-4">
+    <!-- Form -->
+    <form method="POST" id="addUserForm" novalidate>
       {% csrf_token %}
+      
       {% for field in form %}
-        <div>
-          <label class="block text-gray-700 font-medium mb-1">{{ field.label }}</label>
-          {{ field }}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">
+            {{ field.label }}
+            {% if field.field.required %}
+              <span class="required-star">*</span>
+            {% endif %}
+          </label>
+
+          <div class="input-wrapper">
+            {% if field.name == 'password' or field.name == 'password1' or field.name == 'password2' %}
+              <input type="password" 
+                     name="{{ field.html_name }}"
+                     id="{{ field.id_for_label }}"
+                     value="{{ field.value|default:'' }}"
+                     class="password-input {% if field.errors %}error{% endif %}"
+                     placeholder="Masukkan {{ field.label|lower }}"
+                     {% if field.field.required %}required{% endif %}>
+              <button type="button" 
+                      class="password-toggle" 
+                      onclick="togglePassword('{{ field.id_for_label }}')"
+                      aria-label="Toggle password visibility">
+                <svg class="eye-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              </button>
+            {% elif field.field.widget.input_type == 'select' %}
+              <select name="{{ field.html_name }}" 
+                      id="{{ field.id_for_label }}"
+                      class="{% if field.errors %}error{% endif %}"
+                      {% if field.field.required %}required{% endif %}>
+                {% for value, label in field.field.choices %}
+                  <option value="{{ value }}" {% if field.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <input type="{{ field.field.widget.input_type|default:'text' }}" 
+                     name="{{ field.html_name }}"
+                     id="{{ field.id_for_label }}"
+                     value="{{ field.value|default:'' }}"
+                     class="{% if field.errors %}error{% endif %}"
+                     placeholder="Masukkan {{ field.label|lower }}"
+                     {% if field.field.required %}required{% endif %}
+                     {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}>
+            {% endif %}
+          </div>
+
+          <!-- Password Strength Indicator -->
+          {% if field.name == 'password' or field.name == 'password1' %}
+            <div class="password-strength" id="passwordStrength" style="display: none;">
+              <div class="bar" data-index="0"></div>
+              <div class="bar" data-index="1"></div>
+              <div class="bar" data-index="2"></div>
+              <div class="bar" data-index="3"></div>
+              <span class="password-strength-text"></span>
+            </div>
+          {% endif %}
+
+          <!-- Error Messages -->
           {% if field.errors %}
-            <p class="text-red-500 text-xs mt-1">{{ field.errors|striptags }}</p>
+            <div class="field-error">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              {{ field.errors|striptags }}
+            </div>
+          {% endif %}
+
+          <!-- Help Text -->
+          {% if field.help_text %}
+            <div class="help-text">{{ field.help_text }}</div>
           {% endif %}
         </div>
       {% endfor %}
 
-      <div class="flex justify-between items-center">
+      <!-- Actions -->
+      <div class="form-actions">
         <a href="{% if request.path == '/accounts/add/' %}{% url 'accounts:manage_users' %}{% else %}{% url 'accounts:admin_dashboard' %}{% endif %}" 
-           class="text-gray-500 hover:underline text-sm">Batal</a>
-        <button type="submit" 
-                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-          Tambah
+           class="btn btn-cancel">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Batal
+        </a>
+        <button type="submit" class="btn btn-submit" id="submitBtn">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Tambah Pengguna
         </button>
       </div>
     </form>
   </div>
 </div>
+
+<!-- JavaScript -->
+<script>
+  // Toggle Password Visibility
+  function togglePassword(fieldId) {
+    const input = document.getElementById(fieldId);
+    const button = input.closest('.input-wrapper').querySelector('.password-toggle');
+    const eyeIcon = button.querySelector('.eye-icon');
+    
+    if (input.type === 'password') {
+      input.type = 'text';
+      // Change icon to eye-off
+      eyeIcon.innerHTML = `
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+      `;
+    } else {
+      input.type = 'password';
+      // Change icon to eye
+      eyeIcon.innerHTML = `
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+      `;
+    }
+  }
+
+  // Password Strength Checker
+  document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.querySelector('input[name="password"], input[name="password1"]');
+    if (passwordInput) {
+      const strengthContainer = document.getElementById('passwordStrength');
+      const bars = strengthContainer.querySelectorAll('.bar');
+      const strengthText = strengthContainer.querySelector('.password-strength-text');
+
+      passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        const strength = getPasswordStrength(password);
+        
+        if (password.length > 0) {
+          strengthContainer.style.display = 'flex';
+          // Update bars
+          bars.forEach((bar, index) => {
+            bar.className = 'bar';
+            if (index < strength.level) {
+              bar.classList.add(strength.label);
+            }
+          });
+          strengthText.textContent = strength.label === 'weak' ? 'Lemah' : 
+                                     strength.label === 'medium' ? 'Sedang' : 'Kuat';
+          strengthText.className = 'password-strength-text ' + strength.label;
+        } else {
+          strengthContainer.style.display = 'none';
+        }
+      });
+    }
+
+    // Form Submit Loading State
+    const form = document.getElementById('addUserForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function() {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Menambahkan...
+      `;
+    });
+  });
+
+  function getPasswordStrength(password) {
+    let score = 0;
+    
+    // Length
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    
+    // Complexity
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+    
+    // Determine strength
+    if (score <= 2) return { level: 1, label: 'weak' };
+    if (score <= 4) return { level: 2, label: 'medium' };
+    return { level: 3, label: 'strong' };
+  }
+</script>
+
 {% endblock %}

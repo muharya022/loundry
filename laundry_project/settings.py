@@ -10,7 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import dj_database_url
 from pathlib import Path
+
 
 try:
     from dotenv import load_dotenv
@@ -37,7 +39,8 @@ ALLOWED_HOSTS = ['menaralaundry.site',
 
 CSRF_TRUSTED_ORIGINS = [
     "https://www.menaralaundry.site/",
-    'https://menaralaundry.site', "https://www.menaralaundry.site", 'http://127.0.0.1',
+    'https://menaralaundry.site', "https://www.menaralaundry.site", 'http://127.0.0.1', 'https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev',
+    'http://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev',
 ]
 
 # Application definition
@@ -57,12 +60,11 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'courier',
     'rest_framework',
+    'utils',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
 
-MIDTRANS_SERVER_KEY = os.getenv("MIDTRANS_SERVER_KEY")
-MIDTRANS_CLIENT_KEY = os.getenv("MIDTRANS_CLIENT_KEY")
 
 # WAHA Configuration
 WAHA_API_KEY = "88bce2e5513f686f2eb823004ddb48733c434e7b4e95b3228639c6f207b48b14"
@@ -102,17 +104,29 @@ WSGI_APPLICATION = 'laundry_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'laundry_db',
-        'USER': 'laundry_user',
-        'PASSWORD': 'password_mysql',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-    }
-}
+# ========== DATABASE ==========
+# Gunakan DATABASE_URL dari Supabase
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
+if DATABASE_URL:
+    # Gunakan PostgreSQL di Supabase
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True  # Wajib untuk Supabase
+        )
+    }
+    print("✅ Using Supabase PostgreSQL")
+else:
+    # Fallback ke SQLite (development)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+    print("⚠️ Using SQLite (fallback)")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -163,9 +177,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 LOGIN_URL = 'accounts:login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
-# ===== MIDTRANS Configuration =====
-MIDTRANS = {
-    "IS_PRODUCTION": False,
-    "SERVER_KEY": os.getenv("MIDTRANS_SERVER_KEY", ""),
-    "CLIENT_KEY": os.getenv("MIDTRANS_CLIENT_KEY", ""),
-}
+
+# settings.py
+
+# ===================== WAHA (WHATSAPP API) CONFIGURATION =====================
+WAHA_API_URL = os.getenv('WAHA_API_URL', 'http://localhost:3000')
+WAHA_API_KEY = os.getenv('WAHA_API_KEY', '123456')
+WAHA_SESSION = os.getenv('WAHA_SESSION', 'default')
+
+# Logging WAHA
+WAHA_LOGGING_ENABLED = os.getenv('WAHA_LOGGING_ENABLED', 'True') == 'True'

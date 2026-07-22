@@ -220,6 +220,8 @@
   
   .payment-badge.paid { background: #d1fae5; color: #065f46; }
   .payment-badge.unpaid { background: #fef3c7; color: #92400e; }
+  .payment-badge.waiting_confirmation { background: #fef3c7; color: #92400e; }
+  .payment-badge.rejected { background: #fee2e2; color: #991b1b; }
   
   .payment-badge-mobile {
     display: inline-block;
@@ -231,6 +233,8 @@
   
   .payment-badge-mobile.paid { background: #d1fae5; color: #065f46; }
   .payment-badge-mobile.unpaid { background: #fef3c7; color: #92400e; }
+  .payment-badge-mobile.waiting_confirmation { background: #fef3c7; color: #92400e; }
+  .payment-badge-mobile.rejected { background: #fee2e2; color: #991b1b; }
   
   /* Select dropdown styles */
   .status-select {
@@ -350,6 +354,47 @@
     from { transform: scale(0.95); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
   }
+
+  /* Payment Proof Preview */
+  .payment-proof-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .payment-proof-container img {
+    transition: transform 0.3s ease;
+  }
+
+  .payment-proof-container:hover img {
+    transform: scale(1.02);
+  }
+
+  .payment-proof-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 0.5rem;
+  }
+
+  .payment-proof-container:hover .payment-proof-overlay {
+    opacity: 1;
+  }
+
+  /* Badge waiting confirmation */
+  .badge-waiting {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
 </style>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-4 sm:py-8 px-3 sm:px-4"
@@ -366,7 +411,9 @@
        weightItemId: null,
        currentWeight: 0,
        newWeight: 0,
-       isUpdatingWeight: false
+       isUpdatingWeight: false,
+       showPaymentProofModal: false,
+       selectedPaymentProof: null
      }"
      x-init="
         const urlParams = new URLSearchParams(window.location.search);
@@ -386,6 +433,18 @@
           </h1>
           <p class="text-sm sm:text-base text-gray-600">Ringkasan performa & aktivitas sistem</p>
         </div>
+        <!-- Notifikasi Bukti Pembayaran Menunggu Konfirmasi -->
+         {% if pending_payments > 0 %}
+          <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 flex items-center gap-2">
+            <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+            </span>
+            <span class="text-sm font-medium text-yellow-800" id="pending-notification">
+              {{ pending_payments }} bukti pembayaran menunggu konfirmasi
+            </span>
+          </div>
+          {% endif %}
       </div>
     </div>
 
@@ -501,7 +560,7 @@
         </div>
       </div>
 
-      <!-- Quick Actions (sama) -->
+      <!-- Quick Actions -->
       <div class="mb-6">
         <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6">
           <div class="flex items-center justify-between mb-4">
@@ -564,71 +623,71 @@
     </div>
 
     <!-- ================= ORDERS TAB ================= -->
-     <!-- Tambahkan di atas tabel orders, di dalam div orders tab -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-      <div class="flex flex-wrap gap-3">
-        <!-- Tombol Export Bulan Ini -->
-        <a href="{% url 'accounts:export_orders_excel_current' %}" 
-          class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-          </svg>
-          Export Transaksi Bulan Ini
-        </a>
-        
-        <!-- Dropdown Pilih Bulan & Tahun -->
-        <div x-data="{ showYearMonth: false, selectedYear: new Date().getFullYear(), selectedMonth: new Date().getMonth() + 1 }" class="relative">
-          <button @click="showYearMonth = !showYearMonth" 
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+    <div x-show="activeTab === 'orders'" x-transition>
+      <!-- Export Section -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div class="flex flex-wrap gap-3">
+          <a href="{% url 'accounts:export_orders_excel_current' %}" 
+            class="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
             </svg>
-            Export Per Bulan
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
+            Export Transaksi Bulan Ini
+          </a>
           
-          <div x-show="showYearMonth" @click.away="showYearMonth = false" 
-              class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-20 p-4"
-              x-cloak>
-            <div class="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Tahun</label>
-                <select x-model="selectedYear" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                </select>
+          <div x-data="{ showYearMonth: false, selectedYear: new Date().getFullYear(), selectedMonth: new Date().getMonth() + 1 }" class="relative">
+            <button @click="showYearMonth = !showYearMonth" 
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              Export Per Bulan
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            
+            <div x-show="showYearMonth" @click.away="showYearMonth = false" 
+                class="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-20 p-4"
+                x-cloak>
+              <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Tahun</label>
+                  <select x-model="selectedYear" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Bulan</label>
+                  <select x-model="selectedMonth" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <option value="1">Januari</option>
+                    <option value="2">Februari</option>
+                    <option value="3">Maret</option>
+                    <option value="4">April</option>
+                    <option value="5">Mei</option>
+                    <option value="6">Juni</option>
+                    <option value="7">Juli</option>
+                    <option value="8">Agustus</option>
+                    <option value="9">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Bulan</label>
-                <select x-model="selectedMonth" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="1">Januari</option>
-                  <option value="2">Februari</option>
-                  <option value="3">Maret</option>
-                  <option value="4">April</option>
-                  <option value="5">Mei</option>
-                  <option value="6">Juni</option>
-                  <option value="7">Juli</option>
-                  <option value="8">Agustus</option>
-                  <option value="9">September</option>
-                  <option value="10">Oktober</option>
-                  <option value="11">November</option>
-                  <option value="12">Desember</option>
-                </select>
-              </div>
+              <a :href="`{% url 'accounts:export_orders_excel' 0 0 %}`.replace('/0/0/', `/${selectedYear}/${selectedMonth}/`)" 
+                class="w-full block text-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
+                Download Laporan
+              </a>
             </div>
-            <a :href="`{% url 'accounts:export_orders_excel' 0 0 %}`.replace('/0/0/', `/${selectedYear}/${selectedMonth}/`)" 
-              class="w-full block text-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition">
-              Download Laporan
-            </a>
           </div>
         </div>
       </div>
-    </div>
-    <div x-show="activeTab === 'orders'" x-transition>
+
+      <!-- Orders Table -->
       <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-4 sm:p-6 border-b border-gray-200">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -685,8 +744,11 @@
             </div>
             
             <div class="flex items-center justify-between mb-4">
-              <span class="payment-badge-mobile {% if order.payment_status == 'paid' %}paid{% else %}unpaid{% endif %}">
-                {% if order.payment_status == 'paid' %}Dibayar{% else %}Belum Bayar{% endif %}
+              <span class="payment-badge-mobile {% if order.payment_status == 'paid' %}paid{% elif order.payment_status == 'waiting_confirmation' %}waiting_confirmation{% elif order.payment_status == 'rejected' %}rejected{% else %}unpaid{% endif %}">
+                {% if order.payment_status == 'paid' %}Dibayar
+                {% elif order.payment_status == 'waiting_confirmation' %}Menunggu Konfirmasi
+                {% elif order.payment_status == 'rejected' %}Ditolak
+                {% else %}Belum Bayar{% endif %}
               </span>
               <div class="text-right">
                 <div class="text-xs text-gray-500">Kurir</div>
@@ -705,6 +767,15 @@
                 </svg>
                 Detail
               </button>
+              {% if order.payment_proof %}
+              <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}" 
+                      class="flex-1 admin-action-btn bg-green-600 hover:bg-green-700" style="width: auto; padding: 0.5rem 1rem;">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Bukti Bayar
+              </button>
+              {% endif %}
             </div>
             
             <div class="space-y-3">
@@ -741,7 +812,6 @@
               </form>
               {% endif %}
 
-              
               <button type="button" @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true"
                       class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition">
                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -844,7 +914,7 @@
                     </select>
                   </form>
                   {% else %}
-                  <span class="text-xs text-gray-400">-</span>
+                  <span class="text-xs text-gray-400">- No Kurir</span>
                   {% endif %}
                 </td>
                 <td class="table-td">
@@ -853,17 +923,10 @@
                 </td>
                 <td class="table-td">
                   <div class="flex justify-center gap-2">
-                    <button
-                        type="button"
-                        onclick="window.location.href='{% url "orders:order_invoice" order.id %}'"
-                        class="admin-action-btn bg-emerald-600 hover:bg-emerald-700"
-                        title="Invoice">
-
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-
+                    <button type="button" onclick="window.location.href='{% url "orders:order_invoice" order.id %}'" class="admin-action-btn bg-emerald-600 hover:bg-emerald-700" title="Invoice">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                      </svg>
                     </button>
                     
                     <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}" class="admin-action-btn bg-gray-600 hover:bg-gray-700" title="Detail Pesanan">
@@ -872,6 +935,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                       </svg>
                     </button>
+                    
+                    {% if order.payment_proof %}
+                    <button @click="showDetailModal = true; selectedOrderId = {{ order.id }}" class="admin-action-btn bg-green-600 hover:bg-green-700" title="Lihat Bukti Pembayaran">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </button>
+                    {% endif %}
+                    
                     <button type="button" @click="deleteOrderId = {{ order.id }}; deleteOrderNumber = '#{{ order.id }}'; showDeleteModal = true" class="admin-action-btn bg-red-600 hover:bg-red-700" title="Hapus Pesanan">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z"/>
@@ -915,7 +987,7 @@
     </div>
   </div>
 
-   <!-- Modal Detail Pesanan (DIPERBAIKI - Support Per Item dengan benar) -->
+  <!-- ================= MODAL DETAIL PESANAN ================= -->
   <div x-show="showDetailModal && selectedOrderId" x-cloak class="modal-overlay" @click.self="showDetailModal = false">
     <div class="modal-container">
       <div class="modal-header">
@@ -930,13 +1002,13 @@
         {% for order in recent_orders %}
         <div x-show="selectedOrderId == {{ order.id }}">
           <!-- Informasi Dasar -->
-          <div class="detail-row"><span class="detail-label">No. Order</span><span class="detail-value">#{{ order.id }}</span></div>
+          <div class="detail-row"><span class="detail-label">No. Order</span><span class="detail-value">#{{ order.order_number }}</span></div>
           <div class="detail-row"><span class="detail-label">Tanggal Order</span><span class="detail-value">{{ order.created_at|date:"d M Y, H:i" }}</span></div>
           <div class="detail-row"><span class="detail-label">Pelanggan</span><span class="detail-value">{{ order.customer.get_full_name|default:order.customer.username }}</span></div>
           
           <div class="border-t border-gray-200 my-3"></div>
           
-          <!-- ===== LAYANAN ANTAR JEMPUT ===== -->
+          <!-- Layanan Antar Jemput -->
           <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 mb-4 border border-blue-200">
             <div class="flex items-center gap-2 mb-3">
               <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -980,7 +1052,7 @@
             </div>
           </div>
           
-          <!-- ===== DETAIL LAYANAN ===== -->
+          <!-- Detail Layanan -->
           <div class="font-semibold text-gray-900 mb-2">Detail Layanan</div>
           
           {% if order.order_items.all %}
@@ -1120,7 +1192,14 @@
             </div>
             <div>
               <div class="text-xs text-gray-500 mb-1">Status Pembayaran</div>
-              <div><span class="payment-badge {% if order.payment_status == 'paid' %}paid{% else %}unpaid{% endif %}">{% if order.payment_status == 'paid' %}Dibayar{% else %}Belum Dibayar{% endif %}</span></div>
+              <div>
+                <span class="payment-badge {% if order.payment_status == 'paid' %}paid{% elif order.payment_status == 'waiting_confirmation' %}waiting_confirmation{% elif order.payment_status == 'rejected' %}rejected{% else %}unpaid{% endif %}">
+                  {% if order.payment_status == 'paid' %}Dibayar
+                  {% elif order.payment_status == 'waiting_confirmation' %}Menunggu Konfirmasi
+                  {% elif order.payment_status == 'rejected' %}Ditolak
+                  {% else %}Belum Dibayar{% endif %}
+                </span>
+              </div>
             </div>
           </div>
           <div class="detail-row mt-2">
@@ -1146,13 +1225,122 @@
             <span class="detail-label">Kurir</span>
             <span class="detail-value">{{ order.assigned_courier.username|default:"Belum ditugaskan" }}</span>
           </div>
+
+          <!-- ================= BUKTI PEMBAYARAN ================= -->
+          <div class="border-t border-gray-200 my-3"></div>
+          
+          {% if order.payment_proof %}
+          <div class="bg-green-50 rounded-lg p-4 mb-4 border border-green-200">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span class="font-semibold text-green-800">Bukti Pembayaran</span>
+              </div>
+              <span class="text-xs text-gray-500">
+                {{ order.payment_date|date:"d M Y, H:i"|default:"-" }}
+              </span>
+            </div>
+            
+            <!-- Preview Gambar -->
+            <div class="payment-proof-container rounded-lg border border-green-200 overflow-hidden bg-white">
+              <img src="{{ order.payment_proof.url }}" 
+                   alt="Bukti Pembayaran Order #{{ order.id }}"
+                   class="w-full max-h-64 object-contain cursor-pointer"
+                   @click="window.open('{{ order.payment_proof.url }}', '_blank')">
+              <div class="payment-proof-overlay">
+                <span class="text-white text-sm font-medium bg-black bg-opacity-60 px-4 py-2 rounded-lg">
+                  🔍 Klik untuk memperbesar
+                </span>
+              </div>
+            </div>
+            
+            <!-- Tombol Aksi -->
+            <div class="mt-3 flex gap-2">
+              <a href="{{ order.payment_proof.url }}" 
+                 target="_blank"
+                 class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center text-sm font-medium">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                Lihat Full
+              </a>
+              <a href="{{ order.payment_proof.url }}" 
+                 download
+                 class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-center text-sm font-medium">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Download
+              </a>
+            </div>
+            
+            <!-- Status Konfirmasi -->
+            <div class="mt-3 pt-3 border-t border-green-200">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Status Konfirmasi</span>
+                {% if order.payment_status == 'waiting_confirmation' %}
+                  <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold badge-waiting">
+                    ⏳ Menunggu Konfirmasi
+                  </span>
+                {% elif order.payment_status == 'paid' %}
+                  <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                    ✅ Sudah Dikonfirmasi
+                  </span>
+                {% elif order.payment_status == 'rejected' %}
+                  <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                    ❌ Ditolak
+                  </span>
+                {% endif %}
+              </div>
+              
+              {% if order.payment_status == 'waiting_confirmation' %}
+              <div class="mt-3 flex gap-2">
+                <form action="{% url 'orders:confirm_payment' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" 
+                      method="post" 
+                      class="flex-1">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="confirm">
+                  <button type="submit" 
+                          class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium">
+                    ✅ Konfirmasi Pembayaran
+                  </button>
+                </form>
+                <form action="{% url 'orders:confirm_payment' order.id %}?orders_page={{ request.GET.orders_page|default:1 }}&tab=orders" 
+                      method="post" 
+                      class="flex-1">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="reject">
+                  <button type="submit" 
+                          class="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium">
+                    ❌ Tolak Pembayaran
+                  </button>
+                </form>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          {% else %}
+          <!-- Jika tidak ada bukti pembayaran -->
+          <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+            <div class="flex items-center gap-2 text-gray-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span>Belum ada bukti pembayaran diupload</span>
+            </div>
+          </div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
     </div>
   </div>
 
-  <!-- Modal Ubah Berat Laundry (Update ke OrderItem) -->
+  <!-- ================= MODAL UBAH BERAT ================= -->
   <div x-show="showWeightModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]" style="animation: fadeIn 0.2s ease-out;" @click.self="showWeightModal = false">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden" style="animation: scaleIn 0.2s ease-out;">
       <div class="p-6">
@@ -1188,7 +1376,7 @@
     </div>
   </div>
 
-  <!-- Modal Konfirmasi Hapus Pesanan -->
+  <!-- ================= MODAL KONFIRMASI HAPUS ================= -->
   <div x-show="showDeleteModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1001]" style="animation: fadeIn 0.2s ease-out;" @click.self="showDeleteModal = false">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 overflow-hidden" style="animation: scaleIn 0.2s ease-out;">
       <div class="p-6 text-center">
@@ -1243,16 +1431,64 @@ document.addEventListener('DOMContentLoaded', function() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(17, 24, 39, 0.9)', cornerRadius: 8, padding: 10, callbacks: { label: function(ctx) { let value = ctx.parsed.y; if(!value) return ''; return 'Rp ' + value.toLocaleString('id-ID'); } } } },
+        plugins: { 
+          legend: { display: false }, 
+          tooltip: { 
+            backgroundColor: 'rgba(17, 24, 39, 0.9)', 
+            cornerRadius: 8, 
+            padding: 10, 
+            callbacks: { 
+              label: function(ctx) { 
+                let value = ctx.parsed.y; 
+                if(!value) return ''; 
+                return 'Rp ' + value.toLocaleString('id-ID'); 
+              } 
+            } 
+          } 
+        },
         scales: {
           x: { grid: { display: false }, ticks: { color: '#6B7280', font: { weight: '500' } } },
-          y: { beginAtZero: true, grid: { color: '#E5E7EB', borderDash: [5,5] }, ticks: { color: '#6B7280', font: { weight: '500' }, callback: function(value) { if (value >= 1000000) return 'Rp ' + (value/1000000).toFixed(1) + 'M'; if (value >= 1000) return 'Rp ' + (value/1000).toFixed(0) + 'K'; return 'Rp ' + value; } } }
+          y: { 
+            beginAtZero: true, 
+            grid: { color: '#E5E7EB', borderDash: [5,5] }, 
+            ticks: { 
+              color: '#6B7280', 
+              font: { weight: '500' }, 
+              callback: function(value) { 
+                if (value >= 1000000) return 'Rp ' + (value/1000000).toFixed(1) + 'M'; 
+                if (value >= 1000) return 'Rp ' + (value/1000).toFixed(0) + 'K'; 
+                return 'Rp ' + value; 
+              } 
+            } 
+          }
         },
         animation: { duration: 1500, easing: 'easeOutQuart' }
       }
     });
   }
 });
+
+</script>
+<!-- accounts/templates/accounts/admin_dashboard.html -->
+
+<script>
+// Auto refresh notifikasi setiap 30 detik
+setInterval(function() {
+    fetch('/accounts/check-notifications/')
+        .then(response => response.json())
+        .then(data => {
+            const notifBadge = document.getElementById('pending-notification');
+            if (notifBadge) {
+                if (data.pending_payments > 0) {
+                    notifBadge.textContent = data.pending_payments;
+                    notifBadge.style.display = 'inline';
+                } else {
+                    notifBadge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => console.log('Error fetching notifications:', error));
+}, 30000); // 30 detik
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>

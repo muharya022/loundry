@@ -38,6 +38,74 @@
   .modal-animate {
     animation: modalSlideIn 0.3s ease-out;
   }
+
+  /* Payment proof styles */
+  .payment-proof-container {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 2px solid #22c55e;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+  
+  .payment-proof-container .proof-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .payment-proof-container .proof-image:hover {
+    transform: scale(1.02);
+  }
+
+  .payment-proof-container .proof-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .payment-proof-container .proof-actions a {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  /* Modal for viewing proof */
+  .proof-viewer-modal .modal-content {
+    max-width: 90vw;
+    max-height: 90vh;
+  }
+
+  .proof-viewer-modal .modal-content img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+  }
+
+  /* Order number badge */
+  .order-number-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .order-number-badge-mobile {
+    display: inline-block;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
 </style>
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-4 sm:py-8 px-3 sm:px-4"
@@ -49,10 +117,14 @@
        cancelOrderId: null,
        cancelOrderNumber: null,
        isCancelling: false,
+       showProofModal: false,
+       proofImageUrl: null,
+       proofOrderNumber: null,
        orders: [
          {% for order in orders %}
          {
            id: {{ order.id }},
+           order_number: '{{ order.order_number|default:"" }}',
            service_name: '{{ order.service.name|escapejs }}',
            service_type: '{{ order.service.type }}',
            weight: {% if order.weight %}{{ order.weight }}{% else %}null{% endif %},
@@ -73,6 +145,7 @@
            discount_amount: {{ order.discount_amount|default:0 }},
            duration: '{{ order.service.duration }}',
            estimated_completion: '{{ order.estimated_completion|date:"Y-m-d H:i:s" }}',
+           payment_proof: '{% if order.payment_proof %}{{ order.payment_proof.url }}{% else %}null{% endif %}',
            order_items: [
              {% for item in order.order_items.all %}
              {
@@ -86,6 +159,9 @@
              }{% if not forloop.last %},{% endif %}
              {% endfor %}
            ],
+           getDisplayNumber() {
+             return this.order_number || '#' + this.id;
+           },
            getTotalWeight() {
                 if (this.weight && this.weight > 0) {
                     return parseFloat(this.weight);
@@ -209,6 +285,31 @@
               }
               return '-';
             },
+           getPaymentStatusText() {
+             const statusMap = {
+               'unpaid': 'Belum Dibayar',
+               'pending': 'Menunggu Verifikasi',
+               'paid': 'Sudah Dibayar',
+               'settlement': 'Lunas',
+               'expire': 'Kadaluarsa',
+               'failed': 'Gagal'
+             };
+             return statusMap[this.payment_status] || this.payment_status;
+           },
+           getPaymentStatusColor() {
+             const colorMap = {
+               'unpaid': 'bg-yellow-100 text-yellow-800',
+               'pending': 'bg-blue-100 text-blue-800',
+               'paid': 'bg-green-100 text-green-800',
+               'settlement': 'bg-emerald-100 text-emerald-800',
+               'expire': 'bg-red-100 text-red-800',
+               'failed': 'bg-red-100 text-red-800'
+             };
+             return colorMap[this.payment_status] || 'bg-gray-100 text-gray-800';
+           },
+           hasPaymentProof() {
+             return this.payment_proof && this.payment_proof !== 'null';
+           }
          }{% if not forloop.last %},{% endif %}
          {% endfor %}
        ],
@@ -239,11 +340,17 @@
          if (form) {
            form.submit();
          }
+       },
+       // Fungsi untuk melihat bukti pembayaran
+       viewPaymentProof(imageUrl, orderNumber) {
+         this.proofImageUrl = imageUrl;
+         this.proofOrderNumber = orderNumber;
+         this.showProofModal = true;
        }
      }">
 
   <div class="max-w-7xl mx-auto">
-    <!-- Header Section (sama seperti sebelumnya) -->
+    <!-- Header Section -->
     <div class="bg-white rounded-2xl sm:rounded-3xl shadow-lg p-5 sm:p-8 mb-6 border border-slate-200">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div class="flex-1">
@@ -388,7 +495,11 @@
                 <div class="flex justify-between items-start mb-3">
                   <div>
                     <div class="font-semibold text-slate-900" x-text="order.service_name"></div>
-                    <div class="text-xs text-slate-500 mt-1">#<span x-text="order.id"></span> • <span x-text="order.created_at"></span></div>
+                    <div class="text-xs text-slate-500 mt-1">
+                      <span class="order-number-badge-mobile" x-text="order.getDisplayNumber()"></span>
+                      <span class="mx-1">•</span>
+                      <span x-text="order.created_at"></span>
+                    </div>
                   </div>
                   <span class="status-badge-mobile" :class="order.order_status" x-text="order.getStatusText(order.order_status)"></span>
                 </div>
@@ -416,11 +527,31 @@
                 </div>
                 
                 <div class="mb-4">
-                  <span class="payment-badge-mobile" :class="['paid', 'settlement'].includes(order.payment_status) ? 'paid' : 'unpaid'" 
-                        x-text="['paid', 'settlement'].includes(order.payment_status) ? 'Dibayar' : 'Belum Bayar'"></span>
+                  <span class="payment-badge-mobile" :class="order.getPaymentStatusColor()" 
+                        x-text="order.getPaymentStatusText()"></span>
                 </div>
                 
-                <div class="flex gap-2">
+                <!-- Tampilkan bukti pembayaran jika ada -->
+                <div x-show="order.hasPaymentProof()" class="mb-4 payment-proof-container">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <span class="text-sm font-medium text-green-700">Bukti Pembayaran</span>
+                    </div>
+                    <button @click="viewPaymentProof(order.payment_proof, order.getDisplayNumber())" 
+                            class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      Lihat
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="flex gap-2 flex-wrap">
                   <button @click="showDetail = true; selectedOrder = order"
                           class="action-btn-mobile bg-blue-600 hover:bg-blue-700 text-white flex-1 flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,7 +568,6 @@
                   || order.order_status === 'ready')"
                   :href="order.payment_url"
                   class="action-btn-mobile bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2">
-
                   Bayar
                   </a>
                   
@@ -452,7 +582,7 @@
                   
                   <!-- ===== TOMBOL BATAL DENGAN MODAL ===== -->
                   <button x-show="order.order_status === 'pending' && order.payment_status === 'unpaid'"
-                          @click="openCancelModal(order.id, order.id)"
+                          @click="openCancelModal(order.id, order.getDisplayNumber())"
                           class="action-btn-mobile bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -486,7 +616,7 @@
             <table class="w-full">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="table-th">Layanan</th>
+                  <th class="table-th">Layanan & No. Order</th>
                   <th class="table-th">Berat/Jumlah</th>
                   <th class="table-th">Total</th>
                   <th class="table-th">Pembayaran</th>
@@ -499,7 +629,11 @@
                   <tr class="hover:bg-blue-50 transition-colors">
                     <td class="table-td">
                       <div class="font-medium text-slate-900" x-text="order.service_name"></div>
-                      <div class="text-xs text-slate-500">#<span x-text="order.id"></span> • <span x-text="order.created_at"></span></div>
+                      <div class="text-xs text-slate-500 mt-0.5">
+                        <span class="order-number-badge" x-text="order.getDisplayNumber()"></span>
+                        <span class="mx-1">•</span>
+                        <span x-text="order.created_at"></span>
+                      </div>
                     </td>
                     <td class="table-td">
                       <div class="font-medium text-slate-900">
@@ -518,14 +652,27 @@
                       <div class="font-bold text-slate-900">Rp <span x-text="parseFloat(order.price_total).toLocaleString()"></span></div>
                     </td>
                     <td class="table-td">
-                      <span class="payment-badge" :class="['paid', 'settlement'].includes(order.payment_status) ? 'paid' : 'unpaid'"
-                            x-text="['paid', 'settlement'].includes(order.payment_status) ? 'Dibayar' : 'Belum Bayar'"></span>
+                      <div>
+                        <span class="payment-badge" :class="order.getPaymentStatusColor()"
+                              x-text="order.getPaymentStatusText()"></span>
+                        <!-- Tampilkan bukti pembayaran jika ada -->
+                        <div x-show="order.hasPaymentProof()" class="mt-1">
+                          <button @click="viewPaymentProof(order.payment_proof, order.getDisplayNumber())" 
+                                  class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            Lihat Bukti
+                          </button>
+                        </div>
+                      </div>
                     </td>
                     <td class="table-td">
                       <span class="status-badge" :class="order.order_status" x-text="order.getStatusText(order.order_status)"></span>
                     </td>
                     <td class="table-td">
-                      <div class="flex justify-center gap-2">
+                      <div class="flex justify-center gap-2 flex-wrap">
                         <button @click="showDetail = true; selectedOrder = order"
                                 class="action-btn bg-blue-600 hover:bg-blue-700 text-white" title="Detail">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -549,7 +696,7 @@
                         
                         <!-- ===== TOMBOL BATAL DENGAN MODAL ===== -->
                         <button x-show="order.order_status === 'pending' && order.payment_status === 'unpaid'"
-                                @click="openCancelModal(order.id, order.id)"
+                                @click="openCancelModal(order.id, order.getDisplayNumber())"
                                 class="action-btn bg-red-600 hover:bg-red-700 text-white" title="Batalkan">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -643,7 +790,12 @@
     <div class="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto modal-animate">
       <div class="sticky top-0 bg-white p-6 border-b border-slate-200">
         <div class="flex justify-between items-center">
-          <h2 class="text-xl font-bold text-slate-900">Detail Pesanan</h2>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Detail Pesanan</h2>
+            <p class="text-sm text-slate-500 mt-1" x-show="selectedOrder">
+              <span class="order-number-badge" x-text="selectedOrder.getDisplayNumber()"></span>
+            </p>
+          </div>
           <button @click="showDetail = false" class="text-slate-400 hover:text-slate-600 transition">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -718,9 +870,44 @@
           <div class="text-xs text-slate-500 mb-1">Estimasi Selesai</div>
           <div class="font-medium text-slate-900" x-text="selectedOrder.getEstimatedCompletion()"></div>
         </div>
+        
         <div>
           <div class="text-xs text-slate-500 mb-1">Metode Pembayaran</div>
-          <div class="font-medium text-slate-900" x-text="selectedOrder.payment_method"></div>
+          <div class="font-medium text-slate-900 uppercase" x-text="selectedOrder.payment_method"></div>
+        </div>
+        
+        <div>
+          <div class="text-xs text-slate-500 mb-1">Status Pembayaran</div>
+          <span class="inline-block px-3 py-1 rounded-full text-sm font-medium" 
+                :class="selectedOrder.getPaymentStatusColor()" 
+                x-text="selectedOrder.getPaymentStatusText()"></span>
+        </div>
+        
+        <!-- Tampilkan bukti pembayaran di detail -->
+        <div x-show="selectedOrder.hasPaymentProof()" class="payment-proof-container">
+          <div class="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Bukti Pembayaran
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button @click="viewPaymentProof(selectedOrder.payment_proof, selectedOrder.getDisplayNumber())" 
+                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              Lihat Bukti
+            </button>
+            <a :href="selectedOrder.payment_proof" download 
+               class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download
+            </a>
+          </div>
         </div>
         
         <div>
@@ -732,10 +919,6 @@
           <div>
             <div class="text-xs text-slate-500 mb-1">Status Pengantaran</div>
             <div class="font-medium text-slate-900" x-text="selectedOrder.getStatusText(selectedOrder.order_status)"></div>
-          </div>
-          <div>
-            <div class="text-xs text-slate-500 mb-1">Status Pembayaran</div>
-            <div class="font-medium text-slate-900" x-text="['paid', 'settlement'].includes(selectedOrder.payment_status) ? 'Dibayar' : 'Belum Bayar'"></div>
           </div>
         </div>
         
@@ -804,7 +987,7 @@
           </svg>
         </div>
         <h3 class="text-white text-xl font-bold">Batalkan Pesanan?</h3>
-        <p class="text-white/80 text-sm mt-1">Pesanan #<span x-text="cancelOrderNumber"></span></p>
+        <p class="text-white/80 text-sm mt-1">Pesanan <span x-text="cancelOrderNumber"></span></p>
       </div>
       
       <!-- Body Modal -->
@@ -848,6 +1031,59 @@
               Memproses...
             </span>
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL VIEW BUKTI PEMBAYARAN ==================== -->
+  <div x-show="showProofModal" x-cloak
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 proof-viewer-modal"
+       @click.self="showProofModal = false">
+    
+    <div class="bg-white rounded-2xl w-full max-w-3xl modal-content modal-animate"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="scale-95 opacity-0"
+         x-transition:enter-end="scale-100 opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="scale-100 opacity-100"
+         x-transition:leave-end="scale-95 opacity-0">
+      
+      <!-- Header -->
+      <div class="flex justify-between items-center p-6 border-b border-slate-200">
+        <div>
+          <h3 class="text-xl font-bold text-slate-900">Bukti Pembayaran</h3>
+          <p class="text-sm text-slate-500">Pesanan <span x-text="proofOrderNumber"></span></p>
+        </div>
+        <button @click="showProofModal = false" class="text-slate-400 hover:text-slate-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      
+      <!-- Body -->
+      <div class="p-6 flex flex-col items-center">
+        <div class="w-full bg-slate-100 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+          <img :src="proofImageUrl" alt="Bukti Pembayaran" 
+               class="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg">
+        </div>
+        
+        <div class="flex gap-3 w-full mt-4">
+          <a :href="proofImageUrl" target="_blank" 
+             class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-center font-medium transition">
+            Buka di Tab Baru
+          </a>
+          <a :href="proofImageUrl" download 
+             class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg text-center font-medium transition">
+            Download
+          </a>
         </div>
       </div>
     </div>
@@ -942,8 +1178,6 @@
   font-weight: 600;
   border-radius: 9999px;
 }
-.payment-badge-mobile.paid { background: #d1fae5; color: #065f46; }
-.payment-badge-mobile.unpaid { background: #fef3c7; color: #92400e; }
 .action-btn-mobile {
   display: flex;
   align-items: center;
@@ -1006,8 +1240,6 @@
   font-weight: 600;
   border-radius: 9999px;
 }
-.payment-badge.paid { background: #d1fae5; color: #065f46; }
-.payment-badge.unpaid { background: #fef3c7; color: #92400e; }
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -1026,6 +1258,38 @@
 }
 .modal-animate {
   animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Payment proof specific styles */
+.payment-proof-container {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 2px solid #22c55e;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+/* Order number badge styles */
+.order-number-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.order-number-badge-mobile {
+  display: inline-block;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 </style>
 

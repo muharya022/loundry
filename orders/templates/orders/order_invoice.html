@@ -77,6 +77,8 @@
     .bold { font-weight: bold; }
     .space { margin-top: 8px; }
     .mb-1 { margin-bottom: 4px; }
+    .mt-1 { margin-top: 4px; }
+    .text-small { font-size: 8px; }
     
     .row {
         display: flex;
@@ -125,11 +127,47 @@
         transform: scale(1.02);
     }
     
+    .print-btn button.btn-secondary {
+        background: #6c757d;
+    }
+    
+    .print-btn button.btn-secondary:hover {
+        background: #5a6268;
+    }
+    
+    .print-btn button.btn-success {
+        background: #28a745;
+    }
+    
+    .print-btn button.btn-success:hover {
+        background: #218838;
+    }
+    
+    /* Badge status */
+    .status-paid {
+        color: #28a745;
+    }
+    .status-unpaid {
+        color: #dc3545;
+    }
+    
     /* QR Code placeholder (opsional) */
     .qrcode {
         text-align: center;
         margin: 5px 0;
         font-size: 9px;
+    }
+    
+    /* Order number badge di struk */
+    .order-number-display {
+        font-size: 14px;
+        letter-spacing: 2px;
+        font-weight: bold;
+        color: #2563eb;
+        background: #eff6ff;
+        padding: 2px 12px;
+        border-radius: 4px;
+        display: inline-block;
     }
 </style>
 </head>
@@ -148,10 +186,20 @@
 
     <div class="divider"></div>
 
-    <!-- Informasi Order -->
+    <!-- Informasi Order - PERBAIKAN: Gunakan order_number -->
     <div class="row">
         <span>No. Order</span>
-        <span class="bold">#{{ order.id }}</span>
+        <span class="bold">
+            {% if order.order_number %}
+                <span class="order-number-display">{{ order.order_number }}</span>
+            {% else %}
+                #{{ order.id }}
+            {% endif %}
+        </span>
+    </div>
+    <div class="row">
+        <span>ID Internal</span>
+        <span class="text-small">#{{ order.id }}</span>
     </div>
     <div class="row">
         <span>Tanggal</span>
@@ -160,6 +208,10 @@
     <div class="row">
         <span>Pelanggan</span>
         <span>{{ order.customer.get_full_name|default:order.customer.username|truncatechars:20 }}</span>
+    </div>
+    <div class="row">
+        <span>Telepon</span>
+        <span>{{ order.customer.phone|default:"-" }}</span>
     </div>
 
     <div class="divider"></div>
@@ -172,21 +224,18 @@
         {% if item.service and item.service.type == 'per_kilo' %}
         <div class="row">
             <span>{{ item.service.name }}</span>
-            <span></span>
-        </div>
-        <div class="row">
-            <span>  {{ item.weight|floatformat:1 }} kg x Rp {{ item.price|floatformat:0|intcomma }}</span>
-            <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
-        </div>
-        <div class="row">
-            <span>  Durasi:</span>
             <span>
                 {% if item.service.duration == 'reguler' %}Reguler
                 {% elif item.service.duration == 'kilat' %}Kilat
                 {% elif item.service.duration == 'express' %}Express 6J
                 {% elif item.service.duration == 'express1' %}Express 3J
+                {% else %}{{ item.service.duration }}
                 {% endif %}
             </span>
+        </div>
+        <div class="row" style="padding-left: 4px;">
+            <span>{{ item.weight|floatformat:1 }} kg x Rp {{ item.price|floatformat:0|intcomma }}</span>
+            <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
         </div>
         {% endif %}
         
@@ -196,8 +245,16 @@
             <span>{{ item.laundry_item.name }}</span>
             <span></span>
         </div>
+        <div class="row" style="padding-left: 4px;">
+            <span>{{ item.quantity }} pcs x Rp {{ item.price|floatformat:0|intcomma }}</span>
+            <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
+        </div>
+        {% endif %}
+        
+        <!-- Service per_item (selain laundry_item) -->
+        {% if item.service and item.service.type == 'per_item' and not item.laundry_item %}
         <div class="row">
-            <span>  {{ item.quantity }} pcs x Rp {{ item.price|floatformat:0|intcomma }}</span>
+            <span>{{ item.service.name }}</span>
             <span>Rp {{ item.subtotal|floatformat:0|intcomma }}</span>
         </div>
         {% endif %}
@@ -210,8 +267,13 @@
             <span></span>
         </div>
         {% if order.service.type == 'per_kilo' and order.weight %}
-        <div class="row">
-            <span>  {{ order.weight|floatformat:1 }} kg x Rp {{ order.service.price|floatformat:0|intcomma }}</span>
+        <div class="row" style="padding-left: 4px;">
+            <span>{{ order.weight|floatformat:1 }} kg x Rp {{ order.service.price|floatformat:0|intcomma }}</span>
+            <span>Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+        </div>
+        {% elif order.service.type == 'per_item' %}
+        <div class="row" style="padding-left: 4px;">
+            <span>1 item</span>
             <span>Rp {{ order.price_total|floatformat:0|intcomma }}</span>
         </div>
         {% endif %}
@@ -220,17 +282,22 @@
     <div class="divider"></div>
 
     <!-- SUBTOTAL, ONGKIR, DISKON (jika ada) -->
+    <div class="row">
+        <span>Subtotal</span>
+        <span>Rp {{ order.price_total|floatformat:0|intcomma }}</span>
+    </div>
+    
     {% if order.shipping_cost > 0 %}
     <div class="row">
-        <span>Ongkir</span>
+        <span>Biaya Kirim</span>
         <span>Rp {{ order.shipping_cost|floatformat:0|intcomma }}</span>
     </div>
     {% endif %}
     
     {% if order.discount_amount > 0 %}
-    <div class="row">
+    <div class="row" style="color: #dc3545;">
         <span>Diskon</span>
-        <span class="bold">- Rp {{ order.discount_amount|floatformat:0|intcomma }}</span>
+        <span>- Rp {{ order.discount_amount|floatformat:0|intcomma }}</span>
     </div>
     {% endif %}
 
@@ -242,21 +309,46 @@
     </div>
 
     <!-- Metode & Status Pembayaran -->
+    <div class="divider"></div>
     <div class="row">
         <span>Metode Bayar</span>
         <span>{{ order.get_payment_method_display }}</span>
     </div>
     <div class="row">
         <span>Status Bayar</span>
-        <span class="bold">{% if order.payment_status == 'paid' %}✅ LUNAS{% else %}⏳ BELUM{% endif %}</span>
+        <span class="bold {% if order.payment_status == 'paid' or order.payment_status == 'settlement' %}status-paid{% else %}status-unpaid{% endif %}">
+            {% if order.payment_status == 'paid' or order.payment_status == 'settlement' %}
+                ✅ LUNAS
+            {% else %}
+                ⏳ BELUM
+            {% endif %}
+        </span>
     </div>
 
     <div class="divider"></div>
 
-    <!-- Jadwal Pickup -->
+    <!-- Informasi Tambahan -->
     <div class="row">
         <span>Jemput</span>
         <span>{{ order.scheduled_pickup|date:"d/m/Y H:i" }}</span>
+    </div>
+    <div class="row">
+        <span>Estimasi Selesai</span>
+        <span>{% if order.estimated_completion %}{{ order.estimated_completion|date:"d/m/Y H:i" }}{% else %}-{% endif %}</span>
+    </div>
+    <div class="row">
+        <span>Kurir</span>
+        <span>{{ order.assigned_courier.username|default:"-" }}</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Alamat Pickup -->
+    <div class="row">
+        <span style="font-size: 8px;">Alamat Pickup:</span>
+    </div>
+    <div style="font-size: 8px; padding-left: 4px;">
+        {{ order.pickup_address|truncatechars:50 }}
     </div>
 
     <div class="divider"></div>
@@ -264,7 +356,11 @@
     <!-- Kode Pesanan (Barcode sederhana) -->
     <div class="center bold" style="font-size: 9px;">KODE PESANAN</div>
     <div class="center space" style="font-size: 16px; letter-spacing: 3px; font-weight: bold; font-family: monospace;">
-        {{ order.id|stringformat:"06d" }}
+        {% if order.order_number %}
+            {{ order.order_number|slice:"-6:" }}
+        {% else %}
+            {{ order.id|stringformat:"06d" }}
+        {% endif %}
     </div>
 
     <div class="divider"></div>
@@ -275,11 +371,14 @@
         Cuci Cepat - Bersih - Wangi<br>
         MENARA 011 LAUNDRY KENDARI
     </div>
+    <div class="center" style="font-size: 7px; margin-top: 3px;">
+        {{ order.created_at|date:"d/m/Y H:i" }} | #{{ order.id }}
+    </div>
 </div>
 
 <div class="print-btn no-print">
-    <button onclick="printReceipt()">🖨️ Cetak Struk Thermal</button>
-    <button onclick="window.history.back()" style="background: #6c757d;">◀ Kembali</button>
+    <button onclick="printReceipt()">Cetak Struk</button>
+    <button onclick="window.history.back()" class="btn-secondary">Kembali</button>
 </div>
 
 <script>
@@ -316,6 +415,20 @@
                     .total-row { display: flex; justify-content: space-between; font-weight: bold; margin: 5px 0; }
                     .space { margin-top: 5px; }
                     .mb-1 { margin-bottom: 3px; }
+                    .mt-1 { margin-top: 3px; }
+                    .text-small { font-size: 8px; }
+                    .status-paid { color: #28a745; }
+                    .status-unpaid { color: #dc3545; }
+                    .order-number-display {
+                        font-size: 14px;
+                        letter-spacing: 2px;
+                        font-weight: bold;
+                        color: #2563eb;
+                        background: #eff6ff;
+                        padding: 2px 12px;
+                        border-radius: 4px;
+                        display: inline-block;
+                    }
                     @page { size: 80mm auto; margin: 0; }
                     @media print { 
                         body { margin: 0; padding: 0; }

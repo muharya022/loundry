@@ -89,7 +89,7 @@ def send_waha_message(phone, message):
 
 
 def build_maintenance_message(order, event_type):
-    """Pesan fallback saat n8n/WAHA sedang maintenance."""
+    """Pesan fallback saat WAHA sedang maintenance."""
     return (
         "⚠️ Menara Laundry sedang melakukan pemeliharaan.\n\n"
         f"Pembaruan pesanan #{order.id} belum dapat diproses saat ini.\n"
@@ -345,6 +345,10 @@ def create_order(request):
         print(f"[DEBUG] Order created: #{order.id}, Total weight: {order.weight}")
 
         messages.success(request, f"Pesanan #{order.id} berhasil dibuat.")
+
+        if payment_method == "qris":
+            return redirect("orders:payment", order.id)
+
         return redirect("orders:order_list")
 
     # ===== GET request =====
@@ -361,11 +365,12 @@ def create_order(request):
         "available_promos": available_promos
     })
 
+from .models import Order, PaymentSetting
+
 @login_required
 def payment(request, order_id):
-    """Halaman pembayaran untuk order"""
 
-    # Admin bisa melihat semua order, customer hanya miliknya
+    # Admin dapat melihat semua order
     if request.user.is_staff:
         order = get_object_or_404(Order, id=order_id)
     else:
@@ -375,85 +380,51 @@ def payment(request, order_id):
             customer=request.user
         )
 
-    # Pastikan status sudah diambil oleh admin
-    if order.order_status != 'picked_up':
+    # Pembayaran hanya bisa dilakukan jika laundry sudah dijemput
+    if order.order_status != "picked_up":
         messages.warning(
             request,
-            "Pesanan belum siap dibayar. Tunggu admin mengubah status menjadi diambil."
+            "Pesanan belum siap dibayar. Tunggu sampai status pesanan menjadi 'Diambil'."
         )
-        return redirect('orders:order_list')
+        return redirect("orders:order_list")
 
+    # Ambil pengaturan pembayaran yang aktif
+    payment_setting = PaymentSetting.objects.filter(
+        is_active=True
+    ).first()
 
-    # Buat Snap Token jika belum ada
-    if not order.snap_token:
+    if not payment_setting:
+        messages.error(
+            request,
+            "Pengaturan pembayaran belum tersedia. Hubungi admin."
+        )
+        return redirect("orders:order_list")
 
-        snap = midtransclient.Snap(
-            is_production=settings.MIDTRANS["IS_PRODUCTION"],
-            server_key=settings.MIDTRANS["SERVER_KEY"]
+    # Jika customer sudah mengirim bukti
+    if request.method == "POST":
+
+        payment_proof = request.FILES.get("payment_proof")
+
+        if not payment_proof:
+            messages.error(request, "Silakan upload bukti pembayaran.")
+            return redirect("orders:payment", order_id=order.id)
+
+        order.payment_proof = payment_proof
+        order.payment_status = "waiting_confirmation"
+        order.payment_date = timezone.now()
+        order.save()
+
+        messages.success(
+            request,
+            "Bukti pembayaran berhasil dikirim. Silakan tunggu konfirmasi dari admin."
         )
 
-
-        unique_order_id = (
-            f"ORDER-{order.id}-{int(time.time())}"
-        )
-
-
-        transaction_params = {
-
-            "transaction_details": {
-                "order_id": unique_order_id,
-                "gross_amount": int(order.price_total),
-            },
-
-
-            "customer_details": {
-                "first_name": order.customer.username,
-                "phone": getattr(order.customer, "phone", ""),
-            },
-
-
-            "enabled_payments": [
-                "qris",
-                "gopay",
-                "bank_transfer"
-            ],
-
-
-            "finish_redirect_url": request.build_absolute_uri(
-                reverse("orders:payment_finish")
-            )
-        }
-
-
-        try:
-            transaction = snap.create_transaction(
-                transaction_params
-            )
-
-            order.snap_token = transaction.get("token")
-            order.transaction_id = unique_order_id
-            order.save()
-
-
-        except Exception as e:
-            messages.error(
-                request,
-                f"Gagal membuat pembayaran Midtrans: {e}"
-            )
-            return redirect(
-                'orders:order_list'
-            )
-
+        return redirect("orders:order_list")
 
     context = {
         "order": order,
-        "snap_token": order.snap_token,
-        "client_key": settings.MIDTRANS.get(
-            "CLIENT_KEY",
-            ""
-        ),
+        "payment_setting": payment_setting,
     }
-
 
     return render(
         request,
@@ -461,79 +432,52 @@ def payment(request, order_id):
         context
     )
 
+
+# orders/views.py
+
+from django.core.cache import cache
+
 @login_required
-def payment_finish(request):
-    order_id = request.GET.get("order_id")
-    status = request.GET.get("transaction_status")
-
-    print("MIDTRANS FINISH:", order_id, status)
-
-    return redirect("orders:order_list")
-
-@csrf_exempt
-def callback_midtrans(request):
-
-    if request.method != "POST":
-        return HttpResponse(status=405)
-
-    try:
-        data = json.loads(request.body)
-
-        print("MIDTRANS:", data)
-
-        order_id = data["order_id"]
-        transaction_status = data["transaction_status"]
-        status_code = data["status_code"]
-        gross_amount = data["gross_amount"]
-        signature_key = data["signature_key"]
-
-        server_key = settings.MIDTRANS["SERVER_KEY"]
-
-        signature = hashlib.sha512(
-            f"{order_id}{status_code}{gross_amount}{server_key}".encode()
-        ).hexdigest()
-
-
-        if signature != signature_key:
-            return HttpResponse("Invalid signature", status=403)
-
-
-        order_id = data.get("order_id")
-
-        order = Order.objects.filter(transaction_id=order_id).first()
-
-        if not order:
-            print("Order tidak ditemukan:", order_id)
-            return HttpResponse("OK", status=200)
-
-        old_status = order.payment_status
-
-        if transaction_status in ["capture", "settlement"]:
-            order.payment_status = "paid"
-
-        elif transaction_status in ["cancel", "deny", "expire"]:
-            order.payment_status = "unpaid"
-            order.snap_token = None
-            order.transaction_id = None
-
-        elif transaction_status == "pending":
-            pass
-
-        order.save()
-
-        # kirim pesan jika status berubah
-        if old_status != order.payment_status:
-
-            trigger_n8n_webhook(
-                order,
-                "midtrans_payment_updated"
+@user_passes_test(lambda u: u.is_staff)
+def confirm_payment(request, order_id):
+    """Konfirmasi atau tolak pembayaran"""
+    order = get_object_or_404(Order, id=order_id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'confirm':
+            order.payment_status = 'paid'
+            order.payment_date = timezone.now()
+            order.save()
+            
+            # 🔥 Clear cache agar notifikasi hilang
+            cache.delete('pending_payments_count')
+            
+            messages.success(
+                request, 
+                f'✅ Pembayaran untuk order #{order.id} telah dikonfirmasi.'
             )
-
-        return HttpResponse("OK")
-
-    except Exception as e:
-        print(e)
-        return HttpResponse("ERROR", status=500)
+            
+        elif action == 'reject':
+            order.payment_status = 'rejected'
+            order.save()
+            
+            # 🔥 Clear cache
+            cache.delete('pending_payments_count')
+            
+            messages.warning(
+                request, 
+                f'❌ Pembayaran untuk order #{order.id} ditolak.'
+            )
+        
+        # 🔥 Hapus bukti pembayaran jika sudah dikonfirmasi (opsional)
+        # if action == 'confirm' and order.payment_proof:
+        #     order.payment_proof.delete()
+        #     order.payment_proof = None
+        #     order.save()
+        
+    return redirect(request.META.get('HTTP_REFERER', 'accounts:admin_dashboard'))
     
 @login_required
 def order_list(request):
@@ -613,19 +557,44 @@ def update_order_status(request, order_id):
     
     if request.method == "POST":
         new_status = request.POST.get("order_status")
+        old_status = order.order_status  # Simpan status lama
+        
         if new_status in dict(Order.ORDER_STATUS_CHOICES):
             order.order_status = new_status
             order.save()
-
-            trigger_n8n_webhook(order, "order_status_updated")
-
-            messages.success(request, f"Status pesanan #{order.id} diperbarui menjadi {order.get_order_status_display()}.")
+            
+            # 🔥 KIRIM NOTIFIKASI WHATSAPP
+            from utils.order_notifications import trigger_whatsapp_notification
+            
+            # Mapping status ke event
+            status_event_map = {
+                'picked_up': 'order_picked_up',
+                'processing': 'order_processing',
+                'ready': 'order_ready',
+                'delivered': 'order_delivered',
+                'cancelled': 'order_cancelled',
+            }
+            
+            event = status_event_map.get(new_status)
+            
+            if event:
+                # Kirim ke customer
+                result = trigger_whatsapp_notification(order, event, include_courier=False)
+                
+                # Jika status 'picked_up' atau 'ready' dan ada kurir, kirim juga ke kurir
+                if new_status in ['picked_up', 'ready'] and order.assigned_courier:
+                    result_courier = trigger_whatsapp_notification(order, event, include_courier=True)
+                
+                # Log untuk debugging
+                print(f"📤 Notifikasi status {new_status} dikirim untuk order {order.order_number or order.id}")
+            
+            messages.success(request, f"Status pesanan {order.order_number or '#'+str(order.id)} diperbarui menjadi {order.get_order_status_display()}.")
         else:
             messages.error(request, "Status yang dipilih tidak valid.")
-            
     
     # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
     return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
+
 
 @login_required
 @user_passes_test(admin_required)
@@ -637,17 +606,62 @@ def update_payment_status(request, order_id):
         new_status = request.POST.get("payment_status")
 
         if new_status in dict(Order.PAYMENT_STATUS_CHOICES):
-            old_status = order.payment_status  # simpan status lama
+            old_status = order.payment_status
             order.payment_status = new_status
             order.save()
-
-            trigger_n8n_webhook(order, "payment_status_updated")
+            
+            # 🔥 KIRIM NOTIFIKASI JIKA PEMBAYARAN DIKONFIRMASI
+            if new_status == 'paid':
+                from utils.order_notifications import trigger_whatsapp_notification
+                trigger_whatsapp_notification(order, 'payment_confirmed', include_courier=False)
 
             messages.success(
                 request,
-                f"Status pembayaran pesanan #{order.id} diperbarui menjadi {order.get_payment_status_display()}."
+                f"Status pembayaran pesanan {order.order_number or '#'+str(order.id)} diperbarui menjadi {order.get_payment_status_display()}."
             )
 
+    return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
+
+
+@login_required
+@user_passes_test(admin_required)
+def assign_courier(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    
+    current_page = request.GET.get('orders_page', 1)
+    
+    if request.method == "POST":
+        courier_id = request.POST.get("courier")
+        order_display = order.order_number if order.order_number else f"#{order.id}"
+        
+        if not courier_id:
+            order.assigned_courier = None
+            order.save()
+            messages.info(request, f"Kurir untuk pesanan {order_display} telah dihapus.")
+        else:
+            try:
+                courier = User.objects.get(id=courier_id, is_courier=True)
+                order.assigned_courier = courier
+                order.save()
+                
+                # 🔥 PERBAIKAN: Gunakan notify_courier_pickup yang sudah benar
+                from utils.order_notifications import notify_courier_pickup
+                result = notify_courier_pickup(order)
+                
+                if result['status'] == 'ok':
+                    messages.success(
+                        request, 
+                        f"✅ Kurir '{courier.username}' telah ditugaskan ke pesanan {order_display} dan notifikasi terkirim!"
+                    )
+                else:
+                    messages.warning(
+                        request, 
+                        f"⚠️ Kurir '{courier.username}' ditugaskan tapi gagal kirim notifikasi."
+                    )
+                    
+            except User.DoesNotExist:
+                messages.error(request, "Kurir yang dipilih tidak valid.")
+    
     return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
 from django.shortcuts import get_object_or_404, redirect
@@ -784,34 +798,6 @@ def update_order_item_weight(request, item_id):
     next_url = request.GET.get('next', f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={request.GET.get('orders_page', 1)}")
     return redirect(next_url)
 
-@login_required
-@user_passes_test(admin_required)
-def assign_courier(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
-    
-    # Simpan halaman saat ini untuk redirect kembali
-    current_page = request.GET.get('orders_page', 1)
-    
-    if request.method == "POST":
-        courier_id = request.POST.get("courier")
-        if not courier_id:
-            order.assigned_courier = None
-            order.save()
-            trigger_n8n_webhook(order, "courier_removed")
-            messages.info(request, f"Kurir untuk pesanan #{order.id} telah dihapus.")
-        else:
-            try:
-                courier = User.objects.get(id=courier_id, is_courier=True)
-                order.assigned_courier = courier
-                order.save()
-                trigger_n8n_webhook(order, "courier_assigned")
-
-                messages.success(request, f"Kurir '{courier.username}' telah ditugaskan ke pesanan #{order.id}.")
-            except User.DoesNotExist:
-                messages.error(request, "Kurir yang dipilih tidak valid.")
-    
-    # Redirect ke dashboard dengan parameter tab=orders dan halaman yang sama
-    return redirect(f"{reverse('accounts:admin_dashboard')}?tab=orders&orders_page={current_page}")
 
 @login_required
 @user_passes_test(admin_required)
@@ -1216,6 +1202,11 @@ def get_order_status(request):
                 "status": "success",
                 "reply": reply_text,
 
+                "customer_id": user.id,
+                "customer_username": user.username,
+                "customer_name": user.get_full_name() if user.get_full_name() else user.username,
+                "customer_phone": user.phone,
+
                 "order_id": order.id,
                 "service": order.service.name if order.service else None,
 
@@ -1263,87 +1254,3 @@ def get_order_status(request):
             "reply": "Server sedang error. Silakan coba beberapa saat lagi.",
             "status": "maintenance"
         }, status=503)
-    
-
-def trigger_n8n_webhook(order, event_type):
-    webhook_url = "https://subcorymbosely-nonmythologic-marcelina.ngrok-free.dev/webhook/order-update"
-
-    maintenance_message = build_maintenance_message(order, event_type)
-    fallback_used = False
-
-    customer_phone = format_phone(order.customer.phone) if order.customer else None
-    courier_phone = (
-        format_phone(order.assigned_courier.phone)
-        if order.assigned_courier
-        else None
-    )
-
-    # =========================
-    # DATA LENGKAP ORDER
-    # =========================
-    base_payload = {
-        "event": event_type,
-        "order_id": order.id,
-
-        "customer_name": order.customer.username if order.customer else None,
-        "customer_phone": customer_phone,
-
-        "courier": order.assigned_courier.username if order.assigned_courier else None,
-        "courier_phone": courier_phone,
-
-        "order_status": order.get_order_status_display(),
-        "payment_status": order.get_payment_status_display(),
-
-        "pickup_address": order.pickup_address,
-
-        "customer_address": (
-            getattr(order.customer, "address", None)
-            if order.customer
-            else None
-        ),
-
-        "latitude": order.latitude,
-        "longitude": order.longitude,
-    }
-
-    # =========================
-    # CUSTOMER
-    # =========================
-    customer_payload = {
-        **base_payload,
-        "target": "customer",
-        "user": order.customer.username if order.customer else None,
-        "phone": customer_phone,
-    }
-
-    try:
-        response = requests.post(webhook_url, json=customer_payload, timeout=5)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as exc:
-        print("N8N customer webhook failed:", exc)
-        if send_waha_message(customer_phone, maintenance_message):
-            fallback_used = True
-
-    # =========================
-    # COURIER
-    # =========================
-    if order.assigned_courier:
-        courier_payload = {
-            **base_payload,
-            "target": "courier",
-            "user": order.assigned_courier.username,
-            "phone": courier_phone,
-        }
-
-        try:
-            response = requests.post(webhook_url, json=courier_payload, timeout=5)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as exc:
-            print("N8N courier webhook failed:", exc)
-            if send_waha_message(courier_phone, maintenance_message):
-                fallback_used = True
-
-    return {
-        "status": "maintenance" if fallback_used else "ok",
-        "delivered": fallback_used,
-    }

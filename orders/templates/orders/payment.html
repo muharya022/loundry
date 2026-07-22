@@ -1,54 +1,108 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block content %}
 
-<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg mt-12 text-center">
-  <h2 class="text-2xl font-bold mb-3 text-blue-700">💳 Pembayaran Pesanan #{{ order.id }}</h2>
+<div class="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-lg mt-12">
 
-  <div class="my-4">
-    <p class="text-gray-700">Total Pembayaran:</p>
-    <h3 class="text-3xl font-bold text-green-600 mt-1 mb-3">
-      Rp{{ order.price_total|floatformat:0 }}
-    </h3>
+    <h2 class="text-2xl font-bold text-center text-blue-700 mb-6">
+        💳 Pembayaran Pesanan #{{ order.id }}
+    </h2>
 
-    <p class="text-sm text-gray-500 mb-2">
-      Metode Pembayaran: 
-      <span class="font-semibold text-gray-700 uppercase">{{ order.get_payment_method_display }}</span>
-    </p>
-    <p class="text-sm text-gray-500">
-      Tanggal Pemesanan: {{ order.created_at|date:"d M Y, H:i" }}
-    </p>
-  </div>
+    <div class="text-center mb-6">
+        <p class="text-gray-600">Total Pembayaran</p>
 
-  <hr class="my-4">
+        <h3 class="text-3xl font-bold text-green-600">
+            Rp {{ order.price_total|floatformat:0 }}
+        </h3>
 
-  <p class="text-gray-600 text-sm mb-5">
-    Tekan tombol di bawah untuk melakukan pembayaran melalui Midtrans (QRIS, GoPay, atau Transfer Bank).
-  </p>
+        <p class="mt-2 text-sm text-gray-500">
+            Metode Pembayaran :
+            <strong>{{ order.get_payment_method_display }}</strong>
+        </p>
+    </div>
 
-  <button id="pay-button" 
-          class="mt-3 bg-green-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-green-700 transition-all duration-200">
-    Bayar Sekarang
-  </button>
+    <hr class="my-6">
 
-  <a href="{% url 'orders:order_list' %}" 
-     class="block mt-4 text-sm text-blue-600 hover:underline">
-    Kembali ke Daftar Pesanan
-  </a>
+    <!-- QRIS -->
+    <div class="text-center">
+
+        <h4 class="font-bold text-lg mb-3">
+            Scan QRIS
+        </h4>
+
+        <img
+            src="{{ payment_setting.qris_image.url }}"
+            class="w-64 mx-auto border rounded-lg shadow"
+            alt="QRIS">
+
+    </div>
+
+    <hr class="my-6">
+
+    <!-- Rekening -->
+
+    <div>
+
+        <h4 class="font-bold mb-3">
+            Transfer Bank
+        </h4>
+
+        <div class="bg-gray-100 rounded-lg p-4">
+
+            <p>
+                <strong>Bank</strong><br>
+                {{ payment_setting.bank_name }}
+            </p>
+
+            <p class="mt-3">
+                <strong>Nomor Rekening</strong><br>
+                {{ payment_setting.account_number }}
+            </p>
+
+            <p class="mt-3">
+                <strong>Atas Nama</strong><br>
+                {{ payment_setting.account_name }}
+            </p>
+
+        </div>
+
+    </div>
+
+    <hr class="my-6">
+
+    <form method="POST"
+          enctype="multipart/form-data">
+
+        {% csrf_token %}
+
+        <label class="block font-semibold mb-2">
+            Upload Bukti Pembayaran
+        </label>
+
+        <input
+            type="file"
+            name="payment_proof"
+            class="w-full border rounded-lg p-2"
+            accept="image/*"
+            required>
+
+        <button
+            class="w-full mt-5 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg">
+
+            Saya Sudah Bayar
+
+        </button>
+
+    </form>
+
+    <a href="{% url 'orders:order_list' %}"
+       class="block text-center mt-6 text-blue-600 hover:underline">
+
+        Kembali ke Daftar Pesanan
+
+    </a>
+
 </div>
-
-<!-- 🔹 Load Midtrans Snap SDK -->
-<script 
-  src="https://app.sandbox.midtrans.com/snap/snap.js" 
-  data-client-key="{{ client_key }}">
-</script>
-
-<script>
-document.getElementById('pay-button').onclick = function () {
-
-    snap.pay('{{ snap_token }}');
-
-};
-</script>
 
 {% endblock %}
